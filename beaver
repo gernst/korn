@@ -1,0 +1,2 @@
+#!/bin/sh
+java -jar ./korn/lib/beaver-cc-0.9.11.jar $@

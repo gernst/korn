@@ -1,0 +1,257 @@
+%package "korn";
+%class "Parser";
+
+%import "java.util.Set";
+
+%embed {:
+    Set<String> types;
+    Symbol s(Object x) { return new Symbol(x); }
+:};
+
+%terminals VOID, STRING, BOOL, CHAR, INT, SHORT, INT, LONG, LONGLONG, SIGNED, UNSIGNED, FLOAT, DOUBLE;
+%terminals STRUCT, UNION, ENUM, TYPEDEF;
+
+%terminals RETURN, BREAK, CONTINUE, GOTO, SWITCH, CASE;
+%terminals IF, /* THEN, */ ELSE, DO, WHILE, FOR;
+
+%terminals ID, TYPE;
+%terminals NUM;
+
+%terminals LPAREN, RPAREN, LBRACK, RBRACK, LBRACE, RBRACE;
+%terminals POSTFIX, INCR, DECR, DOT, ARROW;
+%terminals PREFIX,  BANG, TILDE, SIZEOF;
+%terminals STAR, DIV, MOD;
+%terminals PLUS, MINUS;
+%terminals SHL, SHR;
+%terminals LT, LE, GE, GT;
+%terminals EQ, NEQ;
+%terminals AMP;
+%terminals CARET;
+%terminals PIPE;
+%terminals AND;
+%terminals OR;
+%terminals QUESTION, COLON;
+%terminals ASG, ASG_OP;
+%terminals COMMA, SEMICOLON;
+
+%nonassoc IF;
+%nonassoc ELSE;
+%nonassoc LPAREN, RPAREN;
+%left LBRACK, RBRACK;
+%left  POSTFIX, INCR, DECR, DOT, ARROW;
+%right PREFIX;
+%left  STAR, DIV, MOD;
+%left  PLUS, MINUS;
+%left  SHL, SHR;
+%left  LT, LE, GE, GT;
+%left  EQ, NEQ;
+%left  AMP;
+%left  CARET;
+%left  PIPE;
+%left  AND;
+%left  OR;
+%right QUESTION, COLON;
+%right ASG, ASG_OP;
+%left  COMMA;
+
+%typeof ID      = "String";
+// %typeof STRING  = "String";
+%typeof TYPE    = "String";
+
+%typeof NUM     = "Integer";
+%typeof ASG_OP  = "String";
+
+%typeof const   = "String";
+
+%typeof type    = "Type";
+%typeof expr    = "Expr";
+%typeof stmt    = "Stmt";
+%typeof block   = "Block";
+
+%typeof bound   = "Expr";
+%typeof dims    = "Dims";
+
+%typeof var     = "VarSpec";
+
+%typeof param   = "ParamSpec";
+
+%typeof field   = "FieldSpec";
+%typeof fields__ = "FieldsSpec";
+
+%goal unit;
+
+unit = stmts.ss {: return s(new Block(ss)); :}; // force conversion to array
+
+bound  = LBRACK expr.e RBRACK;
+bounds = bound *;
+
+dims
+    = bounds.bs               {: return s(new Dims(false, bs));    :}
+    | LBRACK RBRACK bounds.bs {: return s(new Dims(true, bs));     :}
+    ;
+
+param
+    = type.t dims.ds         {: return s(new ParamSpec(t, ds));    :}
+    | type.t ID.n dims.ds    {: return s(new ParamSpec(t, n, ds)); :}
+    ;
+
+params
+    = param
+    | params COMMA param;
+
+var
+    = ID.n dims.ds            {: return s(new VarSpec(n, ds));     :}
+    | ID.n dims.ds ASG expr.i {: return s(new VarSpec(n, ds, i));  :}
+    ;
+
+vars
+    = var @ASG
+    | vars COMMA var;
+
+
+field
+    = ID.n dims.ds           {: return s(new FieldSpec(n, ds)); :}
+    ;
+
+fields_
+    = field
+    | fields_ COMMA field;
+
+fields__
+    = type.t fields_.fs SEMICOLON
+      {: return s(new FieldsSpec(t, fs)); :}
+    ;
+
+fields
+    = fields__ *;
+
+const  = ID.n;
+consts = const | consts COMMA const;
+exprs  = expr @ASG | exprs COMMA expr;
+
+block = LBRACE stmts.ss RBRACE {: return s(new Block(ss)); :};
+
+stmts = stmt *;
+
+stmt
+    = block
+
+    | TYPEDEF type.t ID.n  SEMICOLON                    {: types.add(n);
+                                                           return s(new TypeDef(t, n));    :}
+    | STRUCT  ID.n SEMICOLON                            {: return s(new StructDecl(n));    :}
+    | UNION   ID.n SEMICOLON                            {: return s(new UnionDecl(n));     :}
+    | ENUM    ID.n SEMICOLON                            {: return s(new EnumDecl(n));      :}
+    | STRUCT  ID.n LBRACE fields.fs RBRACE SEMICOLON    {: return s(new StructDef(n, Parsing.fields(fs))); :}
+    | UNION   ID.n LBRACE fields.fs RBRACE SEMICOLON    {: return s(new UnionDef(n, Parsing.fields(fs)));  :}
+    | ENUM         LBRACE consts.cs RBRACE SEMICOLON    {: return s(new EnumDef(cs));      :}
+    | ENUM    ID.n LBRACE consts.cs RBRACE SEMICOLON    {: return s(new EnumDef(n, cs));   :}
+
+    | type.t ID.n LPAREN RPAREN SEMICOLON               {: return s(new FunDecl(t, n));    :}
+    | type.t ID.n LPAREN RPAREN block.b                 {: return s(new FunDef(t, n, b));  :}
+    | type.t ID.n LPAREN params.ps RPAREN SEMICOLON     {: return s(new FunDecl(t, n, Parsing.params(ps)));   :}
+    | type.t ID.n LPAREN params.ps RPAREN block.b       {: return s(new FunDef(t, n, Parsing.formals(ps), b));:}
+    
+    | type.t vars.vs SEMICOLON                          {: return s(new Group(Parsing.vars(t, vs)));          :}
+
+    | SEMICOLON                                         {: return s(Atomic.none()); :}
+    | expr.a   SEMICOLON                                {: return s(new Atomic(a)); :}
+    | GOTO ID.n                                         {: return s(new Goto(n));   :}
+    | CASE NUM.n COLON                                  {: return s(new Case(n));   :}
+    | ID.n COLON                                        {: return s(new Label(n));  :}
+    | RETURN   SEMICOLON                                {: return s(Return.none()); :}
+    | RETURN expr.a SEMICOLON                           {: return s(new Return(a)); :}
+    | BREAK    SEMICOLON                                {: return s(Break.self());  :}
+    | CONTINUE SEMICOLON                                {: return s(Continue.self());   :}
+    | SWITCH LPAREN expr.e RPAREN stmt.b                {: return s(new Switch(e, b));  :}
+    | IF LPAREN expr.a RPAREN stmt.b                    {: return s(new If(a, b));      :}
+    | IF LPAREN expr.a RPAREN stmt.b ELSE stmt.c        {: return s(new If(a, b, c));   :}
+    | WHILE LPAREN expr.a RPAREN stmt.b                 {: return s(new While(a, b));   :}
+    | DO stmt.b WHILE LPAREN expr.a RPAREN SEMICOLON    {: return s(new DoWhile(b, a)); :}
+    | FOR LPAREN exprs.a SEMICOLON exprs.b SEMICOLON exprs.c RPAREN stmt.p
+                                                        {: return s(new For(a, b, c, p)); :}
+    | FOR LPAREN type.t vars.vs SEMICOLON exprs.b SEMICOLON exprs.c RPAREN stmt.p
+                                                        {: return s(new For(Parsing.vars(t, vs), b, c, p)); :}
+    ;
+
+expr
+    = PREFIX | POSTFIX /* unused */
+    | LPAREN expr.e RPAREN              // {: return e; :}
+    | ID.n                              {: return s(new Id(n));  :}
+    | NUM.n                             {: return s(new Lit(n)); :}
+    | STRING.s                          {: return s(new Lit(s)); :}
+    | ID.n LPAREN RPAREN                {: return s(new FunCall(n));       :}
+    | ID.n LPAREN exprs.as RPAREN       {: return s(new FunCall(n, as));   :}
+    | LPAREN type.t RPAREN expr.a       {: return s(new Cast(t, a));       :}
+    | SIZEOF LPAREN type.t  RPAREN      {: return s(new SizeOfType(t));    :}
+    | SIZEOF LPAREN expr.e RPAREN       {: return s(new SizeOfExpr(e));    :}
+    
+    | expr.a INCR  @POSTFIX             {: return s(new PostOp("++", a));  :}
+    | expr.a DECR  @POSTFIX             {: return s(new PostOp("--", a));  :}
+    | expr.a ARROW  ID.f                {: return s(new Arrow(a, f));      :}
+    
+    | expr.a DOT    ID.f                {: return s(new Dot(a, f));        :}
+    | expr.a LBRACK expr.i RBRACK       {: return s(new Index(a, i));      :}
+    
+    | INCR  expr.a @PREFIX              {: return s(new PreOp("++", a));   :}
+    | DECR  expr.a @PREFIX              {: return s(new PreOp("--", a));   :}
+    | PLUS  expr.a @PREFIX              {: return s(new PreOp("+", a));    :}
+    | MINUS expr.a @PREFIX              {: return s(new PreOp("-", a));    :}
+    | BANG  expr.a @PREFIX              {: return s(new PreOp("!", a));    :}
+    | TILDE expr.a @PREFIX              {: return s(new PreOp("~", a));    :}
+    | STAR  expr.a @PREFIX              {: return s(new PreOp("*", a));    :}
+    | AMP   expr.a @PREFIX              {: return s(new PreOp("&", a));    :}
+    
+    | expr.a STAR   expr.b              {: return s(new BinOp("*", a, b)); :}
+    | expr.a DIV    expr.b              {: return s(new BinOp("/", a, b)); :}
+    | expr.a MOD    expr.b              {: return s(new BinOp("%", a, b)); :}
+    | expr.a PLUS   expr.b              {: return s(new BinOp("+", a, b)); :}
+    | expr.a MINUS  expr.b              {: return s(new BinOp("-", a, b)); :}
+    | expr.a SHL    expr.b              {: return s(new BinOp("<<",a, b)); :}
+    | expr.a SHR    expr.b              {: return s(new BinOp(">>",a, b)); :}
+    | expr.a LT     expr.b              {: return s(new BinOp("<", a, b)); :}
+    | expr.a LE     expr.b              {: return s(new BinOp("<=",a, b)); :}
+    | expr.a GE     expr.b              {: return s(new BinOp(">=",a, b)); :}
+    | expr.a GT     expr.b              {: return s(new BinOp(">", a, b)); :}
+    | expr.a EQ     expr.b              {: return s(new BinOp("==",a, b)); :}
+    | expr.a NEQ    expr.b              {: return s(new BinOp("!=",a, b)); :}
+    | expr.a AMP    expr.b              {: return s(new BinOp("&", a, b)); :}
+    | expr.a CARET  expr.b              {: return s(new BinOp("^", a, b)); :}
+    | expr.a PIPE   expr.b              {: return s(new BinOp("|", a, b)); :}
+    
+    | expr.a AND    expr.b              {: return s(new BinOp("&&",a, b)); :}
+    | expr.a OR     expr.b              {: return s(new BinOp("||",a, b)); :}
+    | expr.a QUESTION expr.b COLON expr.c 
+                                        {: return s(new Question(a, b, c)); :}
+    
+    | expr.a ASG    expr.b              {: return s(new BinOp("=", a, b)); :}
+    | expr.a ASG_OP.e expr.b            {: return s(new BinOp("=", a, new BinOp(e.substring(0, e.length() - 1), a, b)));   :}
+    
+    | expr.a COMMA  expr.b              {: return s(new BinOp(",", a, b)); :}
+    ;
+
+type
+    = VOID                              {: return s(Type._void());         :}
+    | BOOL                              {: return s(Type._Bool());         :}
+    | FLOAT                             {: return s(Type._float());        :}
+    | DOUBLE                            {: return s(Type._double());       :}
+    | SIGNED? CHAR                      {: return s(Signed._char());       :}
+    | SIGNED? SHORT                     {: return s(Signed._short());      :}
+    | SIGNED? INT                       {: return s(Signed._int());        :}
+    | SIGNED? LONG                      {: return s(Signed._long());       :}
+    | SIGNED? LONGLONG                  {: return s(Signed._long_long());  :}
+    | UNSIGNED CHAR                     {: return s(Unsigned._char());     :}
+    | UNSIGNED SHORT                    {: return s(Unsigned._short());    :}
+    | UNSIGNED                          {: return s(Unsigned._int());      :}
+    | UNSIGNED INT                      {: return s(Unsigned._int());      :}
+    | UNSIGNED LONG                     {: return s(Unsigned._long());     :}
+    | UNSIGNED LONGLONG                 {: return s(Unsigned._long_long());:}
+    | TYPE.t                            {: return s(new TypedefName(t));   :}
+    | type.t STAR                       {: return s(new PtrType(t));       :}
+    // | type.t LBRACK RBRACK              {: return s(new PtrType(t));       :}
+    | STRUCT ID.t                       {: return s(new StructName(t));    :}
+    | UNION  ID.t                       {: return s(new UnionName(t));     :}
+    | ENUM   ID.t                       {: return s(new EnumName(t));      :}
+    | STRUCT LBRACE fields.fs RBRACE    {: return s(new AnonStruct(Parsing.fields(fs)));   :}
+    | UNION  LBRACE fields.fs RBRACE    {: return s(new AnonUnion(Parsing.fields(fs)));    :}
+    | ENUM   LBRACE consts.cs RBRACE    {: return s(new AnonEnum(cs));     :}
+    ;
