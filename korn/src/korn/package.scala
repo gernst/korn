@@ -1,4 +1,6 @@
 package object korn {
+  type Store = Map[String, Pure]
+  
   val False = App(Fun.f)
   val True = App(Fun.t)
 

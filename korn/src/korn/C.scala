@@ -67,6 +67,37 @@ sealed trait Expr {
   def rename(re: Map[String, String]): Expr
 }
 
+object Expr {
+  def comma(exprs: List[Expr]) = {
+    // Note: comma is associative
+    exprs.reduce(BinOp(",", _, _))
+  }
+
+  def hasEffects(expr: Expr): Boolean = {
+    expr match {
+      case _: Id                       => false
+      case _: Lit                      => false
+      case PreOp("++", arg)            => true
+      case PreOp("--", arg)            => true
+      case PostOp("++", arg)           => true
+      case PostOp("--", arg)           => true
+      case BinOp("=", arg1, arg2)      => true
+      case PreOp(op, arg)              => hasEffects(arg)
+      case PostOp(op, arg)             => hasEffects(arg)
+      case BinOp(op, arg1, arg2)       => hasEffects(arg1) || hasEffects(arg2)
+      case Index(arg1, arg2)           => hasEffects(arg1) || hasEffects(arg2)
+      case Question(test, left, right) => hasEffects(test) || hasEffects(left) || hasEffects(right)
+      case Cast(typ, expr)             => hasEffects(expr)
+      case SizeOfExpr(expr)            => false // compile time
+      case SizeOfType(typ)             => false
+      case Arrow(expr, field)          => hasEffects(expr)
+      case Dot(expr, field)            => hasEffects(expr)
+      case FunCall(name, args)         => true // XXX: approximation
+      case Init(values)                => (values exists { case (_, expr) => hasEffects(expr) })
+    }
+  }
+}
+
 case class Field(typ: Type, name: String) {
   override def toString = typ + " " + name
 }
@@ -253,6 +284,137 @@ object Parsing {
 
 sealed trait Stmt {}
 
+object Stmt {
+  def modifies(expr: Expr): Set[String] =
+    expr match {
+      case _: Id                                 => Set()
+      case _: Lit                                => Set()
+      case PreOp("++", Id(name))                 => Set(name)
+      case PreOp("--", Id(name))                 => Set(name)
+      case PostOp("++", Id(name))                => Set(name)
+      case PostOp("--", Id(name))                => Set(name)
+      case BinOp("=", Id(name), arg)             => Set(name) ++ modifies(arg)
+      case BinOp("=", Index(Id(name), idx), arg) => Set(name) ++ modifies(idx) ++ modifies(arg)
+      case PreOp(op, arg)                        => modifies(arg)
+      case PostOp(op, arg)                       => modifies(arg)
+      case BinOp(op, arg1, arg2)                 => modifies(arg1) ++ modifies(arg2)
+      case Index(arg1, arg2)                     => modifies(arg1) ++ modifies(arg2)
+      case Question(test, left, right)           => modifies(test) ++ modifies(left) ++ modifies(right)
+      case Cast(typ, expr)                       => modifies(expr)
+      case SizeOfExpr(expr)                      => Set() // compile time
+      case SizeOfType(typ)                       => Set()
+      case Arrow(expr, field)                    => modifies(expr)
+      case Dot(expr, field)                      => modifies(expr)
+      case FunCall(name, args)                   => Set() ++ (args flatMap modifies)
+      case Init(values)                          => Set() ++ (values flatMap { case (_, expr) => modifies(expr) })
+    }
+
+  def modifies(stmt: Stmt): Set[String] =
+    stmt match {
+      case Block(stmts)          => ???
+      case Group(stmts)          => Set(stmts flatMap modifies: _*)
+      case Atomic(Some(expr))    => modifies(expr)
+      case Return(Some(expr))    => modifies(expr)
+      case If(test, left, right) => modifies(test) ++ modifies(left) ++ modifies(right)
+      case While(test, body)     => modifies(test) ++ modifies(body)
+      case DoWhile(body, test)   => modifies(test) ++ modifies(body)
+      // case For(init, test, inc, body) =>
+      //   modifies(init) ++ modifies(test) ++ modifies(inc) ++ modifies(body)
+      case _ => Set()
+    }
+
+  def norm(stmt: Stmt): (List[Formal], Stmt) = {
+    val (formals, stmt_, _) = norm(stmt, Map())
+    (formals, stmt_)
+  }
+
+  def norm(
+      stmts: List[Stmt],
+      re0: Map[String, String]): (List[Formal], List[Stmt], Map[String, String]) =
+    stmts match {
+      case Nil =>
+        (Nil, Nil, re0)
+
+      case first :: rest =>
+        val (formals1, first_, re1) = norm(first, re0)
+        val (formals2, rest_, re2) = norm(rest, re1)
+        (formals1 ++ formals2, first_ :: rest_, re2)
+    }
+
+  def norm(stmt: Stmt, re0: Map[String, String]): (List[Formal], Stmt, Map[String, String]) =
+    stmt match {
+      case Group(stmts) =>
+        val (formals, stmts_, re1) = norm(stmts, re0)
+        (formals, Group(stmts_), re1)
+
+      case Block(stmts) =>
+        val (formals, stmts_, re1) = norm(stmts, re0)
+        (formals, Group(stmts_), re0) // NOTE: extended renaming in the block should not propagate
+
+      case Atomic(None) =>
+        (Nil, stmt, re0)
+
+      case Atomic(Some(expr)) =>
+        (Nil, Atomic(Some(expr rename re0)), re0)
+
+      case Break =>
+        (Nil, stmt, re0)
+
+      case Continue =>
+        (Nil, stmt, re0)
+
+      case Return(None) =>
+        (Nil, stmt, re0)
+
+      case Return(Some(expr)) =>
+        (Nil, Return(Some(expr rename re0)), re0)
+
+      case Label(label) =>
+        (Nil, stmt, re0)
+
+      case Goto(label) =>
+        (Nil, stmt, re0)
+
+      case If(test, left, right) =>
+        val test_ = test rename re0
+        val (formals1, left_, re1) = norm(left, re0)
+        val (formals2, right_, re2) = norm(right, re1)
+        (formals1 ++ formals2, If(test_, left_, right_), re2)
+
+      case While(test, body) =>
+        val test_ = test rename re0
+        val (formals, body_, re1) = norm(body, re0)
+        (formals, While(test_, body_), re1)
+
+      case DoWhile(body, test) =>
+        val test_ = test rename re0
+        val (formals, body_, re1) = norm(body, re0)
+        (formals, DoWhile(body_, test_), re1)
+
+      case For(vars, init, test, inc, body) =>
+        val init_ = Expr.comma(init)
+        val test_ = Expr.comma(test)
+        val inc_ = Expr.comma(inc)
+        val body_ = Block(List(body, Atomic(Some(inc_))))
+        val loop_ = While(test_, body_)
+        val stmt_ = Block(List(Group(vars), Atomic(Some(init_)), loop_))
+        norm(stmt_, re0)
+
+      case VarDef(Formal(typ, name), None) =>
+        val name_ = Id.fresh(name)
+        val formal_ = Formal(typ, name_)
+        (List(formal_), Atomic.none, re0 + (name -> name_))
+
+      case VarDef(Formal(typ, name), Some(init)) =>
+        val name_ = Id.fresh(name)
+        val id_ = Id(name_)
+        val formal_ = Formal(typ, name_)
+        val init_ = init rename re0
+        // (List(formal_), id_ := init_, re0 + (name -> name_))
+        (List(formal_), Atomic.assume(BinOp("==", id_, init_)), re0 + (name -> name_))
+    }
+}
+
 case class Block(stmts: List[Stmt]) extends Stmt {
   def this(stmts: Array[Stmt]) = this(stmts.toList)
 }
@@ -280,7 +442,7 @@ case class Label(label: String) extends Stmt
 
 case class Case(const: Int) extends Stmt
 
-case class Goto(label: String) extends Stmt 
+case class Goto(label: String) extends Stmt
 
 case object Break extends Stmt {
   def self = this
