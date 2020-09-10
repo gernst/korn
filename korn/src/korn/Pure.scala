@@ -22,32 +22,33 @@ object Sort {
 }
 
 sealed trait Pure extends Pure.term {
-  import Fun._
+  def ?(left: Pure, right: Pure) = App(Fun.ite, this, left, right)
 
-  def ?(left: Pure, right: Pure) = App(ite, this, left, right)
-
-  def ^(that: Pure) = App(exp, this, that)
-  def *(that: Pure) = App(times, this, that)
-  def /(that: Pure) = App(divBy, this, that)
-  def %(that: Pure) = App(mod, this, that)
+  def ^(that: Pure) = App(Fun.exp, this, that)
+  def *(that: Pure) = App(Fun.times, this, that)
+  def /(that: Pure) = App(Fun.divBy, this, that)
+  def %(that: Pure) = App(Fun.mod, this, that)
 
   def unary_+ = this
-  def unary_- = App(minus, this)
-  def +(that: Pure) = App(plus, this, that)
-  def -(that: Pure) = App(minus, this, that)
+  def unary_- = App(Fun.minus, this)
+  def +(that: Pure) = App(Fun.plus, this, that)
+  def -(that: Pure) = App(Fun.minus, this, that)
 
-  def ===(that: Pure) = App(_eq, this, that)
+  def ===(that: Pure) = App(Fun._eq, this, that)
   def !==(that: Pure) = !(this === that)
 
-  def <=(that: Pure) = App(le, this, that)
-  def <(that: Pure) = App(lt, this, that)
-  def >=(that: Pure) = App(ge, this, that)
-  def >(that: Pure) = App(gt, this, that)
+  def <=(that: Pure) = App(Fun.le, this, that)
+  def <(that: Pure) = App(Fun.lt, this, that)
+  def >=(that: Pure) = App(Fun.ge, this, that)
+  def >(that: Pure) = App(Fun.gt, this, that)
 
-  def unary_!() = App(not, this)
-  def &&(that: Pure) = App(and, this, that)
-  def ||(that: Pure) = App(or, this, that)
-  def ==>(that: Pure) = App(imp, this, that)
+  def unary_!() = App(Fun.not, this)
+  def and(that: Pure) = App(Fun.and, this, that)
+  def or(that: Pure) = App(Fun.or, this, that)
+  def ==>(that: Pure) = App(Fun.imp, this, that)
+
+  def select(index: Pure) = App(Fun.select, this, index)
+  def store(index: Pure, value: Pure) = App(Fun.select, this, index, value)
 }
 
 object Pure extends Counter with Alpha[Pure, Var] {}
@@ -93,6 +94,12 @@ object Fun extends Counter {
   val store = Fun("store")
 }
 
+case class Num(value: Int) extends Pure {
+  def free = Set()
+  def rename(re: Map[Var, Var]) = this
+  def subst(su: Map[Var, Pure]) = this
+}
+
 case class Var(name: String, index: Option[Int] = None) extends Pure with Pure.x {
   def fresh(index: Int) = Var(name, Some(index))
 
@@ -102,6 +109,10 @@ case class Var(name: String, index: Option[Int] = None) extends Pure with Pure.x
       case Some(index) => name + index
     }
   }
+}
+
+object Var {
+  def fresh(name: String) = Var(name, Some(Pure.next))
 }
 
 case class App(fun: Fun, args: List[Pure]) extends Pure {

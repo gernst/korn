@@ -27,7 +27,7 @@ object Main {
   def run(files: List[String]) {
     for (file <- files) {
       try {
-        object korn extends Korn(file)
+        object korn extends Korn(???)
         korn.run()
       } catch {
         case e: Throwable =>

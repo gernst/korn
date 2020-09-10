@@ -1,6 +1,4 @@
 package object korn {
-  val NULL = Id("NULL")
-
   val False = App(Fun.f)
   val True = App(Fun.t)
 
@@ -13,6 +11,22 @@ package object korn {
     object error extends FunCall.nullary("__VERIFIER_error")
     object nondet_int extends FunCall.nullary("__VERIFIER_nondet_int")
     object assume extends FunCall.unary("__VERIFIER_assume")
+  }
+
+  def error(msg: => String) = {
+    throw new Error(msg)
+  }
+
+  def ensure(phi: Boolean, msg: => String) {
+    if (!phi) error(msg)
+  }
+
+  def avoid(phi: Boolean, msg: => String) {
+    if (phi) error(msg)
+  }
+
+  def unpack[A](a: Option[A], msg: => String) = {
+    a getOrElse error(msg)
   }
 
   def sexpr(arg0: String, args: Any*) = {
