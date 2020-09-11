@@ -54,6 +54,8 @@ object Main {
         val stmts = parse(path)
         object unit extends Unit(stmts)
         unit.run()
+        for (clause <- unit.clauses)
+          println(clause)
       } catch {
         case e: Throwable =>
           e.printStackTrace()

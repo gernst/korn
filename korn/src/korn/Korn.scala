@@ -2,25 +2,25 @@ package korn
 
 import scala.collection.mutable
 
-case class Clause(path: List[Pure], head: Pure, reason: String) {
+case class Clause(path: List[Prop], head: Prop, reason: String) {
   def free = head.free ++ path.flatMap(_.free)
   override def toString = path.mkString(", ") + " ==> " + head
 }
 
 object Clause {
-  def query(path: List[Pure], head: Pure, reason: String) = {
+  def query(path: List[Prop], head: Prop, reason: String) = {
     Clause(!head :: path, False, reason)
   }
 }
 
 case class Pred(name: String, types: List[Sort]) {
-  def apply(args: List[Pure]) = App(name, args)
-  def apply(args: List[Pure], res: Pure) = App(name, args ++ List(res))
+  def apply(args: List[Pure]) = In(name, args)
+  def apply(args: List[Pure], res: Pure) = In(name, args ++ List(res))
 }
 
-case class State(path: List[Pure], store: Store) {
+case class State(path: List[Prop], store: Store) {
   def arbitrary = State(Nil, store)
-  def and(that: Pure) = State(that :: path, store)
+  def and(that: Prop) = State(that :: path, store)
   // def just(that: Pure) = State(List(that), store)
 
   def contains(name: String) = store contains name
@@ -119,10 +119,10 @@ class Unit(stmts: List[Stmt]) {
 
     if (_ret != null) {
       pres += (name -> Pred(pre, _args))
-      posts += (name -> Pred(pre, _args))
+      posts += (name -> Pred(post, _args))
     } else {
       pres += (name -> Pred(pre, _args))
-      posts += (name -> Pred(pre, _args ++ List(_ret)))
+      posts += (name -> Pred(post, _args ++ List(_ret)))
     }
   }
 
@@ -131,26 +131,32 @@ class Unit(stmts: List[Stmt]) {
     val post = posts(name)
     val (locals, stmt) = Stmt.norm(body)
 
-    val formals = params ++ locals
-    val names = formals map (_.name)
-    val types = resolve(formals map (_.typ))
+    val names1 = params map (_.name)
+    val types1 = resolve(params map (_.typ))
 
+    val names2 = locals map (_.name)
+    val types2 = resolve(locals map (_.typ))
+
+    val names = names1 ++ names2
+    val types = types1 ++ types2
+
+    val sig = Scope(names1, types1)
     val env = Scope(names, types)
     val vars = env.vars
     val store = Store(names, vars)
     val path = List(pre(vars))
     val state = State(path, store)
 
-    object define extends Function(name, post, env, state, stmt)
+    object define extends Function(name, post, sig, env, state, stmt)
 
     define.run()
   }
 
-  def clause(st: State, phi: Pure, reason: String) {
+  def clause(st: State, phi: Prop, reason: String) {
     clauses += Clause(st.path, phi, reason)
   }
 
-  class Function(name: String, post: Pred, env: Scope, entry: State, body: Stmt) {
+  class Function(name: String, post: Pred, sig: Scope, env: Scope, entry: State, body: Stmt) {
     def any = entry.arbitrary
 
     object $if extends Counter {
@@ -178,8 +184,13 @@ class Unit(stmts: List[Stmt]) {
       clause(st, cond, reason)
     }
 
-    def now(pred: Pred, st: State, res: Pure, reason: String) {
-      val cond = pred(st(env.names), res)
+    def result(pred: Pred, st: State, reason: String) {
+      val cond = pred(st(sig.names))
+      clause(st, cond, reason)
+    }
+
+    def result(pred: Pred, st: State, res: Pure, reason: String) {
+      val cond = pred(st(sig.names), res)
       clause(st, cond, reason)
     }
 
@@ -279,6 +290,12 @@ class Unit(stmts: List[Stmt]) {
         case Group(stmts) =>
           local(stmts, st0)
 
+        case Assume(Id(name), expr) =>
+          val (_expr, st1) = rval(expr, st0)
+          val eq = Eq(Var(name), _expr)
+          val st2 = st1 and eq
+          Some(st2)
+
         case Atomic(None) =>
           Some(st0)
 
@@ -287,12 +304,12 @@ class Unit(stmts: List[Stmt]) {
           Some(st1)
 
         case Return(None) =>
-          now(post, st0, "return " + name)
+          result(post, st0, "return " + name)
           None
 
         case Return(Some(res)) =>
           val (_res, st1) = rval(res, st0)
-          now(post, st0, _res, "return " + name)
+          result(post, st0, _res, "return " + name)
           None
 
         case Label(label) =>
@@ -388,8 +405,8 @@ class Unit(stmts: List[Stmt]) {
     }
   }
 
-  def truth(arg: Pure): Pure = {
-    arg !== Num(0)
+  def truth(arg: Pure): Prop = {
+    !Eq(arg, Num.zero)
   }
 
   def eval_test(expr: Expr, st: State) = {
@@ -437,7 +454,7 @@ class Unit(stmts: List[Stmt]) {
         binop(op, _arg1, _arg2)
 
       case Question(test, left, right) =>
-        val _test = eval_test(test, st)
+        val _test = eval(test, st)
         val _left = eval(left, st)
         val _right = eval(right, st)
         _test ? (_left, _right)
@@ -447,7 +464,7 @@ class Unit(stmts: List[Stmt]) {
     }
   }
 
-  def rval_test(expr: Expr, st0: State): (Pure, State) = {
+  def rval_test(expr: Expr, st0: State): (Prop, State) = {
     val (_res, st1) = rval(expr, st0)
     (truth(_res), st1)
   }
@@ -536,13 +553,13 @@ class Unit(stmts: List[Stmt]) {
 
       // don't fork if the rhs has no side effects
       case BinOp("||", arg1, arg2) if !Expr.hasEffects(arg2) =>
-        val (_arg1, st1) = rval_test(arg1, st0)
-        val (_arg2, st2) = rval_test(arg2, st1)
+        val (_arg1, st1) = rval(arg1, st0)
+        val (_arg2, st2) = rval(arg2, st1)
         (_arg1 or _arg2, st2)
 
       case BinOp("&&", arg1, arg2) if !Expr.hasEffects(arg2) =>
-        val (_arg1, st1) = rval_test(arg1, st0)
-        val (_arg2, st2) = rval_test(arg2, st1)
+        val (_arg1, st1) = rval(arg1, st0)
+        val (_arg2, st2) = rval(arg2, st1)
         (_arg1 and _arg2, st2)
 
       /*

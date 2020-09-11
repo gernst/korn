@@ -411,7 +411,7 @@ object Stmt {
         val formal_ = Formal(typ, name_)
         val init_ = init rename re0
         // (List(formal_), id_ := init_, re0 + (name -> name_))
-        (List(formal_), Atomic.assume(BinOp("==", id_, init_)), re0 + (name -> name_))
+        (List(formal_), Assume(id_, init_), re0 + (name -> name_))
     }
 }
 
@@ -435,7 +435,7 @@ case class Atomic(expr: Option[Expr]) extends Stmt {
 
 object Atomic {
   val none = Atomic(None)
-  def assume(expr: Expr) = Atomic(Some(__VERIFIER.assume(expr)))
+  // def assume(expr: Expr) = Atomic(Some(__VERIFIER.assume(expr)))
 }
 
 case class Label(label: String) extends Stmt
@@ -451,6 +451,8 @@ case object Break extends Stmt {
 case object Continue extends Stmt {
   def self = this
 }
+
+case class Assume(id: Id, expr: Expr) extends Stmt
 
 case class Return(expr: Option[Expr]) extends Stmt {
   def this(expr: Expr) = this(Some(expr))
