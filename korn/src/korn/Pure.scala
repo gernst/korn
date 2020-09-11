@@ -157,3 +157,35 @@ case class App(fun: String, args: List[Pure]) extends Pure {
     else sexpr(fun :: args)
   }
 }
+
+sealed trait Prop {
+  def free: Set[Var]
+}
+
+case class Eq(left: Pure, right: Pure) extends Prop {
+  def free = left.free ++ right.free
+}
+
+case class In(pred: String, args: List[Pure]) extends Prop {
+  def free = Set(args flatMap (_.free): _*)
+}
+
+case class Not(arg: Prop) extends Prop {
+  def free = arg.free
+}
+
+case class And(arg1: Prop, arg2: Prop) extends Prop {
+  def free = arg1.free ++ arg2.free
+}
+
+case class Or(arg1: Prop, arg2: Prop) extends Prop {
+  def free = arg1.free ++ arg2.free
+}
+
+case class Imp(arg1: Prop, arg2: Prop) extends Prop {
+  def free = arg1.free ++ arg2.free
+}
+
+case class Eqv(arg1: Prop, arg2: Prop) extends Prop {
+  def free = arg1.free ++ arg2.free
+}
