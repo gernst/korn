@@ -65,12 +65,14 @@ object Main {
   def print(unit: Unit) {
     println(sexpr("set-logic", "HORN"))
     println(sexpr("set-option", ":produce-models", "true"))
+    println()
 
     for (pred <- unit.preds) {
       val Pred(name, args) = pred
       val defn = sexpr("declare-fun", name, sexpr(args), "Bool")
       println(defn)
     }
+    println()
 
     for (clause <- unit.clauses) {
       val Clause(_, path, head, reason) = clause
@@ -83,7 +85,10 @@ object Main {
         phi = sexpr("forall", bind(bound), phi)
 
       val assrt = sexpr("assert", phi)
+
+      println("; " + reason)
       println(assrt)
+      println()
     }
 
     println(sexpr("check-sat"))

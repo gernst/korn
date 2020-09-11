@@ -6,6 +6,9 @@ KORN_JAVA 	= korn/src/korn/Parser.java \
               korn/src/korn/Scanner.java
 KORN_SCALA	= $(shell find korn/src -iname "*.scala")
 
+KORN_C      = $(shell find examples -iname "*.c")
+KORN_SMT    = $(KORN_C:.c=.smt2)
+
 BEAVER = ./beaver
 JFLEX  = ./jflex
 
@@ -14,10 +17,9 @@ KORN_JAR = out/korn/jar/dest/out.jar
 KORN_LAUNCHER = out/korn/launcher/dest/run
 KORN_SH  = ./korn.sh
 
-all: $(KORN_JAR) $(KORN_SH)
+all: $(KORN_JAR) $(KORN_SH) $(KORN_SMT)
 
 parser: $(KORN_JAVA)
-
 
 clean:
 	$(MILL) clean
@@ -48,3 +50,7 @@ $(KORN_SH): $(KORN_LAUNCHER)
 
 %.java: %.flex
 	$(JFLEX) -nobak $^
+
+%.smt2: %.c $(KORN_JAR) $(KORN_SH)
+	@echo $@
+	$(KORN_SH) $< > $@

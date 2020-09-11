@@ -40,7 +40,7 @@ sealed trait Pure extends Pure.term {
   def >=(that: Pure) = App(">=", this, that)
   def >(that: Pure) = App(">", this, that)
 
-  def unary_!() = ??? // App("not", this)
+  def unary_!() = App("not", this)
   def and(that: Pure) = App("and", this, that)
   def or(that: Pure) = App("or", this, that)
   def ==>(that: Pure) = App("=>", this, that)

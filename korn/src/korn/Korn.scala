@@ -53,7 +53,7 @@ class Unit(stmts: List[Stmt]) {
 
   /** collected predicates and clauses */
   val pres = mutable.Map[String, Pred]()
-  val posts = mutable.Map[String, Pred]()
+  val posts = mutable.Map[String, (Pred, Boolean)]()
 
   var preds = mutable.Set[Pred]()
   val clauses = mutable.Buffer[Clause]()
@@ -127,16 +127,16 @@ class Unit(stmts: List[Stmt]) {
 
     if (_ret != null) {
       pres += (name -> newPred(pre, _args))
-      posts += (name -> newPred(post, _args ++ List(_ret)))
+      posts += (name -> (newPred(post, _args ++ List(_ret)), true))
     } else {
       pres += (name -> newPred(pre, _args))
-      posts += (name -> newPred(post, _args))
+      posts += (name -> (newPred(post, _args), false))
     }
   }
 
   def define(name: String, params: List[Formal], body: Stmt) {
     val pre = pres(name)
-    val post = posts(name)
+    val (post, hasResult) = posts(name)
     val (locals, stmt) = Stmt.norm(body)
 
     val names1 = params map (_.name)
@@ -154,14 +154,13 @@ class Unit(stmts: List[Stmt]) {
     val path = List(pre(sig.vars))
     val state = State(path, store)
 
-    object define extends Function(name, post, sig, env, state, stmt)
+    object define extends Function(name, post, hasResult, sig, env, state, stmt)
 
-    if(name == "main") {
-        val scope = (names1 zip types1)
-        val init = Clause(scope, Nil, pre(sig.vars), "main")
-        clauses += init
+    if (name == "main") {
+      val scope = (names1 zip types1)
+      val init = Clause(scope, Nil, pre(sig.vars), "main")
+      clauses += init
     }
-
 
     define.run()
   }
@@ -285,11 +284,22 @@ class Unit(stmts: List[Stmt]) {
     }
   }
 
-  class Function(name: String, post: Pred, sig: Scope, env: Scope, entry: State, body: Stmt) {
+  class Function(
+      name: String,
+      post: Pred,
+      hasResult: Boolean,
+      sig: Scope,
+      env: Scope,
+      entry: State,
+      body: Stmt) {
     def any = entry.arbitrary
 
     def clause(st: State, phi: Pure, reason: String) {
       clauses += Clause(env.pairs, st.path, phi, reason)
+    }
+
+    def goal(st: State, phi: Pure, reason: String) {
+      clauses += Clause.query(env.pairs, st.path, phi, reason)
     }
 
     object $if extends Counter {
@@ -304,7 +314,10 @@ class Unit(stmts: List[Stmt]) {
       val out = local(body, entry)
 
       for (exit <- out) {
-        now(post, exit, "post " + name)
+        if (hasResult)
+          result(post, exit, Num.zero, "post " + name)
+        else
+          result(post, exit, "post " + name)
       }
     }
 
@@ -435,8 +448,13 @@ class Unit(stmts: List[Stmt]) {
 
         case Atomic(Some(stdlib.assert(phi))) =>
           val (_phi, st1) = rval_test(phi, st0)
-          clause(st0, _phi, "assert " + _phi)
+          goal(st0, _phi, "assert " + _phi)
           Some(st1)
+
+        case Atomic(Some(stdlib.assume(phi))) =>
+          val (_phi, st1) = rval_test(phi, st0)
+          val st2 = st1 and _phi
+          Some(st2)
 
         case Atomic(Some(expr)) =>
           val (_, st1) = rval(expr, st0)
@@ -684,17 +702,16 @@ class Unit(stmts: List[Stmt]) {
 
         case expr @ FunCall(name, args) =>
           val pre = pres(name)
-          val post = posts(name)
+          val (post, hasReturn) = posts(name)
           val (ret, _) = funs(name)
 
           val (_in, st1) = rvals(args, st0)
 
-          val (_ret, _out) = ret match {
-            case Type._void =>
-              (null, List())
-            case _ =>
-              var x = Var.fresh("$result")
-              (x, List(x))
+          val (_ret, _out) = if (hasReturn) {
+            var x = Var.fresh("$result")
+            (x, List(x))
+          } else {
+            (null, List())
           }
 
           // XXX: need to return the modifed heap

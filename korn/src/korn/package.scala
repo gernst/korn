@@ -11,6 +11,7 @@ package object korn {
   val True = App("true")
 
   object stdlib {
+    object assume extends FunCall.unary("assume")
     object assert extends FunCall.unary("assert")
     object malloc extends FunCall.unary("malloc")
   }
@@ -19,6 +20,10 @@ package object korn {
     object error extends FunCall.nullary("__VERIFIER_error")
     object nondet_int extends FunCall.nullary("__VERIFIER_nondet_int")
     object assume extends FunCall.unary("__VERIFIER_assume")
+  }
+
+  def log(msg: String) = {
+    System.err.println(msg)
   }
 
   def error(msg: => String) = {
