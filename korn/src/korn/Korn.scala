@@ -139,7 +139,13 @@ class Unit(stmts: List[Stmt]) {
     val _args = resolve(args)
     val _ret = resolve(ret)
 
-    if (!known(name)) {
+    if (name == "main") {
+      if (_ret != null) {
+        posts += (name -> (newPred(post, _args ++ List(_ret)), Some(_ret)))
+      } else {
+        posts += (name -> (newPred(post, _args), None))
+      }
+    } else if (!known(name)) {
       if (_ret != null) {
         pres += (name -> newPred(pre, _args))
         posts += (name -> (newPred(post, _args ++ List(_ret)), Some(_ret)))
@@ -151,8 +157,6 @@ class Unit(stmts: List[Stmt]) {
   }
 
   def define(name: String, params: List[Formal], body: Stmt) {
-    val pre = pres(name)
-    val (post, ret) = posts(name)
     val (locals, stmt) = Stmt.norm(body)
 
     if (Main.debug)
@@ -170,19 +174,19 @@ class Unit(stmts: List[Stmt]) {
     val sig = Scope(names1, types1)
     val env = Scope(names, types)
 
-    val path = List(pre(sig.vars))
-    val entry = State(path, Store(names, env.vars))
+    val entry = if (name == "main") {
+      State(Nil, Store(names, env.vars))
+    } else {
+      val pre = pres(name)
+      val phi = pre(sig.vars)
+      State(List(phi), Store(names, env.vars))
+    }
 
     val exit = State(Nil, Store(names, env.vars map (_.prime)))
 
+    val (post, ret) = posts(name)
+
     object define extends Function(name, post, ret, sig, env, entry, exit, stmt)
-
-    if (name == "main") {
-      val scope = Vars(names1, types1)
-      val init = Clause(Nil, pre(sig.vars), "main entry")
-      clauses += init
-    }
-
     define.run()
   }
 
@@ -212,16 +216,18 @@ class Unit(stmts: List[Stmt]) {
 
   def truth(arg: Pure): Prop = {
     arg match {
-      case Num(value)           => if (value == 0) False else True
-      case Pure._eq(arg1, arg2) => Eq(arg1, arg2)
-      case Pure.not(arg1)       => !truth(arg1)
-      case Pure.and(arg1, arg2) => truth(arg1) and truth(arg2)
-      case Pure.or(arg1, arg2)  => truth(arg1) or truth(arg2)
-      case Pure.lt(arg1, arg2)  => Prop.lt(arg1, arg2)
-      case Pure.le(arg1, arg2)  => Prop.le(arg1, arg2)
-      case Pure.gt(arg1, arg2)  => Prop.gt(arg1, arg2)
-      case Pure.ge(arg1, arg2)  => Prop.ge(arg1, arg2)
-      case _                    => !Eq(arg, Num.zero)
+      case Num(value)                   => if (value == 0) False else True
+      case Pure._eq(arg1, arg2)         => Eq(arg1, arg2)
+      case Pure.not(arg1)               => !truth(arg1)
+      case Pure.and(arg1, arg2)         => truth(arg1) and truth(arg2)
+      case Pure.or(arg1, arg2)          => truth(arg1) or truth(arg2)
+      case Pure.lt(arg1, arg2)          => Prop.lt(arg1, arg2)
+      case Pure.le(arg1, arg2)          => Prop.le(arg1, arg2)
+      case Pure.gt(arg1, arg2)          => Prop.gt(arg1, arg2)
+      case Pure.ge(arg1, arg2)          => Prop.ge(arg1, arg2)
+      case Ite(test, Num.one, Num.zero) => test
+      case Ite(test, Num.zero, Num.one) => !test
+      case _                            => !Eq(arg, Num.zero)
     }
   }
 
@@ -717,15 +723,15 @@ class Unit(stmts: List[Stmt]) {
           (_rhs, st1)
 
         // don't fork if the rhs has no side effects
-        /* case BinOp("||", arg1, arg2) if !Expr.hasEffects(arg2) =>
+        case BinOp("||", arg1, arg2) if !Expr.hasEffects(arg2) =>
           val (_arg1, st1) = rval_test(arg1, st0)
           val (_arg2, st2) = rval_test(arg2, st1)
-          (_arg1 or _arg2, st2)
+          (bool(_arg1 or _arg2), st2)
 
         case BinOp("&&", arg1, arg2) if !Expr.hasEffects(arg2) =>
           val (_arg1, st1) = rval_test(arg1, st0)
           val (_arg2, st2) = rval_test(arg2, st1)
-          (_arg1 and _arg2, st2) */
+          (bool(_arg1 and _arg2), st2)
 
         /*
       // shortcut evaluation yields two states
