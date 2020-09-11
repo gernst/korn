@@ -7,11 +7,10 @@ package object korn {
     }
   }
 
-  val False = App("false")
-  val True = App("true")
+  val False = App("false", Nil)
+  val True = App("true", Nil)
 
   val known = Set(
-    "main",
     "__VERIFIER_nondet_int",
     "__VERIFIER_assume",
     "__VERIFIER_error"

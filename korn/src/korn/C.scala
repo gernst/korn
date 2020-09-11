@@ -69,8 +69,12 @@ sealed trait Expr {
 
 object Expr {
   def comma(exprs: List[Expr]) = {
-    // Note: comma is associative
-    exprs.reduce(BinOp(",", _, _))
+    if (exprs.isEmpty) {
+      None
+    } else {
+      // Note: comma is associative
+      Some(exprs.reduce(BinOp(",", _, _)))
+    }
   }
 
   def hasEffects(expr: Expr): Boolean = {
@@ -393,11 +397,11 @@ object Stmt {
 
       case For(vars, init, test, inc, body) =>
         val init_ = Expr.comma(init)
-        val test_ = Expr.comma(test)
+        val test_ = Expr.comma(test) getOrElse Lit(1)
         val inc_ = Expr.comma(inc)
-        val body_ = Block(List(body, Atomic(Some(inc_))))
+        val body_ = Block(List(body, Atomic(inc_)))
         val loop_ = While(test_, body_)
-        val stmt_ = Block(List(Group(vars), Atomic(Some(init_)), loop_))
+        val stmt_ = Block(List(Group(vars), Atomic(init_), loop_))
         norm(stmt_, re0)
 
       case VarDef(Formal(typ, name), None) =>

@@ -4,7 +4,7 @@ import scala.collection.mutable
 
 case class Clause(scope: List[(String, Sort)], path: List[Pure], head: Pure, reason: String) {
   def free = head.free ++ path.flatMap(_.free)
-  def bound = scope filter { case (name, _) => scope exists (_._1 == name) }
+  def bound = scope filter { case (name, _) => free exists (_.name == name) }
   override def toString = path.mkString(", ") + " ==> " + head + " # " + reason
 }
 
@@ -125,12 +125,14 @@ class Unit(stmts: List[Stmt]) {
     val _args = resolve(args)
     val _ret = resolve(ret)
 
-    if (_ret != null) {
-      pres += (name -> newPred(pre, _args))
-      posts += (name -> (newPred(post, _args ++ List(_ret)), true))
-    } else {
-      pres += (name -> newPred(pre, _args))
-      posts += (name -> (newPred(post, _args), false))
+    if (!known(name)) {
+      if (_ret != null) {
+        pres += (name -> newPred(pre, _args))
+        posts += (name -> (newPred(post, _args ++ List(_ret)), true))
+      } else {
+        pres += (name -> newPred(pre, _args))
+        posts += (name -> (newPred(post, _args), false))
+      }
     }
   }
 
@@ -138,6 +140,9 @@ class Unit(stmts: List[Stmt]) {
     val pre = pres(name)
     val (post, hasResult) = posts(name)
     val (locals, stmt) = Stmt.norm(body)
+
+    if (Main.debug)
+      println(stmt)
 
     val names1 = params map (_.name)
     val types1 = resolve(params map (_.typ))
@@ -183,11 +188,53 @@ class Unit(stmts: List[Stmt]) {
     arg1 select arg2
   }
 
+  def not(arg: Pure) = {
+    arg match {
+      case Pure.not(arg) => truth(arg)
+      case _             => truth(arg) ? (Num.zero, Num.one)
+    }
+  }
+
+  def ite(test: Pure, left: Pure, right: Pure) = {
+    (test, left, right) match {
+      case _ => truth(test) ? (left, right)
+    }
+  }
+
+  def and(arg1: Pure, arg2: Pure) = {
+    (arg1, arg2) match {
+      case _ =>
+        truth(arg1) and truth(arg2)
+    }
+  }
+
+  def or(arg1: Pure, arg2: Pure) = {
+    (arg1, arg2) match {
+      case _ =>
+        truth(arg1) or truth(arg2)
+    }
+  }
+
+  def truth(arg: Pure): Pure = {
+    arg match {
+      case Num(value)           => if (value == 0) False else True
+      case Pure._eq(arg1, arg2) => arg1 === arg2
+      case Pure.not(arg1)       => !truth(arg1)
+      case Pure.and(arg1, arg2) => truth(arg1) and truth(arg2)
+      case Pure.or(arg1, arg2)  => truth(arg1) or truth(arg2)
+      case Pure.lt(arg1, arg2)  => arg
+      case Pure.le(arg1, arg2)  => arg
+      case Pure.gt(arg1, arg2)  => arg
+      case Pure.ge(arg1, arg2)  => arg
+      case _                    => arg !== Num.zero
+    }
+  }
+
   def preop(op: String, arg: Pure): Pure = {
     op match {
       case "+" => arg
       case "-" => -arg
-      case "!" => !arg
+      case "!" => not(arg)
     }
   }
 
@@ -204,33 +251,6 @@ class Unit(stmts: List[Stmt]) {
       case "<=" => arg1 <= arg2
       case ">"  => arg1 > arg2
       case ">=" => arg1 >= arg2
-    }
-  }
-
-  val relational = Set("<", "<=", ">", ">=")
-
-  def truth(arg: Pure): Pure = {
-    arg match {
-      case Num(value) =>
-        if (value == 0) False else True
-
-      case App("=", List(arg1, arg2)) =>
-        arg1 === arg2
-
-      case App("!", List(arg1)) =>
-        !truth(arg1)
-
-      case App("and", List(arg1, arg2)) =>
-        truth(arg1) and truth(arg2)
-
-      case App("or", List(arg1, arg2)) =>
-        truth(arg1) or truth(arg2)
-
-      case App(op, List(arg1, arg2)) if (relational contains op) =>
-        arg
-
-      case _ =>
-        arg !== Num.zero
     }
   }
 
@@ -730,6 +750,10 @@ class Unit(stmts: List[Stmt]) {
           val (_cond, st1) = rval_test(cond, st0)
           (null, st1 and _cond)
 
+        case __VERIFIER.error() =>
+          clause(st0, False, "error")
+          (null, st0)
+
         case expr @ FunCall(name, args) =>
           val pre = pres(name)
           val (post, hasReturn) = posts(name)
@@ -753,7 +777,7 @@ class Unit(stmts: List[Stmt]) {
           (_ret, st1 and _call)
 
         case _ =>
-          error("cannot evaluate: " + expr)
+          error("cannot compute: " + expr)
       }
     }
   }

@@ -20,36 +20,105 @@ object Sort {
 }
 
 sealed trait Pure extends Pure.term {
-  def ?(left: Pure, right: Pure) = App("ite", this, left, right)
+  def ?(left: Pure, right: Pure) = Pure.ite(this, left, right)
 
-  def ^(that: Pure) = App("exp", this, that)
-  def *(that: Pure) = App("*", this, that)
-  def /(that: Pure) = App("div", this, that)
-  def %(that: Pure) = App("mod", this, that)
+  def ^(that: Pure) = Pure.exp(this, that)
+  def *(that: Pure) = Pure.times(this, that)
+  def /(that: Pure) = Pure.divBy(this, that)
+  def %(that: Pure) = Pure.mod(this, that)
 
   def unary_+ = this
-  def unary_- = App("-", this)
-  def +(that: Pure) = App("+", this, that)
-  def -(that: Pure) = App("-", this, that)
+  def unary_- = Pure.uminus(this)
+  def +(that: Pure) = Pure.plus(this, that)
+  def -(that: Pure) = Pure.minus(this, that)
 
-  def ===(that: Pure) = App("=", this, that)
+  def ===(that: Pure) = Pure._eq(this, that)
   def !==(that: Pure) = !(this === that)
 
-  def <=(that: Pure) = App("<=", this, that)
-  def <(that: Pure) = App("<", this, that)
-  def >=(that: Pure) = App(">=", this, that)
-  def >(that: Pure) = App(">", this, that)
+  def <=(that: Pure) = Pure.le(this, that)
+  def <(that: Pure) = Pure.lt(this, that)
+  def >=(that: Pure) = Pure.ge(this, that)
+  def >(that: Pure) = Pure.gt(this, that)
 
-  def unary_!() = App("not", this)
-  def and(that: Pure) = App("and", this, that)
-  def or(that: Pure) = App("or", this, that)
-  def ==>(that: Pure) = App("=>", this, that)
+  def unary_!() = Pure.not(this)
+  def and(that: Pure) = Pure.and(this, that)
+  def or(that: Pure) = Pure.or(this, that)
+  def ==>(that: Pure) = Pure.imp(this, that)
 
-  def select(index: Pure) = App("select", this, index)
-  def store(index: Pure, value: Pure) = App("store", this, index, value)
+  def select(index: Pure) = Pure.select(this, index)
+  def store(index: Pure, value: Pure) = Pure.store(this, index, value)
 }
 
-object Pure extends Counter with Alpha[Pure, Var] {}
+object Pure extends Counter with Alpha[Pure, Var] {
+  object ite extends ternary("ite")
+
+  object exp extends binary("expr")
+  object times extends binary("*")
+  object divBy extends binary("div")
+  object mod extends binary("mod")
+
+  object uminus extends unary("-")
+  object plus extends binary("+")
+  object minus extends binary("-")
+
+  object _eq extends binary("=")
+  object lt extends binary("<")
+  object le extends binary("<=")
+  object gt extends binary(">")
+  object ge extends binary(">=")
+
+  object not extends unary("not")
+  object and extends binary("and")
+  object or extends binary("or")
+  object imp extends binary("=>")
+
+  object select extends binary("select")
+  object store extends ternary("store")
+
+  class unary(val fun: String) {
+    def unapply(pure: Pure) =
+      pure match {
+        case App(`fun`, List(arg)) => Some(arg)
+        case _                     => None
+      }
+
+    def apply(arg: Pure) = {
+      App(fun, List(arg))
+    }
+  }
+
+  class binary(val fun: String) {
+    def unapply(pure: Pure) =
+      pure match {
+        case App(`fun`, List(arg1, arg2)) => Some((arg1, arg2))
+        case _                            => None
+      }
+
+    def apply(arg1: Pure, arg2: Pure) = {
+      App(fun, List(arg1, arg2))
+    }
+
+    def flatten(expr: Pure): List[Pure] =
+      expr match {
+        case App(`fun`, List(arg1, arg2)) =>
+          flatten(arg1) ++ flatten(arg2)
+        case _ =>
+          List(expr)
+      }
+  }
+
+  class ternary(val fun: String) {
+    def unapply(pure: Pure) =
+      pure match {
+        case App(`fun`, List(arg1, arg2, arg3)) => Some((arg1, arg2, arg3))
+        case _                                  => None
+      }
+
+    def apply(arg1: Pure, arg2: Pure, arg3: Pure): Pure = {
+      App(fun, List(arg1, arg2, arg3))
+    }
+  }
+}
 
 case class Num(value: Int) extends Pure {
   def free = Set()
@@ -60,6 +129,7 @@ case class Num(value: Int) extends Pure {
 
 object Num {
   val zero = Num(0)
+  val one = Num(1)
 }
 
 case class Var(name: String, index: Option[Int] = None) extends Pure with Pure.x {
@@ -83,25 +153,7 @@ case class App(fun: String, args: List[Pure]) extends Pure {
   def subst(su: Map[Var, Pure]) = App(fun, args map (_ subst su))
 
   override def toString = {
-    if(args.isEmpty) fun
+    if (args.isEmpty) fun
     else sexpr(fun :: args)
-  }
-}
-
-object App {
-  def apply(fun: String): App = {
-    App(fun, Nil)
-  }
-
-  def apply(fun: String, arg1: Pure): App = {
-    App(fun, List(arg1))
-  }
-
-  def apply(fun: String, arg1: Pure, arg2: Pure): App = {
-    App(fun, List(arg1, arg2))
-  }
-
-  def apply(fun: String, arg1: Pure, arg2: Pure, arg3: Pure): App = {
-    App(fun, List(arg1, arg2, arg3))
   }
 }

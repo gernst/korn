@@ -8,7 +8,7 @@ import scala.annotation.tailrec
 
 object Main {
   var dry = false
-  var quiet = false
+  var debug = false
 
   var files = mutable.Buffer[String]()
 
@@ -19,8 +19,8 @@ object Main {
       case "-dry" :: rest =>
         dry = true
         configure(rest)
-      case "-quiet" :: rest =>
-        quiet = true
+      case "-debug" :: rest =>
+        debug = true
         configure(rest)
       case file :: rest =>
         files += file
@@ -67,7 +67,7 @@ object Main {
     println(sexpr("set-option", ":produce-models", "true"))
     println()
 
-    for (pred <- unit.preds if !known(pred.name)) {
+    for (pred <- unit.preds) {
       val Pred(name, args) = pred
       val defn = sexpr("declare-fun", name, sexpr(args), "Bool")
       println(defn)
