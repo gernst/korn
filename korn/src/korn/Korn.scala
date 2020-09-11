@@ -13,16 +13,30 @@ object Clause {
   }
 }
 
+case class Pred(name: String, types: List[Sort]) {
+  def apply(args: List[Pure]) = App(name, args)
+  def apply(args: List[Pure], res: Pure) = App(name, args ++ List(res))
+}
+
 case class State(path: List[Pure], store: Store) {
-  def ==>(that: Pure, reason: String) = Clause(path, that, reason)
+  def arbitrary = State(Nil, store)
   def and(that: Pure) = State(that :: path, store)
+  // def just(that: Pure) = State(List(that), store)
 
   def contains(name: String) = store contains name
   def apply(name: String) = store(name)
+  def apply(names: List[String]) = names map store
   def +(that: (String, Pure)) = State(path, store + that)
 }
 
-class Korn(stmts: List[Stmt]) {
+case class Scope(names: List[String], types: List[Sort]) {
+  def ++(that: Scope) = Scope(this.names ++ that.names, this.types ++ that.types)
+  def vars = names map (Var(_))
+
+  def pred(name: String) = Pred(name, types)
+}
+
+class Unit(stmts: List[Stmt]) {
 
   /** global data types */
   val typedefs = mutable.Map[String, Type]()
@@ -38,8 +52,8 @@ class Korn(stmts: List[Stmt]) {
   val consts = mutable.Map[String, Pure]()
 
   /** collected predicates and clauses */
-  val preds = mutable.Map[String, (Fun, Fun)]()
-  val decls = mutable.Buffer[(Fun, List[Sort])]()
+  val pres = mutable.Map[String, Pred]()
+  val posts = mutable.Map[String, Pred]()
   val clauses = mutable.Buffer[Clause]()
 
   /** symbolic value of global variables */
@@ -88,7 +102,7 @@ class Korn(stmts: List[Stmt]) {
       case FunDef(ret, name, formals, body) =>
         val types = formals map (_.typ)
         declare(name, ret, types)
-        define(name, ret, formals, body)
+        define(name, formals, body)
       case _ =>
         error("unsupported global statement: " + stmt)
     }
@@ -97,25 +111,201 @@ class Korn(stmts: List[Stmt]) {
   def declare(name: String, ret: Type, args: List[Type]) {
     funs += (name -> (ret, args))
 
-    val pre = Fun("$" + name + "_pre")
-    val fun = Fun("$" + name)
-    preds += (name -> (pre, fun))
+    val pre = "$" + name + "_pre"
+    val post = "$" + name
 
     val _args = resolve(args)
     val _ret = resolve(ret)
 
     if (_ret != null) {
-      decls += ((pre, _args))
-      decls += ((fun, _args))
+      pres += (name -> Pred(pre, _args))
+      posts += (name -> Pred(pre, _args))
     } else {
-      decls += ((pre, _args))
-      decls += ((fun, _args ++ List(_ret)))
+      pres += (name -> Pred(pre, _args))
+      posts += (name -> Pred(pre, _args ++ List(_ret)))
     }
   }
 
-  def define(name: String, ret: Type, params: List[Formal], body: Stmt) {
-    val (pre, fun) = preds(name)
+  def define(name: String, params: List[Formal], body: Stmt) {
+    val pre = pres(name)
+    val post = posts(name)
     val (locals, stmt) = Stmt.norm(body)
+
+    val formals = params ++ locals
+    val names = formals map (_.name)
+    val types = resolve(formals map (_.typ))
+
+    val env = Scope(names, types)
+    val vars = env.vars
+    val store = Store(names, vars)
+    val path = List(pre(vars))
+    val state = State(path, store)
+
+    object define extends Function(name, post, env, state, stmt)
+
+    define.run()
+  }
+
+  def clause(st: State, phi: Pure, reason: String) {
+    clauses += Clause(st.path, phi, reason)
+  }
+
+  class Function(name: String, post: Pred, env: Scope, entry: State, body: Stmt) {
+    def any = entry.arbitrary
+
+    object $if extends Counter {
+      def newLabel = "$if" + next
+    }
+
+    object $inv extends Counter {
+      def newLabel = "$inv" + next
+    }
+
+    def run() {
+      val out = local(body, entry)
+
+      for (exit <- out) {
+        now(post, exit, "post " + name)
+      }
+    }
+
+    def here(label: String) = {
+      env.pred(label)
+    }
+
+    def now(pred: Pred, st: State, reason: String) {
+      val cond = pred(st(env.names))
+      clause(st, cond, reason)
+    }
+
+    def now(pred: Pred, st: State, res: Pure, reason: String) {
+      val cond = pred(st(env.names), res)
+      clause(st, cond, reason)
+    }
+
+    def from(pred: Pred) = {
+      val st = any
+      val cond = pred(st(env.names))
+      st and cond
+    }
+
+    def generalize(pred: Pred, st: State, reason: String) = {
+      now(pred, st, reason)
+      from(pred)
+    }
+
+    def join(
+        st1: Option[State],
+        reason1: String,
+        st2: Option[State],
+        reason2: String): Option[State] = {
+      (st1, st2) match {
+        case (None, None) =>
+          None
+        case (Some(st1), None) =>
+          Some(st1)
+        case (None, Some(st2)) =>
+          Some(st2)
+        case (Some(st1), Some(st2)) =>
+          val pred = here($if.newLabel)
+          now(pred, st1, reason1)
+          now(pred, st2, reason2)
+          val st = from(pred)
+          Some(st)
+      }
+    }
+
+    def local(stmts: List[Stmt], st0: Option[State]): Option[State] = {
+      st0 match {
+        case None      => local(stmts)
+        case Some(st0) => local(stmts, st0)
+      }
+    }
+
+    def local(stmt: Stmt, st0: Option[State]): Option[State] = {
+      st0 match {
+        case None      => local(stmt)
+        case Some(st0) => local(stmt, st0)
+      }
+    }
+
+    def local(stmts: List[Stmt]): Option[State] = {
+      stmts match {
+        case Nil =>
+          None
+        case first :: rest =>
+          val st1 = local(first)
+          val st2 = local(rest, st1)
+          st2
+      }
+    }
+
+    def local(stmts: List[Stmt], st0: State): Option[State] = {
+      stmts match {
+        case Nil =>
+          Some(st0)
+        case first :: rest =>
+          val st1 = local(first, st0)
+          val st2 = local(rest, st1)
+          st2
+      }
+    }
+
+    def local(stmt: Stmt): Option[State] = {
+      stmt match {
+        case Group(stmts) =>
+          local(stmts)
+
+        case Label(label) =>
+          val pred = here(label)
+          val st = from(pred)
+          Some(st)
+
+        case If(test, left, right) =>
+          val st1 = local(left)
+          val st2 = local(right)
+          join(st1, "if then", st2, "if else")
+
+        case While(test, body) =>
+          local(body)
+
+        case _ =>
+          None
+      }
+    }
+
+    def local(stmt: Stmt, st0: State): Option[State] = {
+      stmt match {
+        case Group(stmts) =>
+          local(stmts, st0)
+
+        case Atomic(None) =>
+          Some(st0)
+
+        case Atomic(Some(expr)) =>
+          val (_, st1) = rval(expr, st0)
+          Some(st1)
+
+        case Return(None) =>
+          now(post, st0, "return " + name)
+          None
+
+        case Return(Some(res)) =>
+          val (_res, st1) = rval(res, st0)
+          now(post, st0, _res, "return " + name)
+          None
+
+        case Label(label) =>
+          val pred = here(label)
+          val st1 = generalize(pred, st0, "generalize " + label)
+          Some(st1)
+
+        case Goto(label) =>
+          val pred = here(label)
+          now(pred, st0, "goto " + label)
+          None // successor states not immediately reachable
+      }
+    }
   }
 
   def resolve(types: List[Type]): List[Sort] = {
@@ -438,7 +628,8 @@ class Korn(stmts: List[Stmt]) {
         (null, st1 and _cond)
 
       case expr @ FunCall(name, args) =>
-        val (pre, fun) = preds(name)
+        val pre = pres(name)
+        val post = posts(name)
         val (ret, _) = funs(name)
 
         val (_in, st1) = rvals(args, st0)
@@ -452,11 +643,10 @@ class Korn(stmts: List[Stmt]) {
         }
 
         // XXX: need to return the modifed heap
-        val _pre = App(pre, _in)
-        val _call = App(fun, _in ++ _out)
+        val _pre = pre(_in)
+        val _call = post(_in ++ _out)
 
-        val safe = st1 ==> (_pre, name + " precondition")
-        clauses += safe
+        clause(st1, _pre, name + " precondition")
 
         (_ret, st1 and _call)
 

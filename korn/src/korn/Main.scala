@@ -1,6 +1,10 @@
 package korn
 
 import scala.collection.mutable
+import java.io.Reader
+import java.io.File
+import java.io.FileReader
+import scala.annotation.tailrec
 
 object Main {
   var dry = false
@@ -8,10 +12,10 @@ object Main {
 
   var files = mutable.Buffer[String]()
 
+  @tailrec
   def configure(args: List[String]) {
     args match {
       case Nil =>
-        ???
       case "-dry" :: rest =>
         dry = true
         configure(rest)
@@ -24,11 +28,32 @@ object Main {
     }
   }
 
+  def parse(path: String): List[Stmt] = {
+    parse(new FileReader(path), path)
+  }
+
+  def parse(file: File): List[Stmt] = {
+    parse(new FileReader(file), file.getPath)
+  }
+
+  def parse(reader: Reader, path: String): List[Stmt] = {
+    val scanner = new Scanner(reader)
+    val parser = new Parser()
+
+    val types = new java.util.HashSet[String]
+    scanner.types = types
+    parser.types = types
+
+    val Block(stmts) = parser parse scanner
+    stmts
+  }
+
   def run(files: List[String]) {
-    for (file <- files) {
+    for (path <- files) {
       try {
-        object korn extends Korn(???)
-        korn.run()
+        val stmts = parse(path)
+        object unit extends Unit(stmts)
+        unit.run()
       } catch {
         case e: Throwable =>
           e.printStackTrace()

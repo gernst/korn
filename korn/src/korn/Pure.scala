@@ -22,77 +22,36 @@ object Sort {
 }
 
 sealed trait Pure extends Pure.term {
-  def ?(left: Pure, right: Pure) = App(Fun.ite, this, left, right)
+  def ?(left: Pure, right: Pure) = App("ite", this, left, right)
 
-  def ^(that: Pure) = App(Fun.exp, this, that)
-  def *(that: Pure) = App(Fun.times, this, that)
-  def /(that: Pure) = App(Fun.divBy, this, that)
-  def %(that: Pure) = App(Fun.mod, this, that)
+  def ^(that: Pure) = App("exp", this, that)
+  def *(that: Pure) = App("*", this, that)
+  def /(that: Pure) = App("div", this, that)
+  def %(that: Pure) = App("mod", this, that)
 
   def unary_+ = this
-  def unary_- = App(Fun.minus, this)
-  def +(that: Pure) = App(Fun.plus, this, that)
-  def -(that: Pure) = App(Fun.minus, this, that)
+  def unary_- = App("-", this)
+  def +(that: Pure) = App("+", this, that)
+  def -(that: Pure) = App("-", this, that)
 
-  def ===(that: Pure) = App(Fun._eq, this, that)
+  def ===(that: Pure) = App("=", this, that)
   def !==(that: Pure) = !(this === that)
 
-  def <=(that: Pure) = App(Fun.le, this, that)
-  def <(that: Pure) = App(Fun.lt, this, that)
-  def >=(that: Pure) = App(Fun.ge, this, that)
-  def >(that: Pure) = App(Fun.gt, this, that)
+  def <=(that: Pure) = App("<=", this, that)
+  def <(that: Pure) = App("<", this, that)
+  def >=(that: Pure) = App(">=", this, that)
+  def >(that: Pure) = App(">", this, that)
 
-  def unary_!() = App(Fun.not, this)
-  def and(that: Pure) = App(Fun.and, this, that)
-  def or(that: Pure) = App(Fun.or, this, that)
-  def ==>(that: Pure) = App(Fun.imp, this, that)
+  def unary_!() = App("not", this)
+  def and(that: Pure) = App("and", this, that)
+  def or(that: Pure) = App("or", this, that)
+  def ==>(that: Pure) = App("=>", this, that)
 
-  def select(index: Pure) = App(Fun.select, this, index)
-  def store(index: Pure, value: Pure) = App(Fun.select, this, index, value)
+  def select(index: Pure) = App("select", this, index)
+  def store(index: Pure, value: Pure) = App("store", this, index, value)
 }
 
 object Pure extends Counter with Alpha[Pure, Var] {}
-
-case class Fun(name: String, index: Option[Int] = None) {
-  override def toString = {
-    index match {
-      case None        => name
-      case Some(index) => name + index
-    }
-  }
-}
-
-object Fun extends Counter {
-  def fresh(name: String) = Fun(name, Some(next))
-
-  val ite = Fun("ite")
-
-  def t = Fun("true")
-  def f = Fun("false")
-
-  val exp = Fun("^")
-  val times = Fun("*")
-  val divBy = Fun("/")
-  val mod = Fun("%")
-
-  val uminus = Fun("-")
-  val plus = Fun("+")
-  val minus = Fun("-")
-
-  val _eq = Fun("=")
-  val le = Fun("<=")
-  val lt = Fun("<")
-  val ge = Fun(">=")
-  val gt = Fun(">")
-
-  val not = Fun("not")
-  val and = Fun("and")
-  val or = Fun("or")
-  val imp = Fun("=>")
-
-  val select = Fun("select")
-  val store = Fun("store")
-}
 
 case class Num(value: Int) extends Pure {
   def free = Set()
@@ -115,7 +74,7 @@ object Var {
   def fresh(name: String) = Var(name, Some(Pure.next))
 }
 
-case class App(fun: Fun, args: List[Pure]) extends Pure {
+case class App(fun: String, args: List[Pure]) extends Pure {
   def free = Set(args flatMap (_.free): _*)
   def rename(re: Map[Var, Var]) = App(fun, args map (_ rename re))
   def subst(su: Map[Var, Pure]) = App(fun, args map (_ subst su))
@@ -124,19 +83,19 @@ case class App(fun: Fun, args: List[Pure]) extends Pure {
 }
 
 object App {
-  def apply(fun: Fun): App = {
+  def apply(fun: String): App = {
     App(fun, Nil)
   }
 
-  def apply(fun: Fun, arg1: Pure): App = {
+  def apply(fun: String, arg1: Pure): App = {
     App(fun, List(arg1))
   }
 
-  def apply(fun: Fun, arg1: Pure, arg2: Pure): App = {
+  def apply(fun: String, arg1: Pure, arg2: Pure): App = {
     App(fun, List(arg1, arg2))
   }
 
-  def apply(fun: Fun, arg1: Pure, arg2: Pure, arg3: Pure): App = {
+  def apply(fun: String, arg1: Pure, arg2: Pure, arg3: Pure): App = {
     App(fun, List(arg1, arg2, arg3))
   }
 }

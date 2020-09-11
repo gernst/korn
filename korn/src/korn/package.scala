@@ -1,8 +1,14 @@
 package object korn {
   type Store = Map[String, Pure]
+
+  object Store {
+    def apply(keys: List[String], values: List[Pure]) = {
+      Map(keys zip values: _*)
+    }
+  }
   
-  val False = App(Fun.f)
-  val True = App(Fun.t)
+  val False = App("fals")
+  val True = App("true")
 
   object stdlib {
     object assert extends FunCall.unary("assert")
