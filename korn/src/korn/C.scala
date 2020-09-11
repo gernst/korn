@@ -415,7 +415,7 @@ object Stmt {
         val formal_ = Formal(typ, name_)
         val init_ = init rename re0
         // (List(formal_), id_ := init_, re0 + (name -> name_))
-        (List(formal_), Assume(id_, init_), re0 + (name -> name_))
+        (List(formal_), Assume(id_, init_, typ), re0 + (name -> name_))
     }
 }
 
@@ -456,7 +456,7 @@ case object Continue extends Stmt {
   def self = this
 }
 
-case class Assume(id: Id, expr: Expr) extends Stmt
+case class Assume(id: Id, expr: Expr, typ: Type) extends Stmt
 
 case class Return(expr: Option[Expr]) extends Stmt {
   def this(expr: Expr) = this(Some(expr))

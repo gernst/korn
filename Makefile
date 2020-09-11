@@ -16,8 +16,11 @@ KORN_JAR = out/korn/jar/dest/out.jar
 
 KORN_LAUNCHER = out/korn/launcher/dest/run
 KORN_SH  = ./korn.sh
+KORN_FLAGS ?=
 
-all: $(KORN_JAR) $(KORN_SH) $(KORN_SMT)
+all: $(KORN_JAR) $(KORN_SH)
+
+examples: $(KORN_SMT)
 
 parser: $(KORN_JAVA)
 
@@ -53,4 +56,4 @@ $(KORN_SH): $(KORN_LAUNCHER)
 
 %.smt2: %.c $(KORN_JAR) $(KORN_SH)
 	@echo $@
-	$(KORN_SH) $< > $@
+	$(KORN_SH) $(KORN_FLAGS) $< > $@

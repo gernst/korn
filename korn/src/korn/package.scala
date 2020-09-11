@@ -7,8 +7,8 @@ package object korn {
     }
   }
 
-  val False = App("false", Nil)
-  val True = App("true", Nil)
+  // val False = App("false", Nil)
+  // val True = App("true", Nil)
 
   val known = Set(
     "__VERIFIER_nondet_int",
@@ -48,7 +48,7 @@ package object korn {
     a getOrElse error(msg)
   }
 
-  def sexpr(arg0: String, args: Any*) = {
+  def sexpr(arg0: Any, args: Any*) = {
     if (args.isEmpty)
       "(" + arg0 + ")"
     else

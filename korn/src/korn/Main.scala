@@ -5,12 +5,25 @@ import java.io.Reader
 import java.io.File
 import java.io.FileReader
 import scala.annotation.tailrec
+import java.io.PrintStream
 
 object Main {
   var dry = false
+  var sum = false
   var debug = false
 
   var files = mutable.Buffer[String]()
+  var out = System.out
+
+  def pipe(cmd: String*) = {
+    val builder = new ProcessBuilder(cmd: _*)
+    val proc = builder.start()
+    val in = proc.getOutputStream()
+    val out = proc.getInputStream()
+    val err = proc.getErrorStream()
+    out.transferTo(in)
+    (in, out, err)
+  }
 
   @tailrec
   def configure(args: List[String]) {
@@ -18,6 +31,12 @@ object Main {
       case Nil =>
       case "-dry" :: rest =>
         dry = true
+        configure(rest)
+      case "-sum" :: rest =>
+        sum = true
+        configure(rest)
+      case "-inv" :: rest =>
+        sum = false
         configure(rest)
       case "-debug" :: rest =>
         debug = true
@@ -54,7 +73,7 @@ object Main {
         val stmts = parse(path)
         object unit extends Unit(stmts)
         unit.run()
-        print(unit)
+        print(unit, System.out)
       } catch {
         case e: Throwable =>
           e.printStackTrace()
@@ -62,41 +81,49 @@ object Main {
     }
   }
 
-  def print(unit: Unit) {
-    println(sexpr("set-logic", "HORN"))
-    println(sexpr("set-option", ":produce-models", "true"))
-    println()
+  def print(unit: Unit, out: PrintStream) {
+    out.println(sexpr("set-logic", "HORN"))
+    out.println(sexpr("set-option", ":produce-models", "true"))
+    out.println()
 
     for (pred <- unit.preds) {
       val Pred(name, args) = pred
       val defn = sexpr("declare-fun", name, sexpr(args), "Bool")
-      println(defn)
+      out.println(defn)
     }
-    println()
+    out.println()
 
     for (clause <- unit.clauses) {
-      val Clause(_, path, head, reason) = clause
-      val bound = clause.bound
+      val Clause(path, head, reason) = clause
+      val bound = clause.free
 
-      var phi = head.toString
-      if (path.nonEmpty)
-        phi = sexpr("=>", sexpr("and" :: path), phi)
+      out.println("; " + reason)
+      out.println("(assert")
       if (bound.nonEmpty)
-        phi = sexpr("forall", bind(bound), phi)
+        out.println("  (forall " + bind(bound))
 
-      val assrt = sexpr("assert", phi)
+      if (path.nonEmpty) {
+        out.println(path.mkString("    (=> (and ", "\n             ", ")"))
+      }
 
-      println("; " + reason)
-      println(assrt)
-      println()
+      out.print("        " + head)
+
+      if (path.nonEmpty)
+        out.print(")")
+
+      if (bound.nonEmpty)
+        out.print(")")
+
+      out.println(")")
+      out.println()
     }
 
-    println(sexpr("check-sat"))
-    println(sexpr("get-model"))
+    out.println(sexpr("check-sat"))
+    out.println(sexpr("get-model"))
   }
 
-  def bind(vars: Iterable[(String, Sort)]): String = {
-    sexpr(vars map { case (name, typ) => sexpr(name, typ) })
+  def bind(vars: Iterable[Var]): String = {
+    sexpr(vars map { x => sexpr(x, x.typ) })
   }
 
   def main(args: Array[String]) {
