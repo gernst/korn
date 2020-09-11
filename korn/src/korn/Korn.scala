@@ -2,25 +2,26 @@ package korn
 
 import scala.collection.mutable
 
-case class Clause(path: List[Prop], head: Prop, reason: String) {
+case class Clause(scope: List[(String, Sort)], path: List[Pure], head: Pure, reason: String) {
   def free = head.free ++ path.flatMap(_.free)
-  override def toString = path.mkString(", ") + " ==> " + head
+  def bound = scope filter { case (name, _) => scope exists (_._1 == name) }
+  override def toString = path.mkString(", ") + " ==> " + head + " # " + reason
 }
 
 object Clause {
-  def query(path: List[Prop], head: Prop, reason: String) = {
-    Clause(!head :: path, False, reason)
+  def query(scope: List[(String, Sort)], path: List[Pure], head: Pure, reason: String) = {
+    Clause(scope, !head :: path, False, reason)
   }
 }
 
 case class Pred(name: String, types: List[Sort]) {
-  def apply(args: List[Pure]) = In(name, args)
-  def apply(args: List[Pure], res: Pure) = In(name, args ++ List(res))
+  def apply(args: List[Pure]) = App(name, args)
+  def apply(args: List[Pure], res: Pure) = App(name, args ++ List(res))
 }
 
-case class State(path: List[Prop], store: Store) {
+case class State(path: List[Pure], store: Store) {
   def arbitrary = State(Nil, store)
-  def and(that: Prop) = State(that :: path, store)
+  def and(that: Pure) = State(that :: path, store)
   // def just(that: Pure) = State(List(that), store)
 
   def contains(name: String) = store contains name
@@ -32,8 +33,7 @@ case class State(path: List[Prop], store: Store) {
 case class Scope(names: List[String], types: List[Sort]) {
   def ++(that: Scope) = Scope(this.names ++ that.names, this.types ++ that.types)
   def vars = names map (Var(_))
-
-  def pred(name: String) = Pred(name, types)
+  def pairs = (names zip types)
 }
 
 class Unit(stmts: List[Stmt]) {
@@ -54,6 +54,8 @@ class Unit(stmts: List[Stmt]) {
   /** collected predicates and clauses */
   val pres = mutable.Map[String, Pred]()
   val posts = mutable.Map[String, Pred]()
+
+  var preds = mutable.Set[Pred]()
   val clauses = mutable.Buffer[Clause]()
 
   /** symbolic value of global variables */
@@ -62,6 +64,12 @@ class Unit(stmts: List[Stmt]) {
   def run() {
     for (stmt <- stmts)
       global(stmt)
+  }
+
+  def newPred(name: String, args: List[Sort]): Pred = {
+    val res = Pred(name, args)
+    preds += res
+    res
   }
 
   def enum(cases: List[String]) = {
@@ -118,11 +126,11 @@ class Unit(stmts: List[Stmt]) {
     val _ret = resolve(ret)
 
     if (_ret != null) {
-      pres += (name -> Pred(pre, _args))
-      posts += (name -> Pred(post, _args))
+      pres += (name -> newPred(pre, _args))
+      posts += (name -> newPred(post, _args ++ List(_ret)))
     } else {
-      pres += (name -> Pred(pre, _args))
-      posts += (name -> Pred(post, _args ++ List(_ret)))
+      pres += (name -> newPred(pre, _args))
+      posts += (name -> newPred(post, _args))
     }
   }
 
@@ -142,22 +150,147 @@ class Unit(stmts: List[Stmt]) {
 
     val sig = Scope(names1, types1)
     val env = Scope(names, types)
-    val vars = env.vars
-    val store = Store(names, vars)
-    val path = List(pre(vars))
+    val store = Store(names, env.vars)
+    val path = List(pre(sig.vars))
     val state = State(path, store)
 
     object define extends Function(name, post, sig, env, state, stmt)
 
+    if(name == "main") {
+        val scope = (names1 zip types1)
+        val init = Clause(scope, Nil, pre(sig.vars), "main")
+        clauses += init
+    }
+
+
     define.run()
   }
 
-  def clause(st: State, phi: Prop, reason: String) {
-    clauses += Clause(st.path, phi, reason)
+  def resolve(types: List[Type]): List[Sort] = {
+    types map resolve
+  }
+
+  def resolve(typ: Type): Sort = {
+    typ match {
+      case Type._void          => null
+      case Type._Bool          => Sort.int
+      case _: Signed           => Sort.int
+      case _: Unsigned         => Sort.int
+      case ArrayType(typ, dim) => Sort.array(Sort.int, resolve(typ))
+    }
+  }
+
+  def index(arg1: Pure, arg2: Pure) = {
+    arg1 select arg2
+  }
+
+  def preop(op: String, arg: Pure): Pure = {
+    op match {
+      case "+" => arg
+      case "-" => -arg
+      case "!" => !arg
+    }
+  }
+
+  def binop(op: String, arg1: Pure, arg2: Pure): Pure = {
+    op match {
+      case "+"  => arg1 + arg2
+      case "-"  => arg1 - arg2
+      case "==" => arg1 === arg2
+      case "!=" => arg1 !== arg2
+      case "*"  => arg1 * arg2
+      case "/"  => arg1 / arg2
+      case "%"  => arg1 % arg2
+      case "<"  => arg1 < arg2
+      case "<=" => arg1 <= arg2
+      case ">"  => arg1 > arg2
+      case ">=" => arg1 >= arg2
+    }
+  }
+
+  def truth(arg: Pure): Pure = {
+    arg match {
+      case Num(value) =>
+        if (value == 0) False else True
+
+      case App("=", List(arg1, arg2)) =>
+        arg1 === arg2
+
+      case App("!", List(arg1)) =>
+        !truth(arg1)
+
+      case App("and", List(arg1, arg2)) =>
+        truth(arg1) and truth(arg2)
+
+      case App("or", List(arg1, arg2)) =>
+        truth(arg1) or truth(arg2)
+
+      case _ =>
+        arg !== Num.zero
+    }
+  }
+
+  def eval_test(expr: Expr, st: State) = {
+    truth(eval(expr, st))
+  }
+
+  def eval(expr: Expr, st: State): Pure = {
+    expr match {
+      case Id(name) if st contains name =>
+        st(name)
+
+      case Id(name) if consts contains name =>
+        consts(name)
+
+      case Lit(value: Int) =>
+        Num(value)
+
+      case PreOp("&", PreOp("*", ptr)) =>
+        eval(ptr, st)
+
+      /* case Dot(base, field) =>
+        val _base = eval(base, st)
+        st dot (_base, field)
+
+      case PreOp("&", Arrow(ptr, field)) =>
+        val _ptr = eval(ptr, st)
+        st arrow (_ptr, field) */
+
+      case Index(base, index) =>
+        val _base = eval(base, st)
+        val _index = eval(index, st)
+        _base select _index
+
+      case PreOp("&", Index(base, index)) =>
+        val expr = BinOp("+", base, index)
+        eval(expr, st)
+
+      case PreOp(op, arg) =>
+        val _arg = eval(arg, st)
+        preop(op, _arg)
+
+      case BinOp(op, arg1, arg2) =>
+        val _arg1 = eval(arg1, st)
+        val _arg2 = eval(arg2, st)
+        binop(op, _arg1, _arg2)
+
+      case Question(test, left, right) =>
+        val _test = eval_test(test, st)
+        val _left = eval(left, st)
+        val _right = eval(right, st)
+        _test ? (_left, _right)
+
+      case _ =>
+        error("cannot evaluate: " + expr)
+    }
   }
 
   class Function(name: String, post: Pred, sig: Scope, env: Scope, entry: State, body: Stmt) {
     def any = entry.arbitrary
+
+    def clause(st: State, phi: Pure, reason: String) {
+      clauses += Clause(env.pairs, st.path, phi, reason)
+    }
 
     object $if extends Counter {
       def newLabel = "$if" + next
@@ -176,7 +309,7 @@ class Unit(stmts: List[Stmt]) {
     }
 
     def here(label: String) = {
-      env.pred(label)
+      newPred(label, env.types)
     }
 
     def now(pred: Pred, st: State, reason: String) {
@@ -292,12 +425,18 @@ class Unit(stmts: List[Stmt]) {
 
         case Assume(Id(name), expr) =>
           val (_expr, st1) = rval(expr, st0)
-          val eq = Eq(Var(name), _expr)
+          val x = Var(name)
+          val eq = (x === _expr)
           val st2 = st1 and eq
           Some(st2)
 
         case Atomic(None) =>
           Some(st0)
+
+        case Atomic(Some(stdlib.assert(phi))) =>
+          val (_phi, st1) = rval_test(phi, st0)
+          clause(st0, _phi, "assert " + _phi)
+          Some(st1)
 
         case Atomic(Some(expr)) =>
           val (_, st1) = rval(expr, st0)
@@ -323,41 +462,22 @@ class Unit(stmts: List[Stmt]) {
           None // successor states not immediately reachable
       }
     }
-  }
 
-  def resolve(types: List[Type]): List[Sort] = {
-    types map resolve
-  }
+    def assign(lhs: Expr, rhs: Expr, st0: State): (Pure, Pure, State) = {
+      lhs match {
+        case Id(name) if st0 contains name =>
+          val _old = st0(name)
+          val (_rhs, st1) = rval(rhs, st0)
+          (_old, _rhs, st1 + (name -> _rhs))
 
-  def resolve(typ: Type): Sort = {
-    typ match {
-      case Type._void          => null
-      case Type._Bool          => Sort.int
-      case _: Signed           => Sort.int
-      case _: Unsigned         => Sort.int
-      case ArrayType(typ, dim) => Sort.array(Sort.int, resolve(typ))
-    }
-  }
+        case Index(Id(name), idx) if st0 contains name =>
+          val _old = st0(name)
+          val (_rhs, st1) = rval(rhs, st0)
+          val (_idx, st2) = rval(idx, st1)
+          val _new = _old store (_idx, _rhs)
+          (_old select _idx, _rhs, st2 + (name -> _new))
 
-  def index(arg1: Pure, arg2: Pure) = {
-    arg1 select arg2
-  }
-
-  def assign(lhs: Expr, rhs: Expr, st0: State): (Pure, Pure, State) =
-    lhs match {
-      case Id(name) if st0 contains name =>
-        val _old = st0(name)
-        val (_rhs, st1) = rval(rhs, st0)
-        (_old, _rhs, st1 + (name -> _rhs))
-
-      case Index(Id(name), idx) if st0 contains name =>
-        val _old = st0(name)
-        val (_rhs, st1) = rval(rhs, st0)
-        val (_idx, st2) = rval(idx, st1)
-        val _new = _old store (_idx, _rhs)
-        (_old select _idx, _rhs, st2 + (name -> _new))
-
-      /* case PreOp("*", ptr) =>
+        /* case PreOp("*", ptr) =>
         for (
           (_rhs, st1) <- rval(rhs, st0);
           (_ptr, st2) <- rval(ptr, st1)
@@ -379,140 +499,58 @@ class Unit(stmts: List[Stmt]) {
             // (_old, _rhs, st3)
             ???
           } */
+      }
     }
 
-  def preop(op: String, arg: Pure): Pure = {
-    op match {
-      case "+" => arg
-      case "-" => -arg
-      case "!" => !arg
+    def rval_test(expr: Expr, st0: State): (Pure, State) = {
+      val (_res, st1) = rval(expr, st0)
+      (truth(_res), st1)
     }
-  }
 
-  def binop(op: String, arg1: Pure, arg2: Pure): Pure = {
-    op match {
-      case "+"  => arg1 + arg2
-      case "-"  => arg1 - arg2
-      case "==" => arg1 === arg2
-      case "!=" => arg1 !== arg2
-      case "*"  => arg1 * arg2
-      case "/"  => arg1 / arg2
-      case "%"  => arg1 % arg2
-      case "<"  => arg1 < arg2
-      case "<=" => arg1 <= arg2
-      case ">"  => arg1 > arg2
-      case ">=" => arg1 >= arg2
+    def rvals(exprs: List[Expr], st0: State): (List[Pure], State) = {
+      exprs match {
+        case Nil =>
+          (Nil, st0)
+
+        case expr :: rest => // XXX: right-to-left, should be parallel
+          val (xs, st1) = rvals(rest, st0)
+          val (x, st2) = rval(expr, st1)
+          (x :: xs, st2)
+      }
     }
-  }
 
-  def truth(arg: Pure): Prop = {
-    !Eq(arg, Num.zero)
-  }
+    def rval(expr: Expr, st0: State): (Pure, State) = {
+      expr match {
+        case BinOp(",", fst, snd) =>
+          val (_fst, st1) = rval(fst, st0)
+          val (_snd, st2) = rval(fst, st1)
+          (_snd, st2)
 
-  def eval_test(expr: Expr, st: State) = {
-    truth(eval(expr, st))
-  }
+        case Id(name) if st0 contains name =>
+          (st0(name), st0)
 
-  def eval(expr: Expr, st: State): Pure = {
-    expr match {
-      case Id(name) if st contains name =>
-        st(name)
+        case Id(name) if consts contains name =>
+          (consts(name), st0)
 
-      case Id(name) if consts contains name =>
-        consts(name)
+        case Lit(value: Int) =>
+          (Num(value), st0)
 
-      case Lit(value: Int) =>
-        Num(value)
+        case PreOp("&", id: Id) =>
+          error("cannot take address of variable: " + expr)
 
-      case PreOp("&", PreOp("*", ptr)) =>
-        eval(ptr, st)
+        case PreOp("&", PreOp("*", ptr)) =>
+          rval(ptr, st0)
 
-      /* case Dot(base, field) =>
-        val _base = eval(base, st)
-        st dot (_base, field)
+        case PreOp("&", Index(base, index)) =>
+          val expr = BinOp("+", base, index)
+          rval(expr, st0)
 
-      case PreOp("&", Arrow(ptr, field)) =>
-        val _ptr = eval(ptr, st)
-        st arrow (_ptr, field) */
+        case Index(arg1, arg2) =>
+          val (_arg1, st1) = rval(arg1, st0)
+          val (_arg2, st2) = rval(arg2, st1)
+          (index(_arg1, _arg2), st2)
 
-      case Index(base, index) =>
-        val _base = eval(base, st)
-        val _index = eval(index, st)
-        _base select _index
-
-      case PreOp("&", Index(base, index)) =>
-        val expr = BinOp("+", base, index)
-        eval(expr, st)
-
-      case PreOp(op, arg) =>
-        val _arg = eval(arg, st)
-        preop(op, _arg)
-
-      case BinOp(op, arg1, arg2) =>
-        val _arg1 = eval(arg1, st)
-        val _arg2 = eval(arg2, st)
-        binop(op, _arg1, _arg2)
-
-      case Question(test, left, right) =>
-        val _test = eval(test, st)
-        val _left = eval(left, st)
-        val _right = eval(right, st)
-        _test ? (_left, _right)
-
-      case _ =>
-        error("cannot evaluate: " + expr)
-    }
-  }
-
-  def rval_test(expr: Expr, st0: State): (Prop, State) = {
-    val (_res, st1) = rval(expr, st0)
-    (truth(_res), st1)
-  }
-
-  def rvals(exprs: List[Expr], st0: State): (List[Pure], State) = {
-    exprs match {
-      case Nil =>
-        (Nil, st0)
-
-      case expr :: rest => // XXX: right-to-left, should be parallel
-        val (xs, st1) = rvals(rest, st0)
-        val (x, st2) = rval(expr, st1)
-        (x :: xs, st2)
-    }
-  }
-
-  def rval(expr: Expr, st0: State): (Pure, State) = {
-    expr match {
-      case BinOp(",", fst, snd) =>
-        val (_fst, st1) = rval(fst, st0)
-        val (_snd, st2) = rval(fst, st1)
-        (_snd, st2)
-
-      case Id(name) if st0 contains name =>
-        (st0(name), st0)
-
-      case Id(name) if consts contains name =>
-        (consts(name), st0)
-
-      case Lit(value: Int) =>
-        (Num(value), st0)
-
-      case PreOp("&", id: Id) =>
-        error("cannot take address of variable: " + expr)
-
-      case PreOp("&", PreOp("*", ptr)) =>
-        rval(ptr, st0)
-
-      case PreOp("&", Index(base, index)) =>
-        val expr = BinOp("+", base, index)
-        rval(expr, st0)
-
-      case Index(arg1, arg2) =>
-        val (_arg1, st1) = rval(arg1, st0)
-        val (_arg2, st2) = rval(arg2, st1)
-        (index(_arg1, _arg2), st2)
-
-      /* case PreOp("&", Arrow(ptr, field)) =>
+        /* case PreOp("&", Arrow(ptr, field)) =>
         for ((_ptr, st1) = rval(ptr, st0))
           yield {
             val _ptr_field = st1 arrow (_ptr, field)
@@ -533,36 +571,36 @@ class Unit(stmts: List[Stmt]) {
         ???
       } */
 
-      case PreOp("++", arg) =>
-        val (_, _rhs, st1) = assign(arg, BinOp("+", arg, Lit(1)), st0)
-        (_rhs, st1)
-      case PreOp("--", arg) =>
-        val (_, _rhs, st1) = assign(arg, BinOp("-", arg, Lit(1)), st0)
-        (_rhs, st1)
+        case PreOp("++", arg) =>
+          val (_, _rhs, st1) = assign(arg, BinOp("+", arg, Lit(1)), st0)
+          (_rhs, st1)
+        case PreOp("--", arg) =>
+          val (_, _rhs, st1) = assign(arg, BinOp("-", arg, Lit(1)), st0)
+          (_rhs, st1)
 
-      case PostOp("++", arg) =>
-        val (_val, _, st1) = assign(arg, BinOp("+", arg, Lit(1)), st0)
-        (_val, st1)
-      case PostOp("--", arg) =>
-        val (_val, _, st1) = assign(arg, BinOp("-", arg, Lit(1)), st0)
-        (_val, st1)
+        case PostOp("++", arg) =>
+          val (_val, _, st1) = assign(arg, BinOp("+", arg, Lit(1)), st0)
+          (_val, st1)
+        case PostOp("--", arg) =>
+          val (_val, _, st1) = assign(arg, BinOp("-", arg, Lit(1)), st0)
+          (_val, st1)
 
-      case BinOp("=", lhs, rhs) =>
-        val (_, _rhs, st1) = assign(lhs, rhs, st0)
-        (_rhs, st1)
+        case BinOp("=", lhs, rhs) =>
+          val (_, _rhs, st1) = assign(lhs, rhs, st0)
+          (_rhs, st1)
 
-      // don't fork if the rhs has no side effects
-      case BinOp("||", arg1, arg2) if !Expr.hasEffects(arg2) =>
-        val (_arg1, st1) = rval(arg1, st0)
-        val (_arg2, st2) = rval(arg2, st1)
-        (_arg1 or _arg2, st2)
+        // don't fork if the rhs has no side effects
+        case BinOp("||", arg1, arg2) if !Expr.hasEffects(arg2) =>
+          val (_arg1, st1) = rval_test(arg1, st0)
+          val (_arg2, st2) = rval_test(arg2, st1)
+          (_arg1 or _arg2, st2)
 
-      case BinOp("&&", arg1, arg2) if !Expr.hasEffects(arg2) =>
-        val (_arg1, st1) = rval(arg1, st0)
-        val (_arg2, st2) = rval(arg2, st1)
-        (_arg1 and _arg2, st2)
+        case BinOp("&&", arg1, arg2) if !Expr.hasEffects(arg2) =>
+          val (_arg1, st1) = rval_test(arg1, st0)
+          val (_arg2, st2) = rval_test(arg2, st1)
+          (_arg1 and _arg2, st2)
 
-      /*
+        /*
       // shortcut evaluation yields two states
       case BinOp("||", arg1, arg2) =>
         val _arg1_st = rval_test(arg1, st0)
@@ -604,18 +642,18 @@ class Unit(stmts: List[Stmt]) {
             yield (_arg2, st2)
 
         _false ++ _true
-       */
+         */
 
-      case PreOp(op, arg) =>
-        val (_arg, st1) = rval(arg, st0)
-        (preop(op, _arg), st1)
+        case PreOp(op, arg) =>
+          val (_arg, st1) = rval(arg, st0)
+          (preop(op, _arg), st1)
 
-      case BinOp(op, arg1, arg2) =>
-        val (_arg1, st1) = rval(arg1, st0)
-        val (_arg2, st2) = rval(arg2, st1)
-        (binop(op, _arg1, _arg2), st2)
+        case BinOp(op, arg1, arg2) =>
+          val (_arg1, st1) = rval(arg1, st0)
+          val (_arg2, st2) = rval(arg2, st1)
+          (binop(op, _arg1, _arg2), st2)
 
-      /* case Question(test, left, right) =>
+        /* case Question(test, left, right) =>
         val _test_st = rval_test(test, st0)
 
         val _true =
@@ -636,39 +674,40 @@ class Unit(stmts: List[Stmt]) {
 
         _true ++ _false */
 
-      case __VERIFIER.nondet_int() =>
-        var x = Var.fresh("$int")
-        (x, st0)
+        case __VERIFIER.nondet_int() =>
+          var x = Var.fresh("$int")
+          (x, st0)
 
-      case __VERIFIER.assume(cond) =>
-        val (_cond, st1) = rval_test(cond, st0)
-        (null, st1 and _cond)
+        case __VERIFIER.assume(cond) =>
+          val (_cond, st1) = rval_test(cond, st0)
+          (null, st1 and _cond)
 
-      case expr @ FunCall(name, args) =>
-        val pre = pres(name)
-        val post = posts(name)
-        val (ret, _) = funs(name)
+        case expr @ FunCall(name, args) =>
+          val pre = pres(name)
+          val post = posts(name)
+          val (ret, _) = funs(name)
 
-        val (_in, st1) = rvals(args, st0)
+          val (_in, st1) = rvals(args, st0)
 
-        val (_ret, _out) = ret match {
-          case Type._void =>
-            (null, List())
-          case _ =>
-            var x = Var.fresh("$result")
-            (x, List(x))
-        }
+          val (_ret, _out) = ret match {
+            case Type._void =>
+              (null, List())
+            case _ =>
+              var x = Var.fresh("$result")
+              (x, List(x))
+          }
 
-        // XXX: need to return the modifed heap
-        val _pre = pre(_in)
-        val _call = post(_in ++ _out)
+          // XXX: need to return the modifed heap
+          val _pre = pre(_in)
+          val _call = post(_in ++ _out)
 
-        clause(st1, _pre, name + " precondition")
+          clause(st1, _pre, name + " precondition")
 
-        (_ret, st1 and _call)
+          (_ret, st1 and _call)
 
-      case _ =>
-        error("cannot evaluate: " + expr)
+        case _ =>
+          error("cannot evaluate: " + expr)
+      }
     }
   }
 }

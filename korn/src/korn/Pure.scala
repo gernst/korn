@@ -3,10 +3,8 @@ package korn
 sealed trait Sort {}
 
 object Sort {
-  val bool = base("bool")
-  val int = base("int")
-  val sec = base("sec")
-  val unit = base("unit")
+  val bool = base("Bool")
+  val int = base("Int")
 
   case class base(name: String) extends Sort {
     override def toString = name
@@ -83,7 +81,11 @@ case class App(fun: String, args: List[Pure]) extends Pure {
   def free = Set(args flatMap (_.free): _*)
   def rename(re: Map[Var, Var]) = App(fun, args map (_ rename re))
   def subst(su: Map[Var, Pure]) = App(fun, args map (_ subst su))
-  override def toString = sexpr(fun :: args)
+
+  override def toString = {
+    if(args.isEmpty) fun
+    else sexpr(fun :: args)
+  }
 }
 
 object App {
@@ -102,54 +104,4 @@ object App {
   def apply(fun: String, arg1: Pure, arg2: Pure, arg3: Pure): App = {
     App(fun, List(arg1, arg2, arg3))
   }
-}
-
-sealed trait Prop {
-  def free: Set[Var]
-  def unary_!() = Not(this)
-}
-
-case object True extends Prop {
-  def free = Set()
-  override def toString = "true"
-}
-
-case object False extends Prop {
-  def free = Set()
-  override def toString = "false"
-}
-
-case class In(pred: String, args: List[Pure]) extends Prop {
-  def free = Set(args flatMap (_.free): _*)
-  override def toString = sexpr(pred :: args)
-}
-
-case class Eq(left: Pure, right: Pure) extends Prop {
-  def free = left.free ++ right.free
-  override def toString = sexpr("=", left, right)
-}
-
-case class Not(arg: Prop) extends Prop {
-  def free = arg.free
-  override def toString = sexpr("not", arg)
-}
-
-case class Or(args: List[Prop]) extends Prop {
-  def free = Set(args flatMap (_.free): _*)
-  override def toString = sexpr("or" :: args)
-}
-
-case class And(args: List[Prop]) extends Prop {
-  def free = Set(args flatMap (_.free): _*)
-  override def toString = sexpr("and" :: args)
-}
-
-case class Imp(left: Pure, right: Pure) extends Prop {
-  def free = left.free ++ right.free
-  override def toString = sexpr("=>", left, right)
-}
-
-case class Eqv(left: Pure, right: Pure) extends Prop {
-  def free = left.free ++ right.free
-  override def toString = sexpr("=", left, right)
 }

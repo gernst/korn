@@ -6,6 +6,9 @@ package object korn {
       Map(keys zip values: _*)
     }
   }
+  
+  val False = App("false")
+  val True = App("true")
 
   object stdlib {
     object assert extends FunCall.unary("assert")

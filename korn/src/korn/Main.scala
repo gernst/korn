@@ -54,13 +54,44 @@ object Main {
         val stmts = parse(path)
         object unit extends Unit(stmts)
         unit.run()
-        for (clause <- unit.clauses)
-          println(clause)
+        print(unit)
       } catch {
         case e: Throwable =>
           e.printStackTrace()
       }
     }
+  }
+
+  def print(unit: Unit) {
+    println(sexpr("set-logic", "HORN"))
+    println(sexpr("set-option", ":produce-models", "true"))
+
+    for (pred <- unit.preds) {
+      val Pred(name, args) = pred
+      val defn = sexpr("declare-fun", name, sexpr(args), "Bool")
+      println(defn)
+    }
+
+    for (clause <- unit.clauses) {
+      val Clause(_, path, head, reason) = clause
+      val bound = clause.bound
+
+      var phi = head.toString
+      if (path.nonEmpty)
+        phi = sexpr("=>", sexpr("and" :: path), phi)
+      if (bound.nonEmpty)
+        phi = sexpr("forall", bind(bound), phi)
+
+      val assrt = sexpr("assert", phi)
+      println(assrt)
+    }
+
+    println(sexpr("check-sat"))
+    println(sexpr("get-model"))
+  }
+
+  def bind(vars: Iterable[(String, Sort)]): String = {
+    sexpr(vars map { case (name, typ) => sexpr(name, typ) })
   }
 
   def main(args: Array[String]) {
