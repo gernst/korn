@@ -67,7 +67,7 @@ object Main {
     println(sexpr("set-option", ":produce-models", "true"))
     println()
 
-    for (pred <- unit.preds) {
+    for (pred <- unit.preds if !known(pred.name)) {
       val Pred(name, args) = pred
       val defn = sexpr("declare-fun", name, sexpr(args), "Bool")
       println(defn)

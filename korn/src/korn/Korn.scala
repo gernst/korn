@@ -120,7 +120,7 @@ class Unit(stmts: List[Stmt]) {
     funs += (name -> (ret, args))
 
     val pre = "$" + name + "_pre"
-    val post = "$" + name
+    val post = name
 
     val _args = resolve(args)
     val _ret = resolve(ret)
@@ -158,7 +158,7 @@ class Unit(stmts: List[Stmt]) {
 
     if (name == "main") {
       val scope = (names1 zip types1)
-      val init = Clause(scope, Nil, pre(sig.vars), "main")
+      val init = Clause(scope, Nil, pre(sig.vars), "main entry")
       clauses += init
     }
 
@@ -207,6 +207,8 @@ class Unit(stmts: List[Stmt]) {
     }
   }
 
+  val relational = Set("<", "<=", ">", ">=")
+
   def truth(arg: Pure): Pure = {
     arg match {
       case Num(value) =>
@@ -223,6 +225,9 @@ class Unit(stmts: List[Stmt]) {
 
       case App("or", List(arg1, arg2)) =>
         truth(arg1) or truth(arg2)
+
+      case App(op, List(arg1, arg2)) if (relational contains op) =>
+        arg
 
       case _ =>
         arg !== Num.zero
@@ -313,11 +318,13 @@ class Unit(stmts: List[Stmt]) {
     def run() {
       val out = local(body, entry)
 
-      for (exit <- out) {
-        if (hasResult)
-          result(post, exit, Num.zero, "post " + name)
-        else
-          result(post, exit, "post " + name)
+      if (name != "main") {
+        for (exit <- out) {
+          if (hasResult)
+            result(post, exit, Num.zero, "post " + name)
+          else
+            result(post, exit, "post " + name)
+        }
       }
     }
 
@@ -325,8 +332,12 @@ class Unit(stmts: List[Stmt]) {
       newPred(label, env.types)
     }
 
+    def eval(pred: Pred, st: State) = {
+      pred(st(env.names))
+    }
+
     def now(pred: Pred, st: State, reason: String) {
-      val cond = pred(st(env.names))
+      val cond = eval(pred, st)
       clause(st, cond, reason)
     }
 
@@ -478,6 +489,25 @@ class Unit(stmts: List[Stmt]) {
           val pred = here(label)
           now(pred, st0, "goto " + label)
           None // successor states not immediately reachable
+
+        case If(test, left, right) =>
+          val (_test, st) = rval_test(test, st0)
+          val st1 = local(left, st and _test)
+          val st2 = local(right, st and !_test)
+          join(st1, "if then", st2, "if else")
+
+        case While(test, body) =>
+          val inv = here($inv.newLabel)
+          val st1 = generalize(inv, st0, inv.name + " entry ")
+          val (_test, st2) = rval_test(test, st1)
+
+          val st = st2 and _test
+          for (st_ <- local(body, st)) {
+            now(inv, st_, inv.name + " preserved")
+          }
+
+          val st3 = st2 and !_test
+          Some(st3)
       }
     }
 

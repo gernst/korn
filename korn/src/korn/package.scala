@@ -6,9 +6,16 @@ package object korn {
       Map(keys zip values: _*)
     }
   }
-  
+
   val False = App("false")
   val True = App("true")
+
+  val known = Set(
+    "main",
+    "__VERIFIER_nondet_int",
+    "__VERIFIER_assume",
+    "__VERIFIER_error"
+  )
 
   object stdlib {
     object assume extends FunCall.unary("assume")
