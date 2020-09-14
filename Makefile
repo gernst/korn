@@ -42,8 +42,7 @@ $(KORN_JAR): $(KORN_JAVA) $(KORN_SCALA)
 $(KORN_SH): $(KORN_LAUNCHER)
 	@echo "[echo]  $@"
 	@echo "#!/usr/bin/env bash" > $@
-	@echo "export LD_LIBRARY_PATH=\"$(PWD)/korn/lib\"" >> $@
-	@echo "export PATH=\".:\$$PATH\"" >> $@
+	# @echo "export PATH=\".:\$$PATH\"" >> $@
 	@echo "export JAVA_OPTS=\"\$$JAVA_OPTS -Xss4M\"" >> $@
 	@echo "source $(PWD)/$(KORN_LAUNCHER)" >> $@
 	@echo "[chmod] $@"; chmod +x $@

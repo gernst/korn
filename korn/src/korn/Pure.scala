@@ -50,7 +50,7 @@ sealed trait Pure extends Pure.term {
 object Pure extends Counter with Alpha[Pure, Var] {
   object ite extends ternary("ite")
 
-  object exp extends binary("expr")
+  object exp extends binary("exp")
   object times extends binary("*")
   object divBy extends binary("div")
   object mod extends binary("mod")
@@ -174,7 +174,13 @@ case class Ite(test: Prop, left: Pure, right: Pure) extends Pure {
 sealed trait Prop {
   def ?(left: Pure, right: Pure) = Ite(this, left, right)
 
-  def unary_!() = Not(this)
+  def unary_!() = {
+    this match {
+      case Not(that) => that
+      case _         => Not(this)
+    }
+  }
+
   def and(that: Prop) = And(this, that)
   def or(that: Prop) = Or(this, that)
   def ==>(that: Prop) = Imp(this, that)

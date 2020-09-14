@@ -11,6 +11,7 @@ object Main {
   var dry = false
   var sum = false
   var debug = false
+  var model = false
 
   var files = mutable.Buffer[String]()
   var out = System.out
@@ -21,7 +22,7 @@ object Main {
     val in = proc.getOutputStream()
     val out = proc.getInputStream()
     val err = proc.getErrorStream()
-    out.transferTo(in)
+    // out.transferTo(in)
     (in, out, err)
   }
 
@@ -32,15 +33,23 @@ object Main {
       case "-dry" :: rest =>
         dry = true
         configure(rest)
+
       case "-sum" :: rest =>
         sum = true
         configure(rest)
+
       case "-inv" :: rest =>
         sum = false
         configure(rest)
+
       case "-debug" :: rest =>
         debug = true
         configure(rest)
+
+      case "-model" :: rest =>
+        model = true
+        configure(rest)
+
       case file :: rest =>
         files += file
         configure(rest)
@@ -83,7 +92,10 @@ object Main {
 
   def print(unit: Unit, out: PrintStream) {
     out.println(sexpr("set-logic", "HORN"))
-    out.println(sexpr("set-option", ":produce-models", "true"))
+
+    if (model)
+      out.println(sexpr("set-option", ":produce-models", "true"))
+
     out.println()
 
     for (pred <- unit.preds) {
@@ -119,7 +131,9 @@ object Main {
     }
 
     out.println(sexpr("check-sat"))
-    out.println(sexpr("get-model"))
+
+    if (model)
+      out.println(sexpr("get-model"))
   }
 
   def bind(vars: Iterable[Var]): String = {

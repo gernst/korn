@@ -28,7 +28,6 @@ case class State(path: List[Prop], store: Store) {
   def apply(names: List[String]) = names map store
   def +(that: (String, Pure)) = State(path, store + that)
   def ++(that: Iterable[(String, Pure)]) = State(path, store ++ that)
-
 }
 
 case class Scope(names: List[String], types: List[Sort]) {
@@ -114,9 +113,11 @@ class Unit(stmts: List[Stmt]) {
       // Definitions
       case VarDef(Formal(typ, name), None) =>
         vars += name -> typ
+        ???
       // st_ havoc name
       case VarDef(Formal(typ, name), Some(init)) =>
         vars += name -> typ
+        ???
       // val _init = eval(init, st = Nil)
       // st_ assign (name, _init)
       case FunDecl(ret, name, types) =>
@@ -139,13 +140,7 @@ class Unit(stmts: List[Stmt]) {
     val _args = resolve(args)
     val _ret = resolve(ret)
 
-    if (name == "main") {
-      if (_ret != null) {
-        posts += (name -> (newPred(post, _args ++ List(_ret)), Some(_ret)))
-      } else {
-        posts += (name -> (newPred(post, _args), None))
-      }
-    } else if (!known(name)) {
+    if (!known(name)) {
       if (_ret != null) {
         pres += (name -> newPred(pre, _args))
         posts += (name -> (newPred(post, _args ++ List(_ret)), Some(_ret)))
@@ -158,9 +153,6 @@ class Unit(stmts: List[Stmt]) {
 
   def define(name: String, params: List[Formal], body: Stmt) {
     val (locals, stmt) = Stmt.norm(body)
-
-    if (Main.debug)
-      println(stmt)
 
     val names1 = params map (_.name)
     val types1 = resolve(params map (_.typ))
@@ -184,9 +176,13 @@ class Unit(stmts: List[Stmt]) {
 
     val exit = State(Nil, Store(names, env.vars map (_.prime)))
 
-    val (post, ret) = posts(name)
+    val post = if (name == "main") {
+      None
+    } else {
+      Some(posts(name))
+    }
 
-    object define extends Function(name, post, ret, sig, env, entry, exit, stmt)
+    object define extends Function(name, post, sig, env, entry, exit, stmt)
     define.run()
   }
 
@@ -200,6 +196,7 @@ class Unit(stmts: List[Stmt]) {
       case Type._Bool          => Sort.int
       case _: Signed           => Sort.int
       case _: Unsigned         => Sort.int
+      case PtrType(elem)       => Sort.pointer(resolve(elem))
       case ArrayType(typ, dim) => Sort.array(Sort.int, resolve(typ))
     }
   }
@@ -227,7 +224,7 @@ class Unit(stmts: List[Stmt]) {
       case Pure.ge(arg1, arg2)          => Prop.ge(arg1, arg2)
       case Ite(test, Num.one, Num.zero) => test
       case Ite(test, Num.zero, Num.one) => !test
-      case _                            => !Eq(arg, Num.zero)
+      case pure: Pure                   => !Eq(pure, Num.zero)
     }
   }
 
@@ -243,15 +240,15 @@ class Unit(stmts: List[Stmt]) {
     op match {
       case "+"  => arg1 + arg2
       case "-"  => arg1 - arg2
-      case "==" => bool(Eq(arg1, arg2))
-      case "!=" => bool(!Eq(arg1, arg2))
       case "*"  => arg1 * arg2
       case "/"  => arg1 / arg2
       case "%"  => arg1 % arg2
-      case "<"  => arg1 < arg2
-      case "<=" => arg1 <= arg2
-      case ">"  => arg1 > arg2
-      case ">=" => arg1 >= arg2
+      case "==" => bool(Eq(arg1, arg2))
+      case "!=" => bool(!Eq(arg1, arg2))
+      case "<"  => bool(Prop.lt(arg1, arg2))
+      case "<=" => bool(Prop.le(arg1, arg2))
+      case ">"  => bool(Prop.gt(arg1, arg2))
+      case ">=" => bool(Prop.ge(arg1, arg2))
     }
   }
 
@@ -312,8 +309,7 @@ class Unit(stmts: List[Stmt]) {
 
   class Function(
       name: String,
-      post: Pred,
-      ret: Option[Sort],
+      post: Option[(Pred, Option[Sort])],
       sig: Scope,
       env: Scope,
       entry: State,
@@ -344,13 +340,11 @@ class Unit(stmts: List[Stmt]) {
     def run() {
       val out = local(body, entry)
 
-      if (name != "main") {
-        for (exit <- out) {
-          if (ret.nonEmpty)
-            result(post, exit, Num.zero, "post " + name)
-          else
-            result(post, exit, "post " + name)
-        }
+      for (exit <- out; (cond, ret) <- post) {
+        if (ret.nonEmpty)
+          result(cond, exit, Num.zero, "post " + name)
+        else
+          result(cond, exit, "post " + name)
       }
     }
 
@@ -464,6 +458,11 @@ class Unit(stmts: List[Stmt]) {
         case Nil =>
           Some(st0)
         case first :: rest =>
+          if (Main.debug) {
+            log("execute " + first)
+            log("state   " + st0)
+            log()
+          }
           val st1 = local(first, st0)
           val st2 = local(rest, st1)
           st2
@@ -524,17 +523,21 @@ class Unit(stmts: List[Stmt]) {
           Some(st1)
 
         case Return(None) =>
-          result(post, st0, "return " + name)
+          for ((cond, _) <- post) {
+            result(cond, st0, "return " + name)
+          }
           None
 
         case Return(Some(res)) =>
           val (_res, st1) = rval(res, st0)
-          result(post, st0, _res, "return " + name)
+          for ((cond, _) <- post) {
+            result(cond, st0, _res, "return " + name)
+          }
           None
 
         case Label(label) =>
           val pred = here(label)
-          val st1 = generalize(pred, st0, "generalize " + label)
+          val st1 = generalize(pred, st0, "label " + label)
           Some(st1)
 
         case Goto(label) =>
@@ -588,11 +591,10 @@ class Unit(stmts: List[Stmt]) {
           now(sum, stn, mod, sum.name + " exit")
 
           val re = env fresh mod
-          val sta = st0 ++ re
-          val cond = eval(sum, sta, any, mod)
-          val stb = any and cond
-
-          Some(stb)
+          val st2 = st0 ++ re
+          val cond = eval(sum, st0, st2, mod)
+          val st3 = st2 and cond
+          Some(st3)
       }
     }
 
@@ -609,6 +611,18 @@ class Unit(stmts: List[Stmt]) {
           val (_idx, st2) = rval(idx, st1)
           val _new = _old store (_idx, _rhs)
           (_old select _idx, _rhs, st2 + (name -> _new))
+
+        // XXX: hacky way to support 2-dimensional arrays
+        case Index(Index(Id(name), idx1), idx2) if st0 contains name =>
+          val _old0 = st0(name)
+          val (_rhs, st1) = rval(rhs, st0)
+          val (_idx1, st2) = rval(idx1, st1)
+          val (_idx2, st3) = rval(idx2, st2)
+          val _old1 = _old0 select _idx1
+          val _old2 = _old1 select _idx2
+          val _new1 = _old1 store (_idx2, _rhs)
+          val _new0 = _old0 store (_idx1, _new1)
+          (_old2, _rhs, st2 + (name -> _new0))
 
         /* case PreOp("*", ptr) =>
         for (

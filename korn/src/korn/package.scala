@@ -1,5 +1,6 @@
 package object korn {
   type Store = Map[String, Pure]
+  // type Heap = Map[Pure, Chunk]
 
   object Store {
     def apply(keys: List[String], values: List[Pure]) = {
@@ -7,10 +8,8 @@ package object korn {
     }
   }
 
-  // val False = App("false", Nil)
-  // val True = App("true", Nil)
-
   val known = Set(
+    "main",
     "__VERIFIER_nondet_int",
     "__VERIFIER_assume",
     "__VERIFIER_error"
@@ -26,6 +25,10 @@ package object korn {
     object error extends FunCall.nullary("__VERIFIER_error")
     object nondet_int extends FunCall.nullary("__VERIFIER_nondet_int")
     object assume extends FunCall.unary("__VERIFIER_assume")
+  }
+
+  def log() = {
+    System.err.println()
   }
 
   def log(msg: String) = {
