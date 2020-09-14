@@ -32,7 +32,7 @@ case class State(path: List[Prop], store: Store) {
 
 case class Scope(names: List[String], types: List[Sort]) {
   def ++(that: Scope) = Scope(this.names ++ that.names, this.types ++ that.types)
-  def vars = Vars(names, types)
+  def vars = Pure.vars(names, types)
 
   def names(some: Set[String]): List[String] = {
     this.names filter some
@@ -45,7 +45,7 @@ case class Scope(names: List[String], types: List[Sort]) {
 
   def fresh(some: Set[String]) = {
     for ((name, typ) <- (this.names zip this.types) if some contains name)
-      yield (name -> Var.fresh(name, typ))
+      yield (name -> Pure.fresh(name, typ))
   }
 }
 
@@ -87,7 +87,7 @@ class Unit(stmts: List[Stmt]) {
 
   def enum(cases: List[String]) = {
     for ((name, index) <- cases.zipWithIndex)
-      consts += name -> Num(index)
+      consts += name -> Pure.const(index)
   }
 
   def global(stmt: Stmt) {
@@ -207,24 +207,24 @@ class Unit(stmts: List[Stmt]) {
 
   def bool(prop: Prop): Pure = {
     prop match {
-      case _ => prop ? (Num.one, Num.zero)
+      case _ => prop ? (Pure.one, Pure.zero)
     }
   }
 
   def truth(arg: Pure): Prop = {
     arg match {
-      case Num(value)                   => if (value == 0) False else True
-      case Pure._eq(arg1, arg2)         => Eq(arg1, arg2)
-      case Pure.not(arg1)               => !truth(arg1)
-      case Pure.and(arg1, arg2)         => truth(arg1) and truth(arg2)
-      case Pure.or(arg1, arg2)          => truth(arg1) or truth(arg2)
-      case Pure.lt(arg1, arg2)          => Prop.lt(arg1, arg2)
-      case Pure.le(arg1, arg2)          => Prop.le(arg1, arg2)
-      case Pure.gt(arg1, arg2)          => Prop.gt(arg1, arg2)
-      case Pure.ge(arg1, arg2)          => Prop.ge(arg1, arg2)
-      case Ite(test, Num.one, Num.zero) => test
-      case Ite(test, Num.zero, Num.one) => !test
-      case pure: Pure                   => !Eq(pure, Num.zero)
+      case Pure.const(value)              => if (value == 0) False else True
+      case Pure._eq(arg1, arg2)           => Eq(arg1, arg2)
+      case Pure.not(arg1)                 => !truth(arg1)
+      case Pure.and(arg1, arg2)           => truth(arg1) and truth(arg2)
+      case Pure.or(arg1, arg2)            => truth(arg1) or truth(arg2)
+      case Pure.lt(arg1, arg2)            => Prop.lt(arg1, arg2)
+      case Pure.le(arg1, arg2)            => Prop.le(arg1, arg2)
+      case Pure.gt(arg1, arg2)            => Prop.gt(arg1, arg2)
+      case Pure.ge(arg1, arg2)            => Prop.ge(arg1, arg2)
+      case Ite(test, Pure.one, Pure.zero) => test
+      case Ite(test, Pure.zero, Pure.one) => !test
+      case pure: Pure                     => !Eq(pure, Pure.zero)
     }
   }
 
@@ -265,7 +265,7 @@ class Unit(stmts: List[Stmt]) {
         consts(name)
 
       case Lit(value: Int) =>
-        Num(value)
+        Pure.const(value)
 
       case PreOp("&", PreOp("*", ptr)) =>
         eval(ptr, st)
@@ -342,7 +342,7 @@ class Unit(stmts: List[Stmt]) {
 
       for (exit <- out; (cond, ret) <- post) {
         if (ret.nonEmpty)
-          result(cond, exit, Num.zero, "post " + name)
+          result(cond, exit, Pure.zero, "post " + name)
         else
           result(cond, exit, "post " + name)
       }
@@ -680,7 +680,7 @@ class Unit(stmts: List[Stmt]) {
           (consts(name), st0)
 
         case Lit(value: Int) =>
-          (Num(value), st0)
+          (Pure.const(value), st0)
 
         case PreOp("&", id: Id) =>
           error("cannot take address of variable: " + expr)
@@ -822,7 +822,7 @@ class Unit(stmts: List[Stmt]) {
         _true ++ _false */
 
         case __VERIFIER.nondet_int() =>
-          var x = Var.fresh("$int", Sort.int)
+          var x = Pure.fresh("$int", Sort.int)
           (x, st0)
 
         case __VERIFIER.assume(cond) =>
@@ -842,7 +842,7 @@ class Unit(stmts: List[Stmt]) {
 
           val (_ret, _out) = sort match {
             case Some(sort) =>
-              var x = Var.fresh("$result", sort)
+              var x = Pure.fresh("$result", sort)
               (x, List(x))
             case None =>
               (null, List())

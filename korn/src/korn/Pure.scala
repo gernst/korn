@@ -19,6 +19,33 @@ object Sort {
   }
 }
 
+case class Fun(name: String, args: List[Sort], ret: Sort)
+
+object Fun {
+  def t = Fun("true", List(), Sort.bool)
+  def f = Fun("false", List(), Sort.bool)
+
+  val exp = Fun("^", List(Sort.int, Sort.int), Sort.int)
+  val times = Fun("*", List(Sort.int, Sort.int), Sort.int)
+  val divBy = Fun("/", List(Sort.int, Sort.int), Sort.int)
+  val mod = Fun("%", List(Sort.int, Sort.int), Sort.int)
+
+  val uminus = Fun("-", List(Sort.int), Sort.int)
+  val plus = Fun("+", List(Sort.int, Sort.int), Sort.int)
+  val minus = Fun("-", List(Sort.int, Sort.int), Sort.int)
+
+  val le = Fun("<=", List(Sort.int, Sort.int), Sort.bool)
+  val lt = Fun("<", List(Sort.int, Sort.int), Sort.bool)
+  val ge = Fun(">=", List(Sort.int, Sort.int), Sort.bool)
+  val gt = Fun(">", List(Sort.int, Sort.int), Sort.bool)
+
+  val not = Fun("not", List(Sort.bool), Sort.bool)
+  val and = Fun("and", List(Sort.bool, Sort.bool), Sort.bool)
+  val or = Fun("or", List(Sort.bool, Sort.bool), Sort.bool)
+  val imp = Fun("=>", List(Sort.bool, Sort.bool), Sort.bool)
+  val eqv = Fun("=", List(Sort.bool, Sort.bool), Sort.bool)
+}
+
 sealed trait Pure extends Pure.term {
   def ^(that: Pure) = Pure.exp(this, that)
   def *(that: Pure) = Pure.times(this, that)
@@ -48,6 +75,9 @@ sealed trait Pure extends Pure.term {
 }
 
 object Pure extends Counter with Alpha[Pure, Var] {
+  val zero = const(0)
+  val one = const(1)
+
   object ite extends ternary("ite")
 
   object exp extends binary("exp")
@@ -76,29 +106,29 @@ object Pure extends Counter with Alpha[Pure, Var] {
   class unary(val fun: String) {
     def unapply(pure: Pure) =
       pure match {
-        case App(`fun`, List(arg)) => Some(arg)
+        case app(`fun`, List(arg)) => Some(arg)
         case _                     => None
       }
 
     def apply(arg: Pure) = {
-      App(fun, List(arg))
+      app(fun, List(arg))
     }
   }
 
   class binary(val fun: String) {
     def unapply(pure: Pure) =
       pure match {
-        case App(`fun`, List(arg1, arg2)) => Some((arg1, arg2))
+        case app(`fun`, List(arg1, arg2)) => Some((arg1, arg2))
         case _                            => None
       }
 
     def apply(arg1: Pure, arg2: Pure) = {
-      App(fun, List(arg1, arg2))
+      app(fun, List(arg1, arg2))
     }
 
     def flatten(expr: Pure): List[Pure] =
       expr match {
-        case App(`fun`, List(arg1, arg2)) =>
+        case app(`fun`, List(arg1, arg2)) =>
           flatten(arg1) ++ flatten(arg2)
         case _ =>
           List(expr)
@@ -108,26 +138,39 @@ object Pure extends Counter with Alpha[Pure, Var] {
   class ternary(val fun: String) {
     def unapply(pure: Pure) =
       pure match {
-        case App(`fun`, List(arg1, arg2, arg3)) => Some((arg1, arg2, arg3))
+        case app(`fun`, List(arg1, arg2, arg3)) => Some((arg1, arg2, arg3))
         case _                                  => None
       }
 
     def apply(arg1: Pure, arg2: Pure, arg3: Pure): Pure = {
-      App(fun, List(arg1, arg2, arg3))
+      app(fun, List(arg1, arg2, arg3))
     }
   }
-}
 
-case class Num(value: Int) extends Pure {
-  def free = Set()
-  def rename(re: Map[Var, Var]) = this
-  def subst(su: Map[Var, Pure]) = this
-  override def toString = value.toString
-}
+  case class const(value: Int) extends Pure {
+    def free = Set()
+    def rename(re: Map[Var, Var]) = this
+    def subst(su: Map[Var, Pure]) = this
+    override def toString = value.toString
+  }
 
-object Num {
-  val zero = Num(0)
-  val one = Num(1)
+  case class app(fun: String, args: List[Pure]) extends Pure {
+    def free = Set(args flatMap (_.free): _*)
+    def rename(re: Map[Var, Var]) = app(fun, args map (_ rename re))
+    def subst(su: Map[Var, Pure]) = app(fun, args map (_ subst su))
+
+    override def toString = {
+      if (args.isEmpty) fun
+      else sexpr(fun :: args)
+    }
+  }
+
+  def fresh(name: String, typ: Sort) = Var(name, typ, Some(Pure.next))
+
+  def vars(names: List[String], types: List[Sort]) = {
+    for ((name, typ) <- (names zip types))
+      yield Var(name, typ)
+  }
 }
 
 case class Var(name: String, typ: Sort, index: Option[Int] = None) extends Pure with Pure.x {
@@ -139,28 +182,6 @@ case class Var(name: String, typ: Sort, index: Option[Int] = None) extends Pure 
       case None        => name
       case Some(index) => name + index
     }
-  }
-}
-
-object Var {
-  def fresh(name: String, typ: Sort) = Var(name, typ, Some(Pure.next))
-}
-
-object Vars {
-  def apply(names: List[String], types: List[Sort]) = {
-    for ((name, typ) <- (names zip types))
-      yield Var(name, typ)
-  }
-}
-
-case class App(fun: String, args: List[Pure]) extends Pure {
-  def free = Set(args flatMap (_.free): _*)
-  def rename(re: Map[Var, Var]) = App(fun, args map (_ rename re))
-  def subst(su: Map[Var, Pure]) = App(fun, args map (_ subst su))
-
-  override def toString = {
-    if (args.isEmpty) fun
-    else sexpr(fun :: args)
   }
 }
 
