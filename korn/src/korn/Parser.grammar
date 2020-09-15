@@ -8,14 +8,14 @@
     Symbol s(Object x) { return new Symbol(x); }
 :};
 
-%terminals VOID, STRING, BOOL, CHAR, INT, SHORT, INT, LONG, LONGLONG, SIGNED, UNSIGNED, FLOAT, DOUBLE;
+%terminals VOID, BOOL, CHAR, INT, SHORT, INT, LONG, LONG_LONG, SIGNED, UNSIGNED, FLOAT, DOUBLE, LONG_DOUBLE, LONG_UNSIGNED;
 %terminals STRUCT, UNION, ENUM, TYPEDEF;
 
 %terminals RETURN, BREAK, CONTINUE, GOTO, SWITCH, CASE;
 %terminals IF, /* THEN, */ ELSE, DO, WHILE, FOR;
 
 %terminals ID, TYPE;
-%terminals NUM;
+%terminals CONST;
 
 %terminals LPAREN, RPAREN, LBRACK, RBRACK, LBRACE, RBRACE;
 %terminals POSTFIX, INCR, DECR, DOT, ARROW;
@@ -55,28 +55,27 @@
 %left  COMMA;
 
 %typeof ID      = "String";
-// %typeof STRING  = "String";
+%typeof fun     = "String";
 %typeof TYPE    = "String";
 
-%typeof NUM     = "Integer";
 %typeof ASG_OP  = "String";
 
 %typeof const   = "String";
 
 %typeof type    = "Type";
 %typeof expr    = "Expr";
+%typeof exprs_  = "Expr[]";
 %typeof stmt    = "Stmt";
 %typeof block   = "Block";
 
+%typeof ptrs    = "int";
 %typeof bound   = "Expr";
 %typeof dims    = "Dims";
 
 %typeof var     = "VarSpec";
-
 %typeof param   = "ParamSpec";
-
 %typeof field   = "FieldSpec";
-%typeof fields__ = "FieldsSpec";
+%typeof fields__= "MemberSpecs";
 
 %goal unit;
 
@@ -85,14 +84,21 @@ unit = stmts.ss {: return s(new Block(ss)); :}; // force conversion to array
 bound  = LBRACK expr.e RBRACK;
 bounds = bound *;
 
+ptrs
+    =              {: return s(0); :}
+    | ptrs.ps STAR {: return s(ps + 1); :}
+    ;
+
 dims
     = bounds.bs               {: return s(new Dims(false, bs));    :}
     | LBRACK RBRACK bounds.bs {: return s(new Dims(true, bs));     :}
     ;
 
 param
-    = type.t dims.ds         {: return s(new ParamSpec(t, ds));    :}
-    | type.t ID.n dims.ds    {: return s(new ParamSpec(t, n, ds)); :}
+    = type.t ptrs.x dims.ds         {: return s(new ParamSpec(Parsing.wrap(t, x), ds));    :}
+    | type.t ptrs.x ID.n dims.ds    {: return s(new ParamSpec(Parsing.wrap(t, x), n, ds)); :}
+    | type.t ptrs.x LPAREN STAR ID.n RPAREN LPAREN params.ps RPAREN
+      {: return s(new ParamSpec(new FunPtrType(Parsing.wrap(t, x), Parsing.params(ps)), n)); :}
     ;
 
 params
@@ -100,17 +106,17 @@ params
     | params COMMA param;
 
 var
-    = ID.n dims.ds            {: return s(new VarSpec(n, ds));     :}
-    | ID.n dims.ds ASG expr.i {: return s(new VarSpec(n, ds, i));  :}
+    = ptrs.x ID.n dims.ds            {: return s(new VarSpec(x, n, ds));     :}
+    | ptrs.x ID.n dims.ds ASG expr.i {: return s(new VarSpec(x, n, ds, i));  :}
     ;
 
 vars
     = var @ASG
     | vars COMMA var;
 
-
 field
-    = ID.n dims.ds           {: return s(new FieldSpec(n, ds)); :}
+    = ptrs.x ID.n? COLON CONST       {: return s(new FieldSpec(x, n));     :}
+    | ptrs.x ID.n dims.ds           {: return s(new FieldSpec(x, n, ds)); :}
     ;
 
 fields_
@@ -120,6 +126,8 @@ fields_
 fields__
     = type.t fields_.fs SEMICOLON
       {: return s(new FieldsSpec(t, fs)); :}
+    | UNION LBRACE fields.fs RBRACE SEMICOLON
+      {: return s(new FlatUnionSpec(fs)); :}
     ;
 
 fields
@@ -129,34 +137,50 @@ const  = ID.n;
 consts = const | consts COMMA const;
 exprs  = expr @ASG | exprs COMMA expr;
 
+exprs_ =          {: return s(new Expr[]{}); :}
+       | exprs.es {: return s(es);           :};
+
 block = LBRACE stmts.ss RBRACE {: return s(new Block(ss)); :};
+
+fun = ID.n | LPAREN ID.n RPAREN;
 
 stmts = stmt *;
 
 stmt
     = block
 
-    | TYPEDEF type.t ID.n  SEMICOLON                    {: types.add(n);
-                                                           return s(new TypeDef(t, n));    :}
+    | TYPEDEF type.t ptrs.x ID.n dims.ds SEMICOLON      {: types.add(n);
+                                                           return s(new TypeDef(Parsing.wrap(t.withDims(ds), x), n));    :}
+    | TYPEDEF type.t ptrs.x LPAREN STAR ID.n RPAREN LPAREN params.ps RPAREN
+                                                        {: types.add(n);
+                                                           return s(new TypeDef(new FunPtrType(Parsing.wrap(t, x), Parsing.params(ps)), n)); :}
+    | TYPEDEF STRUCT ID.m LBRACE fields.fs RBRACE ID.n SEMICOLON
+                                                        {: types.add(n);
+                                                           return s(new Group(new StructDef(m, Parsing.members(fs)),
+                                                                              new TypeDef(new StructName(m), n))); :}
+    | TYPEDEF UNION ID.m LBRACE fields.fs RBRACE ID.n SEMICOLON
+                                                        {: types.add(n);
+                                                           return s(new Group(new UnionDef(m, Parsing.members(fs)),
+                                                                              new TypeDef(new UnionName(m), n))); :}
     | STRUCT  ID.n SEMICOLON                            {: return s(new StructDecl(n));    :}
     | UNION   ID.n SEMICOLON                            {: return s(new UnionDecl(n));     :}
     | ENUM    ID.n SEMICOLON                            {: return s(new EnumDecl(n));      :}
-    | STRUCT  ID.n LBRACE fields.fs RBRACE SEMICOLON    {: return s(new StructDef(n, Parsing.fields(fs))); :}
-    | UNION   ID.n LBRACE fields.fs RBRACE SEMICOLON    {: return s(new UnionDef(n, Parsing.fields(fs)));  :}
+    | STRUCT  ID.n LBRACE fields.fs RBRACE SEMICOLON    {: return s(new StructDef(n, Parsing.members(fs))); :}
+    | UNION   ID.n LBRACE fields.fs RBRACE SEMICOLON    {: return s(new UnionDef(n, Parsing.members(fs)));  :}
     | ENUM         LBRACE consts.cs RBRACE SEMICOLON    {: return s(new EnumDef(cs));      :}
     | ENUM    ID.n LBRACE consts.cs RBRACE SEMICOLON    {: return s(new EnumDef(n, cs));   :}
 
-    | type.t ID.n LPAREN RPAREN SEMICOLON               {: return s(new FunDecl(t, n));    :}
-    | type.t ID.n LPAREN RPAREN block.b                 {: return s(new FunDef(t, n, b));  :}
-    | type.t ID.n LPAREN params.ps RPAREN SEMICOLON     {: return s(new FunDecl(t, n, Parsing.params(ps)));   :}
-    | type.t ID.n LPAREN params.ps RPAREN block.b       {: return s(new FunDef(t, n, Parsing.formals(ps), b));:}
+    | type.t ptrs.x fun.n LPAREN RPAREN SEMICOLON             {: return s(new FunDecl(Parsing.wrap(t, x), n));    :}
+    | type.t ptrs.x fun.n LPAREN RPAREN block.b               {: return s(new FunDef(Parsing.wrap(t, x), n, b));  :}
+    | type.t ptrs.x fun.n LPAREN params.ps RPAREN SEMICOLON   {: return s(new FunDecl(Parsing.wrap(t, x), n, Parsing.params(ps)));   :}
+    | type.t ptrs.x fun.n LPAREN params.ps RPAREN block.b     {: return s(new FunDef(Parsing.wrap(t, x), n, Parsing.formals(ps), b));:}
     
     | type.t vars.vs SEMICOLON                          {: return s(new Group(Parsing.vars(t, vs)));          :}
 
     | SEMICOLON                                         {: return s(Atomic.none()); :}
     | expr.a    SEMICOLON                               {: return s(new Atomic(a)); :}
     | GOTO ID.n SEMICOLON                               {: return s(new Goto(n));   :}
-    | CASE NUM.n COLON                                  {: return s(new Case(n));   :}
+    | CASE CONST.n COLON                                {: return s(new Case(n));   :}
     | ID.n COLON                                        {: return s(new Label(n));  :}
     | RETURN   SEMICOLON                                {: return s(Return.none()); :}
     | RETURN expr.a SEMICOLON                           {: return s(new Return(a)); :}
@@ -167,9 +191,9 @@ stmt
     | IF LPAREN expr.a RPAREN stmt.b ELSE stmt.c        {: return s(new If(a, b, c));   :}
     | WHILE LPAREN expr.a RPAREN stmt.b                 {: return s(new While(a, b));   :}
     | DO stmt.b WHILE LPAREN expr.a RPAREN SEMICOLON    {: return s(new DoWhile(b, a)); :}
-    | FOR LPAREN exprs.a SEMICOLON exprs.b SEMICOLON exprs.c RPAREN stmt.p
+    | FOR LPAREN exprs_.a SEMICOLON exprs_.b SEMICOLON exprs_.c RPAREN stmt.p
                                                         {: return s(new For(a, b, c, p)); :}
-    | FOR LPAREN type.t vars.vs SEMICOLON exprs.b SEMICOLON exprs.c RPAREN stmt.p
+    | FOR LPAREN type.t vars.vs SEMICOLON exprs_.b SEMICOLON exprs_.c RPAREN stmt.p
                                                         {: return s(new For(Parsing.vars(t, vs), b, c, p)); :}
     ;
 
@@ -177,11 +201,10 @@ expr
     = PREFIX | POSTFIX /* unused */
     | LPAREN expr.e RPAREN              // {: return e; :}
     | ID.n                              {: return s(new Id(n));  :}
-    | NUM.n                             {: return s(new Lit(n)); :}
-    | STRING.s                          {: return s(new Lit(s)); :}
+    | CONST.n                           {: return s(new Lit(n)); :}
     | ID.n LPAREN RPAREN                {: return s(new FunCall(n));       :}
     | ID.n LPAREN exprs.as RPAREN       {: return s(new FunCall(n, as));   :}
-    | LPAREN type.t RPAREN expr.a       {: return s(new Cast(t, a));       :}
+    | LPAREN type.t ptrs.x RPAREN expr.a  {: return s(new Cast(Parsing.wrap(t, x), a));       :}
     | SIZEOF LPAREN type.t  RPAREN      {: return s(new SizeOfType(t));    :}
     | SIZEOF LPAREN expr.e RPAREN       {: return s(new SizeOfExpr(e));    :}
     
@@ -234,24 +257,24 @@ type
     | BOOL                              {: return s(Type._Bool());         :}
     | FLOAT                             {: return s(Type._float());        :}
     | DOUBLE                            {: return s(Type._double());       :}
+    | LONG_DOUBLE                       {: return s(Type._double());       :}
     | SIGNED? CHAR                      {: return s(Signed._char());       :}
-    | SIGNED? SHORT                     {: return s(Signed._short());      :}
+    | SIGNED? SHORT INT?                {: return s(Signed._short());      :}
     | SIGNED? INT                       {: return s(Signed._int());        :}
-    | SIGNED? LONG                      {: return s(Signed._long());       :}
-    | SIGNED? LONGLONG                  {: return s(Signed._long_long());  :}
+    | SIGNED? LONG INT?                 {: return s(Signed._long());       :}
+    | SIGNED? LONG_LONG INT?            {: return s(Signed._long_long());  :}
     | UNSIGNED CHAR                     {: return s(Unsigned._char());     :}
-    | UNSIGNED SHORT                    {: return s(Unsigned._short());    :}
+    | UNSIGNED SHORT INT?               {: return s(Unsigned._short());    :}
     | UNSIGNED                          {: return s(Unsigned._int());      :}
     | UNSIGNED INT                      {: return s(Unsigned._int());      :}
-    | UNSIGNED LONG                     {: return s(Unsigned._long());     :}
-    | UNSIGNED LONGLONG                 {: return s(Unsigned._long_long());:}
+    | UNSIGNED LONG INT?                {: return s(Unsigned._long());     :}
+    | LONG_UNSIGNED INT                 {: return s(Unsigned._long());     :}
+    | UNSIGNED LONG_LONG INT?           {: return s(Unsigned._long_long());:}
     | TYPE.t                            {: return s(new TypedefName(t));   :}
-    | type.t STAR                       {: return s(new PtrType(t));       :}
-    // | type.t LBRACK RBRACK              {: return s(new PtrType(t));       :}
     | STRUCT ID.t                       {: return s(new StructName(t));    :}
     | UNION  ID.t                       {: return s(new UnionName(t));     :}
     | ENUM   ID.t                       {: return s(new EnumName(t));      :}
-    | STRUCT LBRACE fields.fs RBRACE    {: return s(new AnonStruct(Parsing.fields(fs)));   :}
-    | UNION  LBRACE fields.fs RBRACE    {: return s(new AnonUnion(Parsing.fields(fs)));    :}
+    | STRUCT LBRACE fields.fs RBRACE    {: return s(new AnonStruct(Parsing.members(fs)));   :}
+    | UNION  LBRACE fields.fs RBRACE    {: return s(new AnonUnion(Parsing.members(fs)));    :}
     | ENUM   LBRACE consts.cs RBRACE    {: return s(new AnonEnum(cs));     :}
     ;

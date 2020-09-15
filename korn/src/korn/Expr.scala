@@ -49,6 +49,10 @@ case class EnumName(name: String) extends TypeName
 
 case class PtrType(typ: Type) extends Type
 
+case class FunPtrType(ret: Type, args: List[Type]) extends Type {
+  def this(ret: Type, args: Array[Type]) = this(ret, args.toList)
+}
+
 case class ArrayType(typ: Type, dim: Expr) extends Type
 
 case class AnonStruct(fields: List[Field]) extends CompoundType {
@@ -218,70 +222,4 @@ object FunCall {
 
 case class Init(values: Array[(Option[String], Expr)]) extends Expr { // { .field = value } or { value }
   def rename(re: Map[String, String]) = ???
-}
-
-case class Dims(ptr: Boolean, bounds: List[Expr]) {
-  def this(ptr: Boolean, bounds: Array[Expr]) = this(ptr, bounds.toList)
-}
-
-object Dims {
-  val empty = Dims(false, Nil)
-}
-
-case class ParamSpec(typ: Type, name: Option[String], dims: Dims) {
-  def this(typ: Type, dims: Dims) = this(typ, None, dims)
-  def this(typ: Type, name: String, dims: Dims) = this(typ, Some(name), dims)
-}
-
-case class VarSpec(name: String, dims: Dims, init: Option[Expr]) {
-  def this(name: String, dims: Dims) = this(name, dims, None)
-  def this(name: String, dims: Dims, init: Expr) = this(name, dims, Some(init))
-}
-
-case class FieldSpec(name: String, dims: Dims)
-case class FieldsSpec(typ: Type, fields: Array[FieldSpec])
-
-object Parsing {
-  def params(specs: Array[ParamSpec]) =
-    specs match {
-      case Array(ParamSpec(Type._void, None, Dims.empty)) =>
-        Array[Type]()
-      case _ =>
-        for (spec <- specs)
-          yield {
-            val ParamSpec(typ, _, dims) = spec
-            typ withDims dims
-          }
-    }
-
-  def formals(specs: Array[ParamSpec]) =
-    specs match {
-      case Array(ParamSpec(Type._void, None, Dims.empty)) =>
-        Array[Formal]()
-      case _ =>
-        for (spec <- specs)
-          yield {
-            val ParamSpec(typ, Some(name), dims) = spec
-            Formal(typ withDims dims, name)
-          }
-    }
-
-  def fields(groups: Array[FieldsSpec]) = {
-    for (
-      group <- groups;
-      field <- group.fields
-    )
-      yield {
-        val FieldSpec(name, dims) = field
-        Field(group.typ withDims dims, name)
-      }
-  }
-
-  def vars(typ: Type, group: Array[VarSpec]) = {
-    for (vars <- group)
-      yield {
-        val VarSpec(name, dims, init) = vars
-        VarDef(Formal(typ withDims dims, name), init)
-      }
-  }
 }

@@ -6,6 +6,8 @@ import java.io.File
 import java.io.FileReader
 import scala.annotation.tailrec
 import java.io.PrintStream
+import java.io.InputStream
+import java.io.OutputStream
 
 object Main {
   var dry = false
@@ -26,28 +28,34 @@ object Main {
     (in, out, err)
   }
 
+  def cat(in: InputStream, out: OutputStream) {
+    in.transferTo(out)
+    out.flush()
+  }
+
   @tailrec
   def configure(args: List[String]) {
     args match {
       case Nil =>
-      case "-dry" :: rest =>
-        dry = true
-        configure(rest)
 
-      case "-sum" :: rest =>
+      case ("-s" | "-summaries") :: rest =>
         sum = true
         configure(rest)
 
-      case "-inv" :: rest =>
+      case ("-i" | "-invariants") :: rest =>
         sum = false
         configure(rest)
 
-      case "-debug" :: rest =>
-        debug = true
+      case ("-m" | "-model") :: rest =>
+        model = true
         configure(rest)
 
-      case "-model" :: rest =>
-        model = true
+      case ("-p" | "-parse") :: rest =>
+        dry = true
+        configure(rest)
+
+      case ("-d" | "-debug") :: rest =>
+        debug = true
         configure(rest)
 
       case file :: rest =>
@@ -79,13 +87,27 @@ object Main {
   def run(files: List[String]) {
     for (path <- files) {
       try {
+        System.out.flush()
+        System.err.flush()
+
+        System.out.println(path)
         val stmts = parse(path)
-        object unit extends Unit(stmts)
-        unit.run()
-        print(unit, System.out)
+        if (!dry) {
+          object unit extends Unit(stmts)
+          unit.run()
+          print(unit, System.out)
+        }
       } catch {
+        case e: beaver.Parser.Exception =>
+          System.out.println("parser error")
+        case e: NotImplementedError =>
+          val st = e.getStackTrace()(1)
+          val file = st.getFileName + ":" + st.getLineNumber
+          val code = st.getClassName + "." + st.getMethodName
+          val where = code + " (" + file + ")"
+          System.out.println("not implemented: " + where)
         case e: Throwable =>
-          e.printStackTrace()
+          System.out.println("error: " + e.getMessage)
       }
     }
   }

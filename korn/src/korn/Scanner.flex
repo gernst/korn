@@ -22,10 +22,6 @@ import korn.Parser.Terminals;
 
 %{
     public Set<String> types;
-	
-    Symbol string(String name) {
-    	return newToken(Terminals.STRING, name.substring(1, name.length() - 1));
-    }
 
     Symbol resolve(String name) {
     	if(types.contains(name)) {
@@ -48,6 +44,13 @@ import korn.Parser.Terminals;
 
 NL = \r|\n|\r\n
 WS = {NL} | [ \t\f]
+
+D = [0-9]
+L = [a-zA-Z_]
+H = [a-fA-F0-9]
+E = [Ee][+-]?{D}+
+FS = (f|F|l|L)
+IS = (u|U|l|L)*
 
 %%
 
@@ -106,8 +109,12 @@ WS = {NL} | [ \t\f]
 "short"     { return newToken(Terminals.SHORT);    }
 "int"       { return newToken(Terminals.INT);      }
 "long"      { return newToken(Terminals.LONG);     }
+"long" {WS}+ "double"
+            { return newToken(Terminals.LONG_DOUBLE); }
 "long" {WS}+ "long"
-            { return newToken(Terminals.LONGLONG); }
+            { return newToken(Terminals.LONG_LONG); }
+"long" {WS}+ "unsigned"
+            { return newToken(Terminals.LONG_UNSIGNED); }
 "signed"    { return newToken(Terminals.SIGNED);   }
 "unsigned"  { return newToken(Terminals.UNSIGNED); }
 
@@ -129,23 +136,30 @@ WS = {NL} | [ \t\f]
 "else"      { return newToken(Terminals.ELSE);     }
 
 // ignore these
-"extern"    { }
-"const"     { }
-"static"    { }
-"__attribute__" {WS}+ "((__noreturn__))"     { }
-
-","         { return newToken(Terminals.COMMA);    }
-";"         { return newToken(Terminals.SEMICOLON);}
-
-\"(\\.|[^\"\\])*\"
-            { return string(yytext()); }
+"extern"        { }
+"const"         { }
+"static"        { }
+"volatile"      { }
+"__inline"      { }
+"__restrict"    { }
+"__extension__" { }
+"__attribute__" {WS}+ "((" .* "))" { }
             
 [a-zA-Z_][a-zA-Z_0-9]*
             { return resolve(yytext()); }
 
-[0-9]+      { return newToken(Terminals.NUM, new Integer(yytext())); }
+0[xX]{H}+{IS}?          { return newToken(Terminals.CONST, Long.parseLong(yytext(), 16)); }
+0{D}+{IS}?              { return newToken(Terminals.CONST, Long.parseLong(yytext()));     }
+{D}+{IS}?               { return newToken(Terminals.CONST, Long.parseLong(yytext()));     }
 
-// floats, hex, long literals
+{D}+{E}{FS}?            { return newToken(Terminals.CONST, Double.parseDouble(yytext())); }
+{D}*"."{D}+({E})?{FS}?  { return newToken(Terminals.CONST, Double.parseDouble(yytext())); }
+{D}+"."{D}*({E})?{FS}?  { return newToken(Terminals.CONST, Double.parseDouble(yytext())); }
+
+L?'(\\.|[^\'\\])+'      { return newToken(Terminals.CONST, Parsing.ch(yytext()));         }
+L?\"(\\.|[^\"\\])*\"    { return newToken(Terminals.CONST, Parsing.str(yytext()));        }
+
+// [0-9]+      { return newToken(Terminals.NUM, Integer.parseInt(yytext())); }
 
 [^]         { throw new Scanner.Exception("unexpected character '" + yytext() + "'"); }
 
