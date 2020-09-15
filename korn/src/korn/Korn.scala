@@ -45,16 +45,6 @@ case class Scope(names: List[String], types: List[Sort]) {
   }
 }
 
-/* need this because
-   - break with inv can't use regular exit
-   - break with sum also needs pre-state
- */
-sealed trait Result
-case object Unreach extends Result
-case class Ok(st: State) extends Result
-case class Continued(st: State) extends Result
-case class Breaked(st: State) extends Result
-
 class Unit(stmts: List[Stmt]) {
 
   /** global data types */
@@ -331,21 +321,13 @@ class Unit(stmts: List[Stmt]) {
 
     val any = entry.arbitrary
 
-    var invs: List[Pred] = Nil
-    var sums: List[Pred] = Nil
+    var breaks: List[Pred] = Nil
 
-    def loop[A](inv: Pred)(thunk: => A) = {
+    def loop[A](break: Pred)(thunk: => A) = {
       try {
-        invs = inv :: invs; thunk
+        breaks = break :: breaks; thunk
       } finally {
-        invs = invs.tail
-      }
-    }
-    def loop[A](inv: Pred, sum: Pred)(thunk: => A) = {
-      try {
-        invs = inv :: invs; sums = sum :: sums; thunk
-      } finally {
-        invs = invs.tail; sums = sums.tail
+        breaks = breaks.tail
       }
     }
 
@@ -359,6 +341,10 @@ class Unit(stmts: List[Stmt]) {
 
     object $branch extends Counter {
       def newLabel = "$" + name + "_branch" + next
+    }
+
+    object $break extends Counter {
+      def newLabel = "$" + name + "_break" + next
     }
 
     object $inv extends Counter {
@@ -552,14 +538,10 @@ class Unit(stmts: List[Stmt]) {
           val (_, st1) = rval(expr, st0)
           Some(st1)
 
-        case Break if !Main.sum =>
-          val inv = invs.head
-          error("break: " + inv)
-
         case Break =>
-          val inv = invs.head
-          val sum = sums.head
-          error("break: " + inv + " and " + sum)
+          val break = breaks.head
+          now(break, st0, "break " + break.name)
+          None // successor states not immediately reachable
 
         case Return(None) =>
           for ((cond, _) <- post) {
@@ -592,25 +574,29 @@ class Unit(stmts: List[Stmt]) {
 
         case While(test, body) if !Main.sum =>
           val inv = here($inv.newLabel)
+          val brk = here($break.newLabel)
 
           val st1 = generalize(inv, st0, inv.name + " entry ")
           val (_test, st2) = rval_test(test, st1)
 
           val st = st2 and _test
-          val inner = loop(inv) { local(body, st) }
-          
+          val inner = loop(brk) { local(body, st) }
+
           for (st_ <- inner) {
             now(inv, st_, inv.name + " preserved")
           }
 
           val st3 = st2 and !_test
-          Some(st3)
+
+          now(brk, st3, "loop post")
+          Some(from(brk))
 
         case While(test, body) if Main.sum =>
           val mod = Stmt.modifies(body)
 
           val inv = here($inv.newLabel)
           val sum = here($sum.newLabel, mod)
+          val brk = here($break.newLabel)
 
           now(inv, st0, inv.name + " entry")
 
@@ -621,7 +607,7 @@ class Unit(stmts: List[Stmt]) {
           val stn = st1 and !_test
 
           val step = eval(sum, sty, exit, mod)
-          val inner = loop(inv, sum) { local(body, sty) }
+          val inner = loop(brk) { local(body, sty) }
 
           for (st_ <- inner) {
             now(inv, st_, inv.name + " forwards")
@@ -636,7 +622,9 @@ class Unit(stmts: List[Stmt]) {
           val st2 = st0 ++ re
           val cond = eval(sum, st0, st2, mod)
           val st3 = st2 and cond
-          Some(st3)
+
+          now(brk, st3, "loop post")
+          Some(from(brk))
       }
     }
 
