@@ -45,6 +45,16 @@ case class Scope(names: List[String], types: List[Sort]) {
   }
 }
 
+/* need this because
+   - break with inv can't use regular exit
+   - break with sum also needs pre-state
+ */
+sealed trait Result
+case object Unreach extends Result
+case class Ok(st: State) extends Result
+case class Continued(st: State) extends Result
+case class Breaked(st: State) extends Result
+
 class Unit(stmts: List[Stmt]) {
 
   /** global data types */
@@ -318,7 +328,26 @@ class Unit(stmts: List[Stmt]) {
       entry: State,
       exit: State,
       body: Stmt) {
+
     val any = entry.arbitrary
+
+    var invs: List[Pred] = Nil
+    var sums: List[Pred] = Nil
+
+    def loop[A](inv: Pred)(thunk: => A) = {
+      try {
+        invs = inv :: invs; thunk
+      } finally {
+        invs = invs.tail
+      }
+    }
+    def loop[A](inv: Pred, sum: Pred)(thunk: => A) = {
+      try {
+        invs = inv :: invs; sums = sum :: sums; thunk
+      } finally {
+        invs = invs.tail; sums = sums.tail
+      }
+    }
 
     def clause(st: State, phi: Prop, reason: String) {
       clauses += Clause(st.path, phi, reason)
@@ -523,6 +552,15 @@ class Unit(stmts: List[Stmt]) {
           val (_, st1) = rval(expr, st0)
           Some(st1)
 
+        case Break if !Main.sum =>
+          val inv = invs.head
+          error("break: " + inv)
+
+        case Break =>
+          val inv = invs.head
+          val sum = sums.head
+          error("break: " + inv + " and " + sum)
+
         case Return(None) =>
           for ((cond, _) <- post) {
             result(cond, st0, "return " + name)
@@ -559,7 +597,9 @@ class Unit(stmts: List[Stmt]) {
           val (_test, st2) = rval_test(test, st1)
 
           val st = st2 and _test
-          for (st_ <- local(body, st)) {
+          val inner = loop(inv) { local(body, st) }
+          
+          for (st_ <- inner) {
             now(inv, st_, inv.name + " preserved")
           }
 
@@ -581,8 +621,9 @@ class Unit(stmts: List[Stmt]) {
           val stn = st1 and !_test
 
           val step = eval(sum, sty, exit, mod)
+          val inner = loop(inv, sum) { local(body, sty) }
 
-          for (st_ <- local(body, sty)) {
+          for (st_ <- inner) {
             now(inv, st_, inv.name + " forwards")
 
             val hyp = eval(sum, st_, exit, mod)
