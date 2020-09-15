@@ -1,6 +1,5 @@
 package object korn {
   type Store = Map[String, Pure]
-  // type Heap = Map[Pure, Chunk]
 
   object Store {
     def apply(keys: List[String], values: List[Pure]) = {

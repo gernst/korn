@@ -10,7 +10,3 @@ class Counter {
     _index
   }
 }
-
-class InputStreamOps(in: InputStream) {
-  def text = new String(in.readAllBytes(), "UTF-8")
-}

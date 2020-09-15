@@ -286,7 +286,7 @@ object Parsing {
   }
 }
 
-sealed trait Stmt {}
+sealed trait Stmt
 
 object Stmt {
   def modifies(expr: Expr): Set[String] =
@@ -416,6 +416,9 @@ object Stmt {
         val init_ = init rename re0
         // (List(formal_), id_ := init_, re0 + (name -> name_))
         (List(formal_), Assume(id_, init_, typ), re0 + (name -> name_))
+
+      case _ =>
+        error("cannot normalize: " + stmt)
     }
 }
 

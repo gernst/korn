@@ -1,8 +1,7 @@
 package korn
 
 object Val {
-  sealed trait Val
-  sealed trait Sort
+  /* sealed trait Sort
   sealed trait Fun
 
   case class Signed(name: String, min: Int, max: Int) extends Sort
@@ -10,13 +9,13 @@ object Val {
 
   case class Struct() extends Sort
 
-  case class Arr(value: Pure, length: Pure) extends Val
-  case class Arr2(values: List[Pure]) extends Val
+  case class Arr(value: Val, length: Val) extends Val
+  case class Arr2(values: List[Val]) extends Val
 
   sealed trait Loc extends Val
   case class Ptr(index: Int, sort: Sort) extends Loc
-  case class Index(arr: Pure, index: Pure) extends Loc
-  case class Member(base: Pure, field: String) extends Loc
+  case class Index(arr: Val, index: Val) extends Loc
+  case class Member(base: Val, field: String) extends Loc
 
   case class Var(name: String, sort: Sort) extends Val
   case class Const(value: Int, sort: Sort) extends Val
@@ -28,5 +27,5 @@ object Val {
   }
   case object Emp extends Heap
   case class Load(loc: Loc, heap: Heap) extends Heap
-  case class Store(loc: Loc, value: Val, heap: Heap) extends Heap
+  case class Store(loc: Loc, value: Val, heap: Heap) extends Heap */
 }

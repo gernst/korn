@@ -13,11 +13,6 @@ object Clause {
   }
 }
 
-case class Pred(name: String, types: List[Sort]) {
-  def apply(args: List[Pure]) = In(name, args)
-  def apply(args: List[Pure], res: Pure) = In(name, args ++ List(res))
-}
-
 case class State(path: List[Prop], store: Store) {
   def arbitrary = State(Nil, store)
   def and(that: Prop) = State(that :: path, store)
@@ -198,6 +193,7 @@ class Unit(stmts: List[Stmt]) {
       case _: Unsigned         => Sort.int
       case PtrType(elem)       => Sort.pointer(resolve(elem))
       case ArrayType(typ, dim) => Sort.array(Sort.int, resolve(typ))
+      case _                   => error("cannot resolve: " + typ)
     }
   }
 
@@ -205,34 +201,11 @@ class Unit(stmts: List[Stmt]) {
     arg1 select arg2
   }
 
-  def bool(prop: Prop): Pure = {
-    prop match {
-      case _ => prop ? (Pure.one, Pure.zero)
-    }
-  }
-
-  def truth(arg: Pure): Prop = {
-    arg match {
-      case Pure.const(value)              => if (value == 0) False else True
-      case Pure._eq(arg1, arg2)           => Eq(arg1, arg2)
-      case Pure.not(arg1)                 => !truth(arg1)
-      case Pure.and(arg1, arg2)           => truth(arg1) and truth(arg2)
-      case Pure.or(arg1, arg2)            => truth(arg1) or truth(arg2)
-      case Pure.lt(arg1, arg2)            => Prop.lt(arg1, arg2)
-      case Pure.le(arg1, arg2)            => Prop.le(arg1, arg2)
-      case Pure.gt(arg1, arg2)            => Prop.gt(arg1, arg2)
-      case Pure.ge(arg1, arg2)            => Prop.ge(arg1, arg2)
-      case Ite(test, Pure.one, Pure.zero) => test
-      case Ite(test, Pure.zero, Pure.one) => !test
-      case pure: Pure                     => !Eq(pure, Pure.zero)
-    }
-  }
-
   def preop(op: String, arg: Pure): Pure = {
     op match {
       case "+" => arg
       case "-" => -arg
-      case "!" => bool(!truth(arg))
+      case "!" => Pure.bool(!Prop.truth(arg))
     }
   }
 
@@ -243,17 +216,17 @@ class Unit(stmts: List[Stmt]) {
       case "*"  => arg1 * arg2
       case "/"  => arg1 / arg2
       case "%"  => arg1 % arg2
-      case "==" => bool(Eq(arg1, arg2))
-      case "!=" => bool(!Eq(arg1, arg2))
-      case "<"  => bool(Prop.lt(arg1, arg2))
-      case "<=" => bool(Prop.le(arg1, arg2))
-      case ">"  => bool(Prop.gt(arg1, arg2))
-      case ">=" => bool(Prop.ge(arg1, arg2))
+      case "==" => Pure.bool(arg1 === arg2)
+      case "!=" => Pure.bool(arg1 === arg2)
+      case "<"  => Pure.bool(arg1 < arg2)
+      case "<=" => Pure.bool(arg1 <= arg2)
+      case ">"  => Pure.bool(arg1 > arg2)
+      case ">=" => Pure.bool(arg1 >= arg2)
     }
   }
 
   def eval_test(expr: Expr, st: State) = {
-    truth(eval(expr, st))
+    Prop.truth(eval(expr, st))
   }
 
   def eval(expr: Expr, st: State): Pure = {
@@ -501,7 +474,7 @@ class Unit(stmts: List[Stmt]) {
           val (_expr, st1) = rval(expr, st0)
           val _typ = resolve(typ)
           val x = Var(name, _typ)
-          val eq = Eq(x, _expr)
+          val eq = (x === _expr)
           val st2 = st1 and eq
           Some(st2)
 
@@ -651,7 +624,7 @@ class Unit(stmts: List[Stmt]) {
 
     def rval_test(expr: Expr, st0: State): (Prop, State) = {
       val (_res, st1) = rval(expr, st0)
-      (truth(_res), st1)
+      (Prop.truth(_res), st1)
     }
 
     def rvals(exprs: List[Expr], st0: State): (List[Pure], State) = {
@@ -740,12 +713,12 @@ class Unit(stmts: List[Stmt]) {
         case BinOp("||", arg1, arg2) if !Expr.hasEffects(arg2) =>
           val (_arg1, st1) = rval_test(arg1, st0)
           val (_arg2, st2) = rval_test(arg2, st1)
-          (bool(_arg1 or _arg2), st2)
+          (Pure.bool(_arg1 or _arg2), st2)
 
         case BinOp("&&", arg1, arg2) if !Expr.hasEffects(arg2) =>
           val (_arg1, st1) = rval_test(arg1, st0)
           val (_arg2, st2) = rval_test(arg2, st1)
-          (bool(_arg1 and _arg2), st2)
+          (Pure.bool(_arg1 and _arg2), st2)
 
         /*
       // shortcut evaluation yields two states

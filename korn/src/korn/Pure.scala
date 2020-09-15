@@ -22,9 +22,6 @@ object Sort {
 case class Fun(name: String, args: List[Sort], ret: Sort)
 
 object Fun {
-  def t = Fun("true", List(), Sort.bool)
-  def f = Fun("false", List(), Sort.bool)
-
   val exp = Fun("^", List(Sort.int, Sort.int), Sort.int)
   val times = Fun("*", List(Sort.int, Sort.int), Sort.int)
   val divBy = Fun("/", List(Sort.int, Sort.int), Sort.int)
@@ -33,17 +30,6 @@ object Fun {
   val uminus = Fun("-", List(Sort.int), Sort.int)
   val plus = Fun("+", List(Sort.int, Sort.int), Sort.int)
   val minus = Fun("-", List(Sort.int, Sort.int), Sort.int)
-
-  val le = Fun("<=", List(Sort.int, Sort.int), Sort.bool)
-  val lt = Fun("<", List(Sort.int, Sort.int), Sort.bool)
-  val ge = Fun(">=", List(Sort.int, Sort.int), Sort.bool)
-  val gt = Fun(">", List(Sort.int, Sort.int), Sort.bool)
-
-  val not = Fun("not", List(Sort.bool), Sort.bool)
-  val and = Fun("and", List(Sort.bool, Sort.bool), Sort.bool)
-  val or = Fun("or", List(Sort.bool, Sort.bool), Sort.bool)
-  val imp = Fun("=>", List(Sort.bool, Sort.bool), Sort.bool)
-  val eqv = Fun("=", List(Sort.bool, Sort.bool), Sort.bool)
 }
 
 sealed trait Pure extends Pure.term {
@@ -57,18 +43,13 @@ sealed trait Pure extends Pure.term {
   def +(that: Pure) = Pure.plus(this, that)
   def -(that: Pure) = Pure.minus(this, that)
 
-  def ===(that: Pure) = Pure._eq(this, that)
+  def ===(that: Pure) = Prop.eqn(this, that)
   def !==(that: Pure) = !(this === that)
 
-  def <=(that: Pure) = Pure.le(this, that)
-  def <(that: Pure) = Pure.lt(this, that)
-  def >=(that: Pure) = Pure.ge(this, that)
-  def >(that: Pure) = Pure.gt(this, that)
-
-  def unary_!() = Pure.not(this)
-  def and(that: Pure) = Pure.and(this, that)
-  def or(that: Pure) = Pure.or(this, that)
-  def ==>(that: Pure) = Pure.imp(this, that)
+  def <=(that: Pure) = Prop.le(this, that)
+  def <(that: Pure) = Prop.lt(this, that)
+  def >=(that: Pure) = Prop.ge(this, that)
+  def >(that: Pure) = Prop.gt(this, that)
 
   def select(index: Pure) = Pure.select(this, index)
   def store(index: Pure, value: Pure) = Pure.store(this, index, value)
@@ -78,32 +59,70 @@ object Pure extends Counter with Alpha[Pure, Var] {
   val zero = const(0)
   val one = const(1)
 
-  object ite extends ternary("ite")
+  object exp extends binary(Fun.exp)
+  object times extends binary(Fun.times)
+  object divBy extends binary(Fun.divBy)
+  object mod extends binary(Fun.mod)
 
-  object exp extends binary("exp")
-  object times extends binary("*")
-  object divBy extends binary("div")
-  object mod extends binary("mod")
+  object uminus extends unary(Fun.uminus)
+  object plus extends binary(Fun.plus)
+  object minus extends binary(Fun.minus)
 
-  object uminus extends unary("-")
-  object plus extends binary("+")
-  object minus extends binary("-")
+  def fresh(name: String, typ: Sort) = {
+    Var(name, typ, Some(Pure.next))
+  }
 
-  object _eq extends binary("=")
-  object lt extends binary("<")
-  object le extends binary("<=")
-  object gt extends binary(">")
-  object ge extends binary(">=")
+  def vars(names: List[String], types: List[Sort]) = {
+    for ((name, typ) <- (names zip types))
+      yield Var(name, typ)
+  }
 
-  object not extends unary("not")
-  object and extends binary("and")
-  object or extends binary("or")
-  object imp extends binary("=>")
+  case class const(value: Int) extends Pure {
+    def free = Set()
+    def rename(re: Map[Var, Var]) = this
+    def subst(su: Map[Var, Pure]) = this
+    override def toString = value.toString
+  }
 
-  object select extends binary("select")
-  object store extends ternary("store")
+  case class bool(arg: Prop) extends Pure {
+    def free = arg.free
+    def rename(re: Map[Var, Var]) = bool(arg rename re)
+    def subst(su: Map[Var, Pure]) = bool(arg subst su)
+  }
 
-  class unary(val fun: String) {
+  case class app(fun: Fun, args: List[Pure]) extends Pure {
+    def free = Set(args flatMap (_.free): _*)
+    def rename(re: Map[Var, Var]) = app(fun, args map (_ rename re))
+    def subst(su: Map[Var, Pure]) = app(fun, args map (_ subst su))
+
+    override def toString = {
+      if (args.isEmpty) fun.toString
+      else sexpr(fun :: args)
+    }
+  }
+
+  case class ite(test: Prop, left: Pure, right: Pure) extends Pure {
+    def free = test.free ++ left.free ++ right.free
+    def rename(re: Map[Var, Var]) = ite(test rename re, left rename re, right rename re)
+    def subst(su: Map[Var, Pure]) = ite(test subst su, left subst su, right subst su)
+    override def toString = sexpr("ite", test, left, right)
+  }
+
+  case class select(base: Pure, index: Pure) extends Pure {
+    def free = base.free ++ index.free
+    def rename(re: Map[Var, Var]) = new select(base rename re, index rename re)
+    def subst(su: Map[Var, Pure]) = new select(base subst su, index subst su)
+    override def toString = sexpr("select", base, index)
+  }
+
+  case class store(base: Pure, index: Pure, arg: Pure) extends Pure {
+    def free = base.free ++ index.free ++ arg.free
+    def rename(re: Map[Var, Var]) = new store(base rename re, index rename re, arg rename re)
+    def subst(su: Map[Var, Pure]) = new store(base subst su, index subst su, arg subst su)
+    override def toString = sexpr("store", base, index, arg)
+  }
+
+  class unary(val fun: Fun) {
     def unapply(pure: Pure) =
       pure match {
         case app(`fun`, List(arg)) => Some(arg)
@@ -115,7 +134,7 @@ object Pure extends Counter with Alpha[Pure, Var] {
     }
   }
 
-  class binary(val fun: String) {
+  class binary(val fun: Fun) {
     def unapply(pure: Pure) =
       pure match {
         case app(`fun`, List(arg1, arg2)) => Some((arg1, arg2))
@@ -134,43 +153,6 @@ object Pure extends Counter with Alpha[Pure, Var] {
           List(expr)
       }
   }
-
-  class ternary(val fun: String) {
-    def unapply(pure: Pure) =
-      pure match {
-        case app(`fun`, List(arg1, arg2, arg3)) => Some((arg1, arg2, arg3))
-        case _                                  => None
-      }
-
-    def apply(arg1: Pure, arg2: Pure, arg3: Pure): Pure = {
-      app(fun, List(arg1, arg2, arg3))
-    }
-  }
-
-  case class const(value: Int) extends Pure {
-    def free = Set()
-    def rename(re: Map[Var, Var]) = this
-    def subst(su: Map[Var, Pure]) = this
-    override def toString = value.toString
-  }
-
-  case class app(fun: String, args: List[Pure]) extends Pure {
-    def free = Set(args flatMap (_.free): _*)
-    def rename(re: Map[Var, Var]) = app(fun, args map (_ rename re))
-    def subst(su: Map[Var, Pure]) = app(fun, args map (_ subst su))
-
-    override def toString = {
-      if (args.isEmpty) fun
-      else sexpr(fun :: args)
-    }
-  }
-
-  def fresh(name: String, typ: Sort) = Var(name, typ, Some(Pure.next))
-
-  def vars(names: List[String], types: List[Sort]) = {
-    for ((name, typ) <- (names zip types))
-      yield Var(name, typ)
-  }
 }
 
 case class Var(name: String, typ: Sort, index: Option[Int] = None) extends Pure with Pure.x {
@@ -183,127 +165,4 @@ case class Var(name: String, typ: Sort, index: Option[Int] = None) extends Pure 
       case Some(index) => name + index
     }
   }
-}
-
-case class Ite(test: Prop, left: Pure, right: Pure) extends Pure {
-  def free = test.free ++ left.free ++ right.free
-  def rename(re: Map[Var, Var]) = Ite(test rename re, left rename re, right rename re)
-  def subst(su: Map[Var, Pure]) = Ite(test subst su, left subst su, right subst su)
-  override def toString = sexpr("ite", test, left, right)
-}
-
-sealed trait Prop {
-  def ?(left: Pure, right: Pure) = Ite(this, left, right)
-
-  def unary_!() = {
-    this match {
-      case Not(that) => that
-      case _         => Not(this)
-    }
-  }
-
-  def and(that: Prop) = And(this, that)
-  def or(that: Prop) = Or(this, that)
-  def ==>(that: Prop) = Imp(this, that)
-
-  def free: Set[Var]
-  def rename(re: Map[Var, Var]): Prop
-  def subst(su: Map[Var, Pure]): Prop
-}
-
-object Prop {
-  object lt extends binary("<")
-  object le extends binary("<=")
-  object gt extends binary(">")
-  object ge extends binary(">=")
-
-  class unary(val pred: String) {
-    def unapply(prop: Prop) =
-      prop match {
-        case In(`pred`, List(arg)) => Some(arg)
-        case _                     => None
-      }
-
-    def apply(arg: Pure) = {
-      In(pred, List(arg))
-    }
-  }
-
-  class binary(val pred: String) {
-    def unapply(prop: Prop) =
-      prop match {
-        case In(`pred`, List(arg1, arg2)) => Some((arg1, arg2))
-        case _                            => None
-      }
-
-    def apply(arg1: Pure, arg2: Pure) = {
-      In(pred, List(arg1, arg2))
-    }
-  }
-}
-
-case object True extends Prop {
-  def free = Set()
-  def rename(re: Map[Var, Var]) = this
-  def subst(su: Map[Var, Pure]) = this
-  override def toString = "true"
-}
-
-case object False extends Prop {
-  def free = Set()
-  def rename(re: Map[Var, Var]) = this
-  def subst(su: Map[Var, Pure]) = this
-  override def toString = "false"
-}
-
-case class Eq(left: Pure, right: Pure) extends Prop {
-  def free = left.free ++ right.free
-  def rename(re: Map[Var, Var]) = ???
-  def subst(su: Map[Var, Pure]) = ???
-  override def toString = sexpr("=", left, right)
-}
-
-case class In(pred: String, args: List[Pure]) extends Prop {
-  def free = Set(args flatMap (_.free): _*)
-  def rename(re: Map[Var, Var]) = ???
-  def subst(su: Map[Var, Pure]) = ???
-  override def toString = {
-    if (args.isEmpty) pred
-    else sexpr(pred :: args)
-  }
-}
-
-case class Not(arg: Prop) extends Prop {
-  def free = arg.free
-  def rename(re: Map[Var, Var]) = ???
-  def subst(su: Map[Var, Pure]) = ???
-  override def toString = sexpr("not", arg)
-}
-
-case class And(arg1: Prop, arg2: Prop) extends Prop {
-  def free = arg1.free ++ arg2.free
-  def rename(re: Map[Var, Var]) = ???
-  def subst(su: Map[Var, Pure]) = ???
-  override def toString = sexpr("and", arg1, arg2)
-}
-
-case class Or(arg1: Prop, arg2: Prop) extends Prop {
-  def free = arg1.free ++ arg2.free
-  def rename(re: Map[Var, Var]) = ???
-  def subst(su: Map[Var, Pure]) = ???
-  override def toString = sexpr("or", arg1, arg2)
-}
-
-case class Imp(arg1: Prop, arg2: Prop) extends Prop {
-  def free = arg1.free ++ arg2.free
-  def rename(re: Map[Var, Var]) = ???
-  def subst(su: Map[Var, Pure]) = ???
-  override def toString = sexpr("=>", arg1, arg2)
-}
-
-case class Eqv(arg1: Prop, arg2: Prop) extends Prop {
-  def free = arg1.free ++ arg2.free
-  def rename(re: Map[Var, Var]) = ???
-  def subst(su: Map[Var, Pure]) = ???
-  override def toString = sexpr("=", arg1, arg2)
 }
