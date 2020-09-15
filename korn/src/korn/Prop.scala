@@ -3,6 +3,7 @@ package korn
 case class Pred(name: String, types: List[Sort]) {
   def apply(args: List[Pure]) = Prop.app(this, args)
   def apply(args: List[Pure], res: Pure) = Prop.app(this, args ++ List(res))
+  override def toString = name
 }
 
 object Pred {
@@ -65,6 +66,7 @@ object Prop {
     def free = arg.free
     def rename(re: Map[Var, Var]) = truth(arg rename re)
     def subst(su: Map[Var, Pure]) = truth(arg subst su)
+    override def toString = sexpr("not", sexpr("=", arg, 0))
   }
 
   case class eqn(left: Pure, right: Pure) extends Prop {
@@ -89,7 +91,12 @@ object Prop {
     def free = arg.free
     def rename(re: Map[Var, Var]) = ???
     def subst(su: Map[Var, Pure]) = ???
-    override def toString = sexpr("not", arg)
+    override def toString = {
+      arg match {
+        case truth(arg) => sexpr("=", arg, 0)
+        case _ => sexpr("not", arg)
+      }
+    }
   }
 
   case class and(arg1: Prop, arg2: Prop) extends Prop {

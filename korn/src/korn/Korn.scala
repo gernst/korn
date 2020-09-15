@@ -197,6 +197,19 @@ class Unit(stmts: List[Stmt]) {
     }
   }
 
+  def bool(prop: Prop) = {
+    prop match {
+      case _ => Pure.bool(prop)
+    }
+  }
+
+  def truth(pure: Pure) = {
+    pure match {
+      case Pure.bool(prop) => prop
+      case _ => Prop.truth(pure)
+    }
+  }
+
   def index(arg1: Pure, arg2: Pure) = {
     arg1 select arg2
   }
@@ -205,7 +218,7 @@ class Unit(stmts: List[Stmt]) {
     op match {
       case "+" => arg
       case "-" => -arg
-      case "!" => Pure.bool(!Prop.truth(arg))
+      case "!" => bool(!truth(arg))
     }
   }
 
@@ -216,17 +229,17 @@ class Unit(stmts: List[Stmt]) {
       case "*"  => arg1 * arg2
       case "/"  => arg1 / arg2
       case "%"  => arg1 % arg2
-      case "==" => Pure.bool(arg1 === arg2)
-      case "!=" => Pure.bool(arg1 === arg2)
-      case "<"  => Pure.bool(arg1 < arg2)
-      case "<=" => Pure.bool(arg1 <= arg2)
-      case ">"  => Pure.bool(arg1 > arg2)
-      case ">=" => Pure.bool(arg1 >= arg2)
+      case "==" => bool(arg1 === arg2)
+      case "!=" => bool(arg1 === arg2)
+      case "<"  => bool(arg1 < arg2)
+      case "<=" => bool(arg1 <= arg2)
+      case ">"  => bool(arg1 > arg2)
+      case ">=" => bool(arg1 >= arg2)
     }
   }
 
   def eval_test(expr: Expr, st: State) = {
-    Prop.truth(eval(expr, st))
+    truth(eval(expr, st))
   }
 
   def eval(expr: Expr, st: State): Pure = {
@@ -624,7 +637,7 @@ class Unit(stmts: List[Stmt]) {
 
     def rval_test(expr: Expr, st0: State): (Prop, State) = {
       val (_res, st1) = rval(expr, st0)
-      (Prop.truth(_res), st1)
+      (truth(_res), st1)
     }
 
     def rvals(exprs: List[Expr], st0: State): (List[Pure], State) = {
@@ -713,12 +726,12 @@ class Unit(stmts: List[Stmt]) {
         case BinOp("||", arg1, arg2) if !Expr.hasEffects(arg2) =>
           val (_arg1, st1) = rval_test(arg1, st0)
           val (_arg2, st2) = rval_test(arg2, st1)
-          (Pure.bool(_arg1 or _arg2), st2)
+          (bool(_arg1 or _arg2), st2)
 
         case BinOp("&&", arg1, arg2) if !Expr.hasEffects(arg2) =>
           val (_arg1, st1) = rval_test(arg1, st0)
           val (_arg2, st2) = rval_test(arg2, st1)
-          (Pure.bool(_arg1 and _arg2), st2)
+          (bool(_arg1 and _arg2), st2)
 
         /*
       // shortcut evaluation yields two states

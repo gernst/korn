@@ -19,7 +19,9 @@ object Sort {
   }
 }
 
-case class Fun(name: String, args: List[Sort], ret: Sort)
+case class Fun(name: String, args: List[Sort], ret: Sort) {
+  override def toString = name
+}
 
 object Fun {
   val exp = Fun("^", List(Sort.int, Sort.int), Sort.int)
