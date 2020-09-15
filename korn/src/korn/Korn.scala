@@ -28,6 +28,7 @@ case class State(path: List[Prop], store: Store) {
 case class Scope(names: List[String], types: List[Sort]) {
   def ++(that: Scope) = Scope(this.names ++ that.names, this.types ++ that.types)
   def vars = Pure.vars(names, types)
+  def vars_ = vars map (_.prime)
 
   def names(some: Set[String]): List[String] = {
     this.names filter some
@@ -70,8 +71,7 @@ class Unit(stmts: List[Stmt]) {
   var store: Store = Map()
 
   def run() {
-    for (stmt <- stmts)
-      global(stmt)
+    global(stmts)
   }
 
   def newPred(name: String, args: List[Sort]): Pred = {
@@ -85,8 +85,15 @@ class Unit(stmts: List[Stmt]) {
       consts += name -> Pure.const(index)
   }
 
+  def global(stmts: List[Stmt]) {
+    for (stmt <- stmts)
+      global(stmt)
+  }
+
   def global(stmt: Stmt) {
     stmt match {
+      case Group(stmts) =>
+        global(stmts)
       // Declarations
       case StructDecl(name) =>
         structs += name -> None
@@ -108,13 +115,14 @@ class Unit(stmts: List[Stmt]) {
       // Definitions
       case VarDef(Formal(typ, name), None) =>
         vars += name -> typ
-        ???
-      // st_ havoc name
+        val x = Var(name, resolve(typ))
+        store += name -> x
       case VarDef(Formal(typ, name), Some(init)) =>
         vars += name -> typ
-        ???
-      // val _init = eval(init, st = Nil)
-      // st_ assign (name, _init)
+        val x = Var(name, resolve(typ))
+        store += name -> x
+        val y = eval(init, store)
+        store += name -> y
       case FunDecl(ret, name, types) =>
         declare(name, ret, types)
       case FunDef(ret, name, formals, body) =>
@@ -161,15 +169,18 @@ class Unit(stmts: List[Stmt]) {
     val sig = Scope(names1, types1)
     val env = Scope(names, types)
 
+    val st0 = store ++ (names zip env.vars)
+    val stz = store ++ (names zip env.vars_)
+
     val entry = if (name == "main") {
-      State(Nil, Store(names, env.vars))
+      State(Nil, st0)
     } else {
       val pre = pres(name)
       val phi = pre(sig.vars)
-      State(List(phi), Store(names, env.vars))
+      State(List(phi), st0)
     }
 
-    val exit = State(Nil, Store(names, env.vars map (_.prime)))
+    val exit = State(Nil, stz)
 
     val post = if (name == "main") {
       None
@@ -206,7 +217,7 @@ class Unit(stmts: List[Stmt]) {
   def truth(pure: Pure) = {
     pure match {
       case Pure.bool(prop) => prop
-      case _ => Prop.truth(pure)
+      case _               => Prop.truth(pure)
     }
   }
 
@@ -238,11 +249,11 @@ class Unit(stmts: List[Stmt]) {
     }
   }
 
-  def eval_test(expr: Expr, st: State) = {
+  def eval_test(expr: Expr, st: Store) = {
     truth(eval(expr, st))
   }
 
-  def eval(expr: Expr, st: State): Pure = {
+  def eval(expr: Expr, st: Store): Pure = {
     expr match {
       case Id(name) if st contains name =>
         st(name)
@@ -252,6 +263,12 @@ class Unit(stmts: List[Stmt]) {
 
       case Lit(value: Int) =>
         Pure.const(value)
+
+      case Lit(value: Long) =>
+        Pure.const(value)
+
+      case Lit(value) =>
+        error("unknown constant: " + value + " of type " + value.getClass())
 
       case PreOp("&", PreOp("*", ptr)) =>
         eval(ptr, st)
@@ -311,8 +328,8 @@ class Unit(stmts: List[Stmt]) {
       clauses += Clause.query(st.path, phi, reason)
     }
 
-    object $if extends Counter {
-      def newLabel = "$" + name + "_if" + next
+    object $branch extends Counter {
+      def newLabel = "$" + name + "_branch" + next
     }
 
     object $inv extends Counter {
@@ -393,6 +410,13 @@ class Unit(stmts: List[Stmt]) {
       from(pred)
     }
 
+    def join(st1: State, reason1: String, st2: State, reason2: String): State = {
+      val pred = here($branch.newLabel)
+      now(pred, st1, reason1)
+      now(pred, st2, reason2)
+      from(pred)
+    }
+
     def join(
         st1: Option[State],
         reason1: String,
@@ -406,10 +430,7 @@ class Unit(stmts: List[Stmt]) {
         case (None, Some(st2)) =>
           Some(st2)
         case (Some(st1), Some(st2)) =>
-          val pred = here($if.newLabel)
-          now(pred, st1, reason1)
-          now(pred, st2, reason2)
-          val st = from(pred)
+          val st = join(st1, reason1, st2, reason2)
           Some(st)
       }
     }
@@ -423,8 +444,12 @@ class Unit(stmts: List[Stmt]) {
 
     def local(stmt: Stmt, st0: Option[State]): Option[State] = {
       st0 match {
-        case None      => local(stmt)
-        case Some(st0) => local(stmt, st0)
+        case None =>
+          local(stmt)
+        case Some(st0) if st0.path contains False =>
+          local(stmt)
+        case Some(st0) =>
+          local(stmt, st0)
       }
     }
 
@@ -493,16 +518,6 @@ class Unit(stmts: List[Stmt]) {
 
         case Atomic(None) =>
           Some(st0)
-
-        case Atomic(Some(stdlib.assert(phi))) =>
-          val (_phi, st1) = rval_test(phi, st0)
-          goal(st0, _phi, "assert " + _phi)
-          Some(st1)
-
-        case Atomic(Some(stdlib.assume(phi))) =>
-          val (_phi, st1) = rval_test(phi, st0)
-          val st2 = st1 and _phi
-          Some(st2)
 
         case Atomic(Some(expr)) =>
           val (_, st1) = rval(expr, st0)
@@ -665,8 +680,17 @@ class Unit(stmts: List[Stmt]) {
         case Id(name) if consts contains name =>
           (consts(name), st0)
 
+        case Id(name) =>
+          error("unknown identifier: " + name)
+
         case Lit(value: Int) =>
           (Pure.const(value), st0)
+
+        case Lit(value: Long) =>
+          (Pure.const(value), st0)
+
+        case Lit(value) =>
+          error("unknown constant: " + value + " of type " + value.getClass())
 
         case PreOp("&", id: Id) =>
           error("cannot take address of variable: " + expr)
@@ -733,49 +757,18 @@ class Unit(stmts: List[Stmt]) {
           val (_arg2, st2) = rval_test(arg2, st1)
           (bool(_arg1 and _arg2), st2)
 
-        /*
-      // shortcut evaluation yields two states
-      case BinOp("||", arg1, arg2) =>
-        val _arg1_st = rval_test(arg1, st0)
+        // shortcut evaluation yields two states
+        case BinOp("||", arg1, arg2) =>
+          val (_arg1, st1) = rval_test(arg1, st0)
+          val (_arg2, st2) = rval_test(arg2, st1 and !_arg1)
+          val st3 = join(st1, "or left", st2, "or right")
+          (bool(_arg1 or _arg2), st3)
 
-        val _true =
-          val
-            (_arg1, st1) = _arg1_st;
-            st1_true = st1 and _arg1
-          )
-            yield (_arg1, st1_true)
-
-        val _false =
-          val
-            (_arg1, st1) = _arg1_st;
-            st1_false = st1 and !_arg1;
-            (_arg2, st2) = rval(arg2, st1_false)
-          )
-            yield (_arg2, st2)
-
-        _true ++ _false
-
-      // shortcut evaluation yields two states
-      case BinOp("&&", arg1, arg2) =>
-        val _arg1_st = rval_test(arg1, st0)
-
-        val _false =
-          val
-            (_arg1, st1) = _arg1_st;
-            st1_false = st1 and !_arg1
-          )
-            yield (!_arg1, st1_false)
-
-        val _true =
-          val
-            (_arg1, st1) = _arg1_st;
-            st1_true = st1 and _arg1;
-            (_arg2, st2) = rval(arg2, st1_true)
-          )
-            yield (_arg2, st2)
-
-        _false ++ _true
-         */
+        case BinOp("&&", arg1, arg2) =>
+          val (_arg1, st1) = rval_test(arg1, st0)
+          val (_arg2, st2) = rval_test(arg2, st1 and _arg1)
+          val st3 = join(st1, "and left", st2, "and right")
+          (bool(_arg1 and _arg2), st3)
 
         case PreOp(op, arg) =>
           val (_arg, st1) = rval(arg, st0)
@@ -807,6 +800,19 @@ class Unit(stmts: List[Stmt]) {
 
         _true ++ _false */
 
+        case stdlib.abort() =>
+          (null, st0 and False)
+
+        case stdlib.assert(phi) =>
+          val (_phi, st1) = rval_test(phi, st0)
+          goal(st0, _phi, "assert " + _phi)
+          (null, st1)
+
+        case stdlib.assume(phi) =>
+          val (_phi, st1) = rval_test(phi, st0)
+          val st2 = st1 and _phi
+          (null, st2)
+
         case __VERIFIER.nondet_int() =>
           var x = Pure.fresh("$int", Sort.int)
           (x, st0)
@@ -815,7 +821,7 @@ class Unit(stmts: List[Stmt]) {
           val (_cond, st1) = rval_test(cond, st0)
           (null, st1 and _cond)
 
-        case __VERIFIER.error() =>
+        case __VERIFIER.error() | __VERIFIER.reach_error() =>
           clause(st0, False, "error")
           (null, st0)
 

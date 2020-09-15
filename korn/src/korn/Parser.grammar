@@ -55,6 +55,7 @@
 %left  COMMA;
 
 %typeof ID      = "String";
+%typeof CONST   = "Object";
 %typeof fun     = "String";
 %typeof TYPE    = "String";
 

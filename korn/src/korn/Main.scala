@@ -14,6 +14,8 @@ object Main {
   var sum = false
   var debug = false
   var model = false
+  var timeout = 10
+  var prove: Seq[String] = Seq()
 
   var files = mutable.Buffer[String]()
   var out = System.out
@@ -24,7 +26,6 @@ object Main {
     val in = proc.getOutputStream()
     val out = proc.getInputStream()
     val err = proc.getErrorStream()
-    // out.transferTo(in)
     (in, out, err)
   }
 
@@ -58,6 +59,17 @@ object Main {
         debug = true
         configure(rest)
 
+      case ("-t" | "-timeout") :: arg :: rest =>
+        timeout = arg.toInt
+        configure(rest)
+
+      case "-z3" :: rest =>
+        prove = Seq("z3", "-in", "-t:" + timeout)
+        configure(rest)
+
+      case "--" :: rest =>
+        prove = rest
+
       case file :: rest =>
         files += file
         configure(rest)
@@ -90,24 +102,39 @@ object Main {
         System.out.flush()
         System.err.flush()
 
-        System.out.println(path)
+        System.err.println(path)
         val stmts = parse(path)
+
         if (!dry) {
           object unit extends Unit(stmts)
           unit.run()
-          print(unit, System.out)
+
+          if (prove.isEmpty) {
+            print(unit, System.out)
+          } else {
+            val (in, out, err) = pipe(prove: _*)
+            val to = new PrintStream(in)
+            print(unit, to)
+            to.println("(exit)")
+            to.flush()
+            cat(out, System.out)
+            cat(err, System.err)
+            to.close()
+          }
         }
+
       } catch {
         case e: beaver.Parser.Exception =>
-          System.out.println("parser error")
+          System.err.println("parser error")
         case e: NotImplementedError =>
           val st = e.getStackTrace()(1)
           val file = st.getFileName + ":" + st.getLineNumber
           val code = st.getClassName + "." + st.getMethodName
           val where = code + " (" + file + ")"
-          System.out.println("not implemented: " + where)
+          System.err.println("not implemented: " + where)
         case e: Throwable =>
-          System.out.println("error: " + e.getMessage)
+          System.err.println("error: " + e.getMessage)
+          e.printStackTrace()
       }
     }
   }
@@ -156,6 +183,8 @@ object Main {
 
     if (model)
       out.println(sexpr("get-model"))
+
+    out.flush()
   }
 
   def bind(vars: Iterable[Var]): String = {

@@ -15,12 +15,14 @@ package object korn {
   )
 
   object stdlib {
+    object abort extends FunCall.nullary("abort")
     object assume extends FunCall.unary("assume")
     object assert extends FunCall.unary("assert")
     object malloc extends FunCall.unary("malloc")
   }
 
   object __VERIFIER {
+    object reach_error extends FunCall.nullary("reach_error")
     object error extends FunCall.nullary("__VERIFIER_error")
     object nondet_int extends FunCall.nullary("__VERIFIER_nondet_int")
     object assume extends FunCall.unary("__VERIFIER_assume")

@@ -497,6 +497,10 @@ public class Scanner extends beaver.Scanner {
   /* user code: */
     public Set<String> types;
 
+  	public final String yytext(int from) {
+    	return new String( zzBuffer, zzStartRead + from, zzMarkedPos-zzStartRead-from );
+  	}
+
     Symbol resolve(String name) {
     	if(types.contains(name)) {
     		return newToken(Terminals.TYPE, name);
@@ -1118,7 +1122,7 @@ public class Scanner extends beaver.Scanner {
             // fall through
           case 119: break;
           case 47: 
-            { return newToken(Terminals.CONST, Long.parseLong(yytext(), 16));
+            { return newToken(Terminals.CONST, Long.parseLong(yytext(2), 16));
             } 
             // fall through
           case 120: break;

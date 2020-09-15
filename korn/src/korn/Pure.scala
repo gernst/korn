@@ -26,8 +26,8 @@ case class Fun(name: String, args: List[Sort], ret: Sort) {
 object Fun {
   val exp = Fun("^", List(Sort.int, Sort.int), Sort.int)
   val times = Fun("*", List(Sort.int, Sort.int), Sort.int)
-  val divBy = Fun("/", List(Sort.int, Sort.int), Sort.int)
-  val mod = Fun("%", List(Sort.int, Sort.int), Sort.int)
+  val divBy = Fun("div", List(Sort.int, Sort.int), Sort.int)
+  val mod = Fun("mod", List(Sort.int, Sort.int), Sort.int)
 
   val uminus = Fun("-", List(Sort.int), Sort.int)
   val plus = Fun("+", List(Sort.int, Sort.int), Sort.int)
@@ -79,7 +79,7 @@ object Pure extends Counter with Alpha[Pure, Var] {
       yield Var(name, typ)
   }
 
-  case class const(value: Int) extends Pure {
+  case class const(value: Long) extends Pure {
     def free = Set()
     def rename(re: Map[Var, Var]) = this
     def subst(su: Map[Var, Pure]) = this
@@ -90,6 +90,7 @@ object Pure extends Counter with Alpha[Pure, Var] {
     def free = arg.free
     def rename(re: Map[Var, Var]) = bool(arg rename re)
     def subst(su: Map[Var, Pure]) = bool(arg subst su)
+    override def toString = sexpr("ite", arg, 1, 0)
   }
 
   case class app(fun: Fun, args: List[Pure]) extends Pure {

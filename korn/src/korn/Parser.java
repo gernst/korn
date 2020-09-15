@@ -692,7 +692,8 @@ public class Parser extends beaver.Parser {
 			},
 			new Action() {	// [68] stmt = CASE CONST.n COLON
 				public Symbol reduce(Symbol[] _symbols, int offset) {
-					final Symbol n = _symbols[offset + 2];
+					final Symbol _symbol_n = _symbols[offset + 2];
+					final Object n = (Object) _symbol_n.value;
 					 return s(new Case(n));
 				}
 			},
@@ -813,7 +814,8 @@ public class Parser extends beaver.Parser {
 			},
 			new Action() {	// [85] expr = CONST.n
 				public Symbol reduce(Symbol[] _symbols, int offset) {
-					final Symbol n = _symbols[offset + 1];
+					final Symbol _symbol_n = _symbols[offset + 1];
+					final Object n = (Object) _symbol_n.value;
 					 return s(new Lit(n));
 				}
 			},

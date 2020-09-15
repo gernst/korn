@@ -23,6 +23,10 @@ import korn.Parser.Terminals;
 %{
     public Set<String> types;
 
+  	public final String yytext(int from) {
+    	return new String( zzBuffer, zzStartRead + from, zzMarkedPos-zzStartRead-from );
+  	}
+
     Symbol resolve(String name) {
     	if(types.contains(name)) {
     		return newToken(Terminals.TYPE, name);
@@ -148,7 +152,7 @@ IS = (u|U|l|L)*
 [a-zA-Z_][a-zA-Z_0-9]*
             { return resolve(yytext()); }
 
-0[xX]{H}+{IS}?          { return newToken(Terminals.CONST, Long.parseLong(yytext(), 16)); }
+0[xX]{H}+{IS}?          { return newToken(Terminals.CONST, Long.parseLong(yytext(2), 16)); }
 0{D}+{IS}?              { return newToken(Terminals.CONST, Long.parseLong(yytext()));     }
 {D}+{IS}?               { return newToken(Terminals.CONST, Long.parseLong(yytext()));     }
 
