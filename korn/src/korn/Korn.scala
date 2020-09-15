@@ -241,7 +241,7 @@ class Unit(stmts: List[Stmt]) {
       case "/"  => arg1 / arg2
       case "%"  => arg1 % arg2
       case "==" => bool(arg1 === arg2)
-      case "!=" => bool(arg1 === arg2)
+      case "!=" => bool(arg1 !== arg2)
       case "<"  => bool(arg1 < arg2)
       case "<=" => bool(arg1 <= arg2)
       case ">"  => bool(arg1 > arg2)

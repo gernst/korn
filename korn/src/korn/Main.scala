@@ -8,12 +8,14 @@ import scala.annotation.tailrec
 import java.io.PrintStream
 import java.io.InputStream
 import java.io.OutputStream
+import java.io.FileOutputStream
 
 object Main {
   var dry = false
   var sum = false
   var debug = false
   var model = false
+  var write = false
   var timeout = 10
   var prove: Seq[String] = Seq()
 
@@ -23,10 +25,15 @@ object Main {
   def pipe(cmd: String*) = {
     val builder = new ProcessBuilder(cmd: _*)
     val proc = builder.start()
-    val in = proc.getOutputStream()
+    val in = new PrintStream(proc.getOutputStream())
     val out = proc.getInputStream()
     val err = proc.getErrorStream()
     (in, out, err)
+  }
+
+  def dump(path: String) = {
+    val out = new PrintStream(new FileOutputStream(path))
+    out
   }
 
   def cat(in: InputStream, out: OutputStream) {
@@ -55,6 +62,10 @@ object Main {
         dry = true
         configure(rest)
 
+      case ("-w" | "-write") :: rest =>
+        write = true
+        configure(rest)
+
       case ("-d" | "-debug") :: rest =>
         debug = true
         configure(rest)
@@ -64,7 +75,19 @@ object Main {
         configure(rest)
 
       case "-z3" :: rest =>
-        prove = Seq("z3", "-in", "-t:" + timeout)
+        prove = Seq("z3", "-t:" + timeout)
+        write = true
+        configure(rest)
+
+      case "-eld" :: rest if model =>
+        prove = Seq("eld", "-t:" + timeout, "-ssol")
+        model = false
+        write = true
+        configure(rest)
+
+      case "-eld" :: rest =>
+        prove = Seq("eld", "-t:" + timeout)
+        write = true
         configure(rest)
 
       case "--" :: rest =>
@@ -96,6 +119,11 @@ object Main {
     stmts
   }
 
+  def smt(path: String) = {
+    ensure((path endsWith ".c") || (path endsWith ".i"), "unrecognized file ending: " + path)
+    (path dropRight 2) + ".smt2"
+  }
+
   def run(files: List[String]) {
     for (path <- files) {
       try {
@@ -110,16 +138,30 @@ object Main {
           unit.run()
 
           if (prove.isEmpty) {
-            print(unit, System.out)
+            if (write) {
+              val to = smt(path)
+              System.err.println(to)
+              print(unit, dump(to))
+            } else {
+              print(unit, System.out)
+            }
           } else {
-            val (in, out, err) = pipe(prove: _*)
-            val to = new PrintStream(in)
-            print(unit, to)
-            to.println("(exit)")
-            to.flush()
-            cat(out, System.out)
-            cat(err, System.err)
-            to.close()
+            if (write) {
+              System.err.println(smt(path))
+              val to = smt(path)
+              print(unit, dump(to))
+              val (_, out, err) = pipe(prove ++ List(to): _*)
+              cat(out, System.out)
+              cat(err, System.err)
+            } else {
+              val (in, out, err) = pipe(prove: _*)
+              print(unit, in)
+              in.println("(exit)")
+              in.flush()
+              cat(out, System.out)
+              cat(err, System.err)
+              in.close()
+            }
           }
         }
 
