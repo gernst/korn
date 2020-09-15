@@ -36,6 +36,10 @@ package object korn {
     System.err.println(msg)
   }
 
+  case class Error(msg: String) extends Throwable {
+    override def toString = msg
+  }
+
   def error(msg: => String) = {
     throw new Error(msg)
   }

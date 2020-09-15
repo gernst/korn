@@ -174,6 +174,8 @@ object Main {
           val code = st.getClassName + "." + st.getMethodName
           val where = code + " (" + file + ")"
           System.err.println("not implemented: " + where)
+        case e: Error =>
+          System.err.println(e.msg)
         case e: Throwable =>
           System.err.println("error: " + e.getMessage)
           e.printStackTrace()
