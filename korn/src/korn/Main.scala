@@ -130,7 +130,7 @@ object Main {
         System.out.flush()
         System.err.flush()
 
-        System.err.println(path)
+        // System.err.println(path)
         val stmts = parse(path)
 
         if (!dry) {
@@ -140,14 +140,14 @@ object Main {
           if (prove.isEmpty) {
             if (write) {
               val to = smt(path)
-              System.err.println(to)
+              // System.err.println(to)
               print(unit, dump(to))
             } else {
               print(unit, System.out)
             }
           } else {
             if (write) {
-              System.err.println(smt(path))
+              // System.err.println(smt(path))
               val to = smt(path)
               print(unit, dump(to))
               val (_, out, err) = pipe(prove ++ List(to): _*)

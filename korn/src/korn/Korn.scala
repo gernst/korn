@@ -550,8 +550,6 @@ class Unit(stmts: List[Stmt]) {
 
         case Atomic(Some(expr)) =>
           val (_, st1) = rval(expr, st0)
-          println(expr)
-          println(st1)
           Some(st1)
 
         case Break =>
