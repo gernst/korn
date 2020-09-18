@@ -17,6 +17,7 @@ object Main {
   var model = false
   var write = false
   var timeout = 10
+  var arch64 = false
   var prove: Seq[String] = Seq()
 
   var files = mutable.Buffer[String]()
@@ -90,6 +91,14 @@ object Main {
         write = true
         configure(rest)
 
+      case "-32" :: rest =>
+        arch64 = false
+        configure(rest)
+
+      case "-64" :: rest =>
+        arch64 = true
+        configure(rest)
+
       case "--" :: rest =>
         prove = rest
 
@@ -130,7 +139,7 @@ object Main {
         System.out.flush()
         System.err.flush()
 
-        // System.err.println(path)
+        if (debug) System.err.println(path)
         val stmts = parse(path)
 
         if (!dry) {
@@ -140,14 +149,14 @@ object Main {
           if (prove.isEmpty) {
             if (write) {
               val to = smt(path)
-              // System.err.println(to)
+              if (debug) System.err.println(to)
               print(unit, dump(to))
             } else {
               print(unit, System.out)
             }
           } else {
             if (write) {
-              // System.err.println(smt(path))
+              if (debug) System.err.println(smt(path))
               val to = smt(path)
               print(unit, dump(to))
               val (_, out, err) = pipe(prove ++ List(to): _*)
@@ -168,17 +177,21 @@ object Main {
       } catch {
         case e: beaver.Parser.Exception =>
           System.err.println("parser error")
+          System.out.println("unsupported")
         case e: NotImplementedError =>
           val st = e.getStackTrace()(1)
           val file = st.getFileName + ":" + st.getLineNumber
           val code = st.getClassName + "." + st.getMethodName
           val where = code + " (" + file + ")"
           System.err.println("not implemented: " + where)
+          System.out.println("unsupported")
         case e: Error =>
           System.err.println(e.msg)
+          System.out.println("unsupported")
         case e: Throwable =>
           System.err.println("error: " + e.getMessage)
           e.printStackTrace()
+          System.out.println("unsupported")
       }
     }
   }
@@ -189,6 +202,9 @@ object Main {
     if (model)
       out.println(sexpr("set-option", ":produce-models", "true"))
 
+    out.println()
+
+    out.println(sexpr("declare-sort", "Pointer", "1"))
     out.println()
 
     for (pred <- unit.preds) {
