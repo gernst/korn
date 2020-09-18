@@ -7,12 +7,6 @@ case class Clause(path: List[Prop], head: Prop, reason: String) {
   override def toString = path.mkString(", ") + " ==> " + head + " # " + reason
 }
 
-object Clause {
-  def query(path: List[Prop], head: Prop, reason: String) = {
-    Clause(!head :: path, False, reason)
-  }
-}
-
 case class State(path: List[Prop], store: Store) {
   def arbitrary = State(Nil, store)
   def and(that: Prop) = State(that :: path, store)
@@ -321,10 +315,13 @@ class Unit(stmts: List[Stmt]) {
 
     val any = entry.arbitrary
 
-    case class Hyp(sum: Pred, st0: State, sty: State, mod: Set[String], dont: Set[String])
+    type Eval = (Pred, State, State) => Prop
+
+    case class Hyp(sum: Pred, st0: State, sty: State, dont: Set[String], eval: Eval)
+
     var hyps: List[Hyp] = Nil
 
-    def withHyp[A](hyp: Hyp)(thunk: => A) = {
+    def withinLoop[A](hyp: Hyp)(thunk: => A) = {
       try {
         hyps = hyp :: hyps; thunk
       } finally {
@@ -332,32 +329,32 @@ class Unit(stmts: List[Stmt]) {
       }
     }
 
-    def getHyp(): Hyp = {
-      hyps match {
-        case hyp :: _ =>
-          hyp
-        case _ =>
-          error("no hypothesis available")
-      }
+    def useHyp(label: String) = {
+      hyps.nonEmpty && !(hyps.head.dont contains label)
     }
 
-    def getHyp(to: String): Option[Hyp] = {
+    def exit(st: State) = {
       hyps match {
-        case hyp :: _ =>
-          /* don't apply inductive hypothesis if we do not leave the loop,
-             i.e., the jump target is a forbidden label in the body */
-          if (hyp.dont contains to) None else Some(hyp)
+        case Hyp(sum, stz, sty, _, eval) :: _ =>
+          val prem = eval(sum, sty, st)
+          val concl = eval(sum, stz, st)
+          goal(st, prem, "loop exit " + sum.name)
+          st and concl
         case _ =>
-          error("no hypothesis available")
+          st
       }
     }
 
     def clause(st: State, phi: Prop, reason: String) {
-      clauses += Clause(st.path, phi, reason)
+      val f = (st.path contains False)
+      val t = (st.path contains phi) || (phi == True)
+
+      if (!t && !f)
+        clauses += Clause(st.path, phi, reason)
     }
 
     def goal(st: State, phi: Prop, reason: String) {
-      clauses += Clause.query(st.path, phi, reason)
+      clause(st and !phi, False, reason)
     }
 
     object $if extends Counter {
@@ -553,26 +550,18 @@ class Unit(stmts: List[Stmt]) {
 
         case Atomic(Some(expr)) =>
           val (_, st1) = rval(expr, st0)
+          println(expr)
+          println(st1)
           Some(st1)
 
         case Break =>
-          val stb = st0
-          val Hyp(sum, st, sty, mod, _) = getHyp()
-
-          val prem = eval(sum, sty, stb, mod)
-          goal(stb, prem, "loop exit " + sum.name)
+          ensure(hyps.nonEmpty, "stray break")
+          val st1 = exit(st0)
 
           None // successor states not immediately reachable
 
         case Return(None) =>
-          val str = st0
-          val Hyp(sum, st, sty, mod, _) = getHyp()
-
-          val prem = eval(sum, sty, str, mod)
-          goal(str, prem, "loop exit " + sum.name)
-
-          val concl = eval(sum, st, str, mod)
-          val st1 = st and concl
+          val st1 = exit(st0)
 
           for ((cond, _) <- post) {
             result(cond, st1, "return " + name)
@@ -581,16 +570,9 @@ class Unit(stmts: List[Stmt]) {
           None
 
         case Return(Some(res)) =>
-          val str = st0
-          val Hyp(sum, st, sty, mod, _) = getHyp()
-
-          val prem = eval(sum, sty, str, mod)
-          goal(str, prem, "loop exit " + sum.name)
-
-          val concl = eval(sum, st, str, mod)
-          val st1 = st and concl
-
+          val st1 = exit(st0)
           val (_res, st2) = rval(res, st1)
+
           for ((cond, _) <- post) {
             result(cond, st2, _res, "return " + name)
           }
@@ -602,24 +584,16 @@ class Unit(stmts: List[Stmt]) {
           val st1 = generalize(pred, st0, "label " + label)
           Some(st1)
 
-        case Goto(label) =>
-          val stg = st0
-          val Hyp(sum, st, sty, mod, dont) = getHyp()
-
-          val st1 = if (dont contains label) {
-            stg
-          } else {
-            val prem = eval(sum, sty, stg, mod)
-            goal(stg, prem, "loop exit " + sum.name)
-
-            val concl = eval(sum, st, stg, mod)
-            st and concl
-          }
-
+        case Goto(label) if useHyp(label) =>
+          val st1 = exit(st0)
           val pred = here(label)
           now(pred, st1, "goto " + label)
+          None
 
-          None // successor states not immediately reachable
+        case Goto(label) =>
+          val pred = here(label)
+          now(pred, st0, "goto " + label)
+          None
 
         case If(test, left, right) =>
           val (_test, st) = rval_test(test, st0)
@@ -627,14 +601,13 @@ class Unit(stmts: List[Stmt]) {
           val st2 = local(right, st and !_test)
           join(st1, "if then", st2, "if else")
 
-        case While(test, body) if Main.sum =>
+        case While(test, body) =>
           val mod = Stmt.modifies(body)
           val dont = Stmt.labels(body)
 
           val inv = here($inv.newLabel)
-          val sum = here($sum.newLabel, mod)
 
-          now(inv, st0, inv.name + " entry")
+          now(inv, st0, "loop entry " + inv.name)
 
           val sti = from(inv)
           val (_test, st1) = rval_test(test, sti)
@@ -642,9 +615,23 @@ class Unit(stmts: List[Stmt]) {
           val sty = st1 and _test
           val stn = st1 and !_test
 
-          val hyp = Hyp(sum, st0, sty, mod, dont)
+          def eval_sum(pred: Pred, st: State, st_ : State) = eval(pred, st, st_, mod)
+          def eval_post(pred: Pred, st: State, st_ : State) = eval(pred, st_)
 
-          val iter = withHyp(hyp) {
+          val (sum, _eval) = if (Main.sum) {
+            (here($sum.newLabel, mod), eval_sum: Eval)
+          } else {
+            (here($sum.newLabel), eval_post: Eval)
+          }
+
+          /* base case: exit */
+          val fin = _eval(sum, stn, stn)
+          clause(stn, fin, "loop term " + sum.name)
+
+          /* inductive case: loop once */
+          val hyp = Hyp(sum, st0, sty, dont, _eval)
+
+          val iter = withinLoop(hyp) {
             local(body, sty)
           }
 
@@ -654,13 +641,11 @@ class Unit(stmts: List[Stmt]) {
             val re = env fresh mod
             val st2 = st0 ++ re
 
-            val prem = eval(sum, st_, st2, mod)
-            val concl = eval(sum, sty, st2, mod)
-            clause(st2 and prem, concl, "backwards " + sum.name)
+            val prem = _eval(sum, st_, st2)
+            val concl = _eval(sum, sty, st2)
+            clause(st_ and prem, concl, "backwards " + sum.name)
 
-            val loop = eval(sum, st0, st2, mod)
-            val st3 = st2 and loop
-            
+            val st3 = st2 and _eval(sum, st0, st2)
             st3
           }
       }
@@ -872,7 +857,7 @@ class Unit(stmts: List[Stmt]) {
 
         case stdlib.assert(phi) =>
           val (_phi, st1) = rval_test(phi, st0)
-          goal(st0, _phi, "assert " + _phi)
+          goal(st1, _phi, "assert " + _phi)
           (null, st1)
 
         case stdlib.assume(phi) =>
