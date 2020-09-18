@@ -128,7 +128,7 @@ object Parsing {
 sealed trait Stmt
 
 object Stmt {
-  def modifies(expr: Expr): Set[String] =
+  def modifies(expr: Expr): Set[String] = {
     expr match {
       case _: Id                                 => Set()
       case _: Lit                                => Set()
@@ -151,8 +151,9 @@ object Stmt {
       case FunCall(name, args)                   => Set() ++ (args flatMap modifies)
       case Init(values)                          => Set() ++ (values flatMap { case (_, expr) => modifies(expr) })
     }
+  }
 
-  def modifies(stmt: Stmt): Set[String] =
+  def modifies(stmt: Stmt): Set[String] = {
     stmt match {
       case Block(stmts)          => ???
       case Group(stmts)          => Set(stmts flatMap modifies: _*)
@@ -160,11 +161,20 @@ object Stmt {
       case Return(Some(expr))    => modifies(expr)
       case If(test, left, right) => modifies(test) ++ modifies(left) ++ modifies(right)
       case While(test, body)     => modifies(test) ++ modifies(body)
-      case DoWhile(body, test)   => modifies(test) ++ modifies(body)
-      // case For(init, test, inc, body) =>
-      //   modifies(init) ++ modifies(test) ++ modifies(inc) ++ modifies(body)
-      case _ => Set()
+      case _                     => Set()
     }
+  }
+
+  def labels(stmt: Stmt): Set[String] = {
+    stmt match {
+      case Block(stmts)          => ???
+      case Group(stmts)          => Set(stmts flatMap labels: _*)
+      case Label(label)          => Set(label)
+      case If(test, left, right) => labels(left) ++ labels(right)
+      case While(test, body)     => labels(body)
+      case _                     => Set()
+    }
+  }
 
   def norm(stmt: Stmt): (List[Formal], Stmt) = {
     val (formals, stmt_, _) = norm(stmt, Map())

@@ -321,13 +321,34 @@ class Unit(stmts: List[Stmt]) {
 
     val any = entry.arbitrary
 
-    var breaks: List[Pred] = Nil
+    case class Hyp(sum: Pred, st0: State, sty: State, mod: Set[String], dont: Set[String])
+    var hyps: List[Hyp] = Nil
 
-    def loop[A](break: Pred)(thunk: => A) = {
+    def withHyp[A](hyp: Hyp)(thunk: => A) = {
       try {
-        breaks = break :: breaks; thunk
+        hyps = hyp :: hyps; thunk
       } finally {
-        breaks = breaks.tail
+        hyps = hyps.tail
+      }
+    }
+
+    def getHyp(): Hyp = {
+      hyps match {
+        case hyp :: _ =>
+          hyp
+        case _ =>
+          error("no hypothesis available")
+      }
+    }
+
+    def getHyp(to: String): Option[Hyp] = {
+      hyps match {
+        case hyp :: _ =>
+          /* don't apply inductive hypothesis if we do not leave the loop,
+             i.e., the jump target is a forbidden label in the body */
+          if (hyp.dont contains to) None else Some(hyp)
+        case _ =>
+          error("no hypothesis available")
       }
     }
 
@@ -339,12 +360,8 @@ class Unit(stmts: List[Stmt]) {
       clauses += Clause.query(st.path, phi, reason)
     }
 
-    object $branch extends Counter {
-      def newLabel = "$" + name + "_branch" + next
-    }
-
-    object $break extends Counter {
-      def newLabel = "$" + name + "_break" + next
+    object $if extends Counter {
+      def newLabel = "$" + name + "_if" + next
     }
 
     object $inv extends Counter {
@@ -426,7 +443,7 @@ class Unit(stmts: List[Stmt]) {
     }
 
     def join(st1: State, reason1: String, st2: State, reason2: String): State = {
-      val pred = here($branch.newLabel)
+      val pred = here($if.newLabel)
       now(pred, st1, reason1)
       now(pred, st2, reason2)
       from(pred)
@@ -539,21 +556,45 @@ class Unit(stmts: List[Stmt]) {
           Some(st1)
 
         case Break =>
-          val break = breaks.head
-          now(break, st0, "break " + break.name)
+          val stb = st0
+          val Hyp(sum, st, sty, mod, _) = getHyp()
+
+          val prem = eval(sum, sty, stb, mod)
+          goal(stb, prem, "loop exit " + sum.name)
+
           None // successor states not immediately reachable
 
         case Return(None) =>
+          val str = st0
+          val Hyp(sum, st, sty, mod, _) = getHyp()
+
+          val prem = eval(sum, sty, str, mod)
+          goal(str, prem, "loop exit " + sum.name)
+
+          val concl = eval(sum, st, str, mod)
+          val st1 = st and concl
+
           for ((cond, _) <- post) {
-            result(cond, st0, "return " + name)
+            result(cond, st1, "return " + name)
           }
+
           None
 
         case Return(Some(res)) =>
-          val (_res, st1) = rval(res, st0)
+          val str = st0
+          val Hyp(sum, st, sty, mod, _) = getHyp()
+
+          val prem = eval(sum, sty, str, mod)
+          goal(str, prem, "loop exit " + sum.name)
+
+          val concl = eval(sum, st, str, mod)
+          val st1 = st and concl
+
+          val (_res, st2) = rval(res, st1)
           for ((cond, _) <- post) {
-            result(cond, st0, _res, "return " + name)
+            result(cond, st2, _res, "return " + name)
           }
+
           None
 
         case Label(label) =>
@@ -562,8 +603,22 @@ class Unit(stmts: List[Stmt]) {
           Some(st1)
 
         case Goto(label) =>
+          val stg = st0
+          val Hyp(sum, st, sty, mod, dont) = getHyp()
+
+          val st1 = if (dont contains label) {
+            stg
+          } else {
+            val prem = eval(sum, sty, stg, mod)
+            goal(stg, prem, "loop exit " + sum.name)
+
+            val concl = eval(sum, st, stg, mod)
+            st and concl
+          }
+
           val pred = here(label)
-          now(pred, st0, "goto " + label)
+          now(pred, st1, "goto " + label)
+
           None // successor states not immediately reachable
 
         case If(test, left, right) =>
@@ -572,31 +627,12 @@ class Unit(stmts: List[Stmt]) {
           val st2 = local(right, st and !_test)
           join(st1, "if then", st2, "if else")
 
-        case While(test, body) if !Main.sum =>
-          val inv = here($inv.newLabel)
-          val brk = here($break.newLabel)
-
-          val st1 = generalize(inv, st0, inv.name + " entry ")
-          val (_test, st2) = rval_test(test, st1)
-
-          val st = st2 and _test
-          val inner = loop(brk) { local(body, st) }
-
-          for (st_ <- inner) {
-            now(inv, st_, inv.name + " preserved")
-          }
-
-          val st3 = st2 and !_test
-
-          now(brk, st3, "loop post")
-          Some(from(brk))
-
         case While(test, body) if Main.sum =>
           val mod = Stmt.modifies(body)
+          val dont = Stmt.labels(body)
 
           val inv = here($inv.newLabel)
           val sum = here($sum.newLabel, mod)
-          val brk = here($break.newLabel)
 
           now(inv, st0, inv.name + " entry")
 
@@ -606,25 +642,27 @@ class Unit(stmts: List[Stmt]) {
           val sty = st1 and _test
           val stn = st1 and !_test
 
-          val step = eval(sum, sty, exit, mod)
-          val inner = loop(brk) { local(body, sty) }
+          val hyp = Hyp(sum, st0, sty, mod, dont)
 
-          for (st_ <- inner) {
-            now(inv, st_, inv.name + " forwards")
-
-            val hyp = eval(sum, st_, exit, mod)
-            clause(st_ and hyp, step, sum.name + " backwards")
+          val iter = withHyp(hyp) {
+            local(body, sty)
           }
 
-          now(sum, stn, mod, sum.name + " exit")
+          for (st_ <- iter) yield {
+            now(inv, st_, "forwards " + inv.name)
 
-          val re = env fresh mod
-          val st2 = st0 ++ re
-          val cond = eval(sum, st0, st2, mod)
-          val st3 = st2 and cond
+            val re = env fresh mod
+            val st2 = st0 ++ re
 
-          now(brk, st3, "loop post")
-          Some(from(brk))
+            val prem = eval(sum, st_, st2, mod)
+            val concl = eval(sum, sty, st2, mod)
+            clause(st2 and prem, concl, "backwards " + sum.name)
+
+            val loop = eval(sum, st0, st2, mod)
+            val st3 = st2 and loop
+            
+            st3
+          }
       }
     }
 
