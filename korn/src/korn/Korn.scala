@@ -9,8 +9,15 @@ case class Clause(path: List[Prop], head: Prop, reason: String) {
 
 case class State(path: List[Prop], store: Store) {
   def arbitrary = State(Nil, store)
-  def and(that: Prop) = State(that :: path, store)
-  // def just(that: Pure) = State(List(that), store)
+
+  def and(that: Prop): State = {
+    that match {
+      case Prop.and(phi, psi) =>
+        this and psi and phi
+      case _ =>
+        State(that :: path, store)
+    }
+  }
 
   def contains(name: String) = store contains name
   def apply(name: String) = store(name)
