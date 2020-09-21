@@ -2,8 +2,9 @@
 
 package korn;
 
-import java.util.Set;
 import beaver.Symbol;
+import java.util.Set;
+import scala.math.BigInt;
 import korn.Parser.Terminals;
 
 
@@ -500,6 +501,14 @@ public class Scanner extends beaver.Scanner {
   	public final String yytext(int from) {
     	return new String( zzBuffer, zzStartRead + from, zzMarkedPos-zzStartRead-from );
   	}
+	
+	long makeInt(String text) {
+		return Long.parseLong(text.replaceAll("([uUlL])", ""));
+	}
+	
+	double makeDouble(String text) {
+		return Double.parseDouble(text.replaceAll("([fFlL])", ""));
+	}
 
     Symbol resolve(String name) {
     	if(types.contains(name)) {

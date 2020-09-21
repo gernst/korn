@@ -173,11 +173,10 @@ object Main {
             }
           }
         }
-
       } catch {
         case e: beaver.Parser.Exception =>
           System.err.println("parser error")
-          System.out.println("unsupported")
+          System.out.println("parser")
         case e: NotImplementedError =>
           val st = e.getStackTrace()(1)
           val file = st.getFileName + ":" + st.getLineNumber
@@ -187,11 +186,11 @@ object Main {
           System.out.println("unsupported")
         case e: Error =>
           System.err.println(e.msg)
-          System.out.println("unsupported")
+          System.out.println("error")
         case e: Throwable =>
           System.err.println("error: " + e.getMessage)
           e.printStackTrace()
-          System.out.println("unsupported")
+          System.out.println("error")
       }
     }
   }

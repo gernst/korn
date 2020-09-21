@@ -24,8 +24,8 @@ package object korn {
 
   object __VERIFIER {
     object assume extends FunCall.unary("__VERIFIER_assume")
-    object reach_error extends FunCall.nullary("reach_error")
     object error extends FunCall.nullary("__VERIFIER_error")
+    // object reach_error extends FunCall.nullary("reach_error")
     
     object nondet_bool extends FunCall.nullary("__VERIFIER_nondet_bool")
     
@@ -47,6 +47,7 @@ package object korn {
 
     object nondet_unsigned_char extends FunCall.nullary("__VERIFIER_nondet_unsigned_char")
     object nondet_unsigned extends FunCall.nullary("__VERIFIER_nondet_unsigned")
+    object nondet_unsigned_int extends FunCall.nullary("__VERIFIER_nondet_unsigned_int")
     object nondet_unsigned_long extends FunCall.nullary("__VERIFIER_nondet_unsigned_long")
   }
 

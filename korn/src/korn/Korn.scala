@@ -482,8 +482,6 @@ class Unit(stmts: List[Stmt]) {
       st0 match {
         case None =>
           local(stmt)
-        case Some(st0) if st0.path contains False =>
-          local(stmt)
         case Some(st0) =>
           local(stmt, st0)
       }
@@ -541,6 +539,9 @@ class Unit(stmts: List[Stmt]) {
 
     def local(stmt: Stmt, st0: State): Option[State] = {
       stmt match {
+        case _ if st0.path contains False =>
+          None
+
         case Group(stmts) =>
           local(stmts, st0)
 
@@ -874,6 +875,14 @@ class Unit(stmts: List[Stmt]) {
           val st2 = st1 and _phi
           (null, st2)
 
+        case __VERIFIER.assume(cond) =>
+          val (_cond, st1) = rval_test(cond, st0)
+          (null, st1 and _cond)
+
+        case __VERIFIER.error() =>
+          clause(st0, False, "error")
+          (null, st0)
+
         case __VERIFIER.nondet_bool() =>
           var x = Pure.fresh("$bool", Sort.int)
           val bounds = (x === Pure.zero) or (x === Pure.one)
@@ -919,6 +928,9 @@ class Unit(stmts: List[Stmt]) {
         case __VERIFIER.nondet_unsigned() =>
           nondet_uint("int", limits.int, st0)
 
+        case __VERIFIER.nondet_unsigned_int() =>
+          nondet_uint("int", limits.int, st0)
+
         case __VERIFIER.nondet_unsigned_long() =>
           nondet_uint("ulong", limits.long, st0)
 
@@ -931,14 +943,6 @@ class Unit(stmts: List[Stmt]) {
 
         case __VERIFIER.nondet_u32() =>
           nondet_uint("uint", 4, st0)
-
-        /* case __VERIFIER.assume(cond) =>
-          val (_cond, st1) = rval_test(cond, st0)
-          (null, st1 and _cond)
-
-        case __VERIFIER.error() | __VERIFIER.reach_error() =>
-          clause(st0, False, "error")
-          (null, st0) */
 
         case expr @ FunCall(name, args) =>
           avoid(name startsWith "__VERIFIER_nondet", "unsupported function: " + name)
