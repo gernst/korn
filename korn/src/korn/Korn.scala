@@ -850,7 +850,11 @@ class Unit(stmts: List[Stmt]) {
 
         _true ++ _false */
 
+        case stdlib.exit() =>
+          (null, st0 and False)
+
         case stdlib.abort() =>
+          clause(st0, False, "abort")
           (null, st0 and False)
 
         case stdlib.assert(phi) =>
@@ -863,19 +867,75 @@ class Unit(stmts: List[Stmt]) {
           val st2 = st1 and _phi
           (null, st2)
 
-        case __VERIFIER.nondet_int() =>
-          var x = Pure.fresh("$int", Sort.int)
+        case __VERIFIER.nondet_bool() =>
+          var x = Pure.fresh("$bool", Sort.int)
+          val bounds = (x === Pure.zero) or (x === Pure.one)
+          val st1 = st0 and bounds
           (x, st0)
 
-        case __VERIFIER.assume(cond) =>
+        // signed integers
+        case __VERIFIER.nondet_char() =>
+          nondet_int("char", limits.char, st0)
+
+        case __VERIFIER.nondet_short() =>
+          nondet_int("short", limits.short, st0)
+
+        case __VERIFIER.nondet_int() =>
+          nondet_int("int", limits.int, st0)
+
+        case __VERIFIER.nondet_long() =>
+          nondet_int("long", limits.long, st0)
+
+        case __VERIFIER.nondet_longlong() =>
+          nondet_int("longlong", limits.longlong, st0)
+
+        // unsigned integers
+        case __VERIFIER.nondet_uchar() =>
+          nondet_uint("uchar", limits.char, st0)
+
+        case __VERIFIER.nondet_ushort() =>
+          nondet_uint("ushort", limits.short, st0)
+
+        case __VERIFIER.nondet_uint() =>
+          nondet_uint("uint", limits.int, st0)
+
+        case __VERIFIER.nondet_ulong() =>
+          nondet_uint("ulong", limits.long, st0)
+
+        case __VERIFIER.nondet_ulonglong() =>
+          nondet_uint("ulonglong", limits.longlong, st0)
+
+        // nonstandard
+        case __VERIFIER.nondet_unsigned_char() =>
+          nondet_uint("uchar", limits.char, st0)
+
+        case __VERIFIER.nondet_unsigned() =>
+          nondet_uint("int", limits.int, st0)
+
+        case __VERIFIER.nondet_unsigned_long() =>
+          nondet_uint("ulong", limits.long, st0)
+
+        // explicit size
+        case __VERIFIER.nondet_u8() =>
+          nondet_uint("uchar", 1, st0)
+
+        case __VERIFIER.nondet_u16() =>
+          nondet_uint("ushort", 2, st0)
+
+        case __VERIFIER.nondet_u32() =>
+          nondet_uint("uint", 4, st0)
+
+        /* case __VERIFIER.assume(cond) =>
           val (_cond, st1) = rval_test(cond, st0)
           (null, st1 and _cond)
 
         case __VERIFIER.error() | __VERIFIER.reach_error() =>
           clause(st0, False, "error")
-          (null, st0)
+          (null, st0) */
 
         case expr @ FunCall(name, args) =>
+          avoid(name startsWith "__VERIFIER_nondet", "unsupported function: " + name)
+
           val pre = pres(name)
           val (post, sort) = posts(name)
           val (ret, _) = funs(name)
@@ -901,6 +961,27 @@ class Unit(stmts: List[Stmt]) {
         case _ =>
           error("cannot compute: " + expr)
       }
+    }
+
+    def nondet_int(name: String, bytes: Int, st0: State): (Pure, State) = {
+      val bound = Pure.one << (bytes * 8 - 1)
+      val min = -bound
+      val max = bound - 1
+      nondet_int(name, -min, max - 1, st0)
+    }
+
+    def nondet_uint(name: String, bytes: Int, st0: State): (Pure, State) = {
+      val bound = Pure.one << (bytes * 8)
+      val min = Pure.zero
+      val max = bound - 1
+      nondet_int(name, min, max, st0)
+    }
+
+    def nondet_int(name: String, min: Pure, max: Pure, st0: State): (Pure, State) = {
+      var x = Pure.fresh("$" + name, Sort.int)
+      val bounds = (min <= x) and (x <= max)
+      val st1 = st0 and bounds
+      (x, st1)
     }
   }
 }

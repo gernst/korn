@@ -79,10 +79,13 @@ object Pure extends Counter with Alpha[Pure, Var] {
       yield Var(name, typ)
   }
 
-  case class const(value: Long) extends Pure {
+  case class const(value: BigInt) extends Pure {
     def free = Set()
     def rename(re: Map[Var, Var]) = this
     def subst(su: Map[Var, Pure]) = this
+    def <<(bits: Int) = const(value << bits)
+    def +(that: BigInt) = const(value + that)
+    def -(that: BigInt) = const(value - that)
     override def toString = value.toString
   }
 

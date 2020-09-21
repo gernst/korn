@@ -192,10 +192,6 @@ case class FunCall(fun: String, args: List[Expr]) extends Expr { // no function 
 
 object FunCall {
   class nullary(name: String) {
-    def apply() = {
-      FunCall(name, Nil)
-    }
-
     def unapply(call: FunCall) =
       call match {
         case FunCall(`name`, Nil) =>
@@ -206,10 +202,6 @@ object FunCall {
   }
 
   class unary(name: String) {
-    def apply(arg: Expr) = {
-      FunCall(name, List(arg))
-    }
-
     def unapply(call: FunCall) =
       call match {
         case FunCall(`name`, List(arg)) =>
