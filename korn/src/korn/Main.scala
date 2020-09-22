@@ -195,13 +195,13 @@ object Main {
     out.println()
 
     for (clause <- unit.clauses) {
-      val Clause(path, head, reason) = clause
-      val bound = clause.free
+      val Clause(typing, path, head, reason) = clause
+      val bound = clause.free map (_.toString)
 
       out.println("; " + reason)
       out.println("(assert")
       if (bound.nonEmpty)
-        out.println("  (forall " + bind(bound))
+        out.println("  (forall " + bind(bound, typing))
 
       if (path.nonEmpty) {
         out.println(path.mkString("    (=> (and ", "\n             ", ")"))
@@ -227,9 +227,9 @@ object Main {
     out.flush()
   }
 
-  def bind(vars: Iterable[korn.smt.Var]): String = {
+  def bind[V, T](vars: Iterable[V], typing: Map[V, T]): String = {
     import korn.smt.sexpr
-    sexpr(vars map { x => sexpr(x, x.typ) })
+    sexpr(vars map { x => sexpr(x, typing(x)) })
   }
 
   def main(args: Array[String]) {

@@ -5,7 +5,7 @@ import scala.collection.mutable
 import korn.c._
 import korn.smt._
 
-case class Clause(path: List[Prop], head: Prop, reason: String) {
+case class Clause(typing: Typing, path: List[Prop], head: Prop, reason: String) {
   def free = head.free ++ path.flatMap(_.free)
   override def toString = path.mkString(", ") + " ==> " + head + " # " + reason
 }
@@ -22,8 +22,7 @@ case class State(path: List[Prop], store: Store, typing: Typing) {
     }
   }
 
-  def declare(that: (String, Sort)) = State(path, store, typing + that)
-  def declare(that: Iterable[(String, Sort)]) = State(path, store, typing ++ that)
+  def declare(that: Var, typ: Sort) = State(path, store, typing + (that.toString -> typ))
   def types(that: List[String]) = that map typing
 
   def contains(name: String) = store contains name
@@ -32,14 +31,28 @@ case class State(path: List[Prop], store: Store, typing: Typing) {
   def +(that: (String, Pure)) = State(path, store + that, typing)
   def ++(that: Iterable[(String, Pure)]) = State(path, store ++ that, typing)
 
-  def havoc(names: Iterable[String]) = {
-    val re = names map { name => name -> Pure.fresh(name, typing(name)) }
-    this ++ re
+  def havoc(name: String, typ: Sort): State = {
+    val x = Pure.fresh(name)
+    State(path, store + (name -> x), typing + (x.toString -> typ))
   }
 
-  def init(names: Iterable[String]) = {
-    val re = names map { name => name -> Var(name, typing(name)) }
-    this ++ re
+  def havoc(names: Iterable[(String, Sort)]): State = {
+    names.foldLeft(this) {
+      case (st, (name, typ)) =>
+        st havoc (name, typ)
+    }
+  }
+
+  def init(name: String, typ: Sort): State = {
+    val x = Var(name)
+    State(path, store + (name -> x), typing + (name -> typ))
+  }
+
+  def init(names: Iterable[(String, Sort)]): State = {
+    names.foldLeft(this) {
+      case (st, (name, typ)) =>
+        st init (name, typ)
+    }
   }
 }
 
@@ -117,12 +130,10 @@ class Unit(stmts: List[Stmt]) {
       // Definitions
       case VarDef(Formal(typ, name), None) =>
         vars += name -> typ
-        val x = Var(name, resolve(typ))
-        state += name -> x
+        state = state init (name, resolve(typ))
       case VarDef(Formal(typ, name), Some(init)) =>
         vars += name -> typ
-        val x = Var(name, resolve(typ))
-        state += name -> x
+        state = state init (name, resolve(typ))
         val y = eval(init, state)
         state += name -> y
       case FunDecl(ret, name, types) =>
@@ -168,15 +179,14 @@ class Unit(stmts: List[Stmt]) {
     val names = names1 ++ names2
     val types = types1 ++ types2
 
-    val st0 = state declare (names zip types)
-    val st1 = st0 init names
+    val st0 = state init (names zip types)
 
     val entry = if (name == "main") {
-      st1
+      st0
     } else {
       val pre = pres(name)
-      val phi = pre(st1(names))
-      st1 and phi
+      val phi = pre(st0(names))
+      st0 and phi
     }
 
     // val exit = State(Nil, stz)
@@ -355,7 +365,7 @@ class Unit(stmts: List[Stmt]) {
       val t = (st.path contains phi) || (phi == True)
 
       if (!t && !f)
-        clauses += Clause(st.path, phi, reason)
+        clauses += Clause(st.typing, st.path, phi, reason)
     }
 
     def goal(st: State, phi: Prop, reason: String) {
@@ -545,8 +555,7 @@ class Unit(stmts: List[Stmt]) {
 
         case Assume(Id(name), expr, typ) =>
           val (_expr, st1) = rval(expr, st0)
-          val _typ = resolve(typ)
-          val x = Var(name, _typ)
+          val x = Var(name)
           val eq = (x === _expr)
           val st2 = st1 and eq
           Some(st2)
@@ -642,7 +651,10 @@ class Unit(stmts: List[Stmt]) {
           for (st_ <- iter) yield {
             now(inv, st_, "forwards " + inv.name)
 
-            val st2 = st0 havoc mod
+            // XXX: this assumes all local identifiers have been initialized
+            //      with variables with the same name
+            val todo = mod map { name => (name, st0 typing name) }
+            val st2 = st0 havoc todo
             val prem = _eval(sum, st_, st2)
             val concl = _eval(sum, sty, st2)
             clause(st_ and prem, concl, "backwards " + sum.name)
@@ -880,10 +892,11 @@ class Unit(stmts: List[Stmt]) {
           (null, st0)
 
         case __VERIFIER.nondet_bool() =>
-          var x = Pure.fresh("$bool", Sort.int)
+          var x = Pure.fresh("$bool")
           val bounds = (x === Pure.zero) or (x === Pure.one)
-          val st1 = st0 and bounds
-          (x, st0)
+          val st1 = st0 declare (x, Sort.int)
+          val st2 = st1 and bounds
+          (x, st2)
 
         // signed integers
         case __VERIFIER.nondet_char() =>
@@ -949,21 +962,22 @@ class Unit(stmts: List[Stmt]) {
 
           val (_in, st1) = rvals(args, st0)
 
-          val (_ret, _out) = sort match {
+          val (_ret, _out, st2) = sort match {
             case Some(sort) =>
-              var x = Pure.fresh("$result", sort)
-              (x, List(x))
+              var x = Pure.fresh("$result")
+              val st2 = st1 declare (x, sort)
+              (x, List(x), st2)
             case None =>
-              (null, List())
+              (null, Nil, st1)
           }
 
           // XXX: need to return the modifed heap
           val _pre = pre(_in)
           val _call = post(_in ++ _out)
 
-          clause(st1, _pre, name + " precondition")
+          clause(st2, _pre, name + " precondition")
 
-          (_ret, st1 and _call)
+          (_ret, st2 and _call)
 
         case _ =>
           error("cannot compute: " + expr)
@@ -985,10 +999,11 @@ class Unit(stmts: List[Stmt]) {
     }
 
     def nondet_int(name: String, min: Pure, max: Pure, st0: State): (Pure, State) = {
-      var x = Pure.fresh("$" + name, Sort.int)
+      var x = Pure.fresh("$" + name)
       val bounds = (min <= x) and (x <= max)
-      val st1 = st0 and bounds
-      (x, st1)
+      val st1 = st0 declare (x, Sort.int)
+      val st2 = st1 and bounds
+      (x, st2)
     }
   }
 }
