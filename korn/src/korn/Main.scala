@@ -13,8 +13,10 @@ import java.io.FileOutputStream
 
 object Main {
   var dry = false
-  var sum = false
+  var invariants = false
+  var summaries = false
   var debug = false
+  var quiet = false
   var model = false
   var write = false
   var timeout = 10
@@ -48,11 +50,11 @@ object Main {
       case Nil =>
 
       case ("-s" | "-summaries") :: rest =>
-        sum = true
+        summaries = true
         configure(rest)
 
       case ("-i" | "-invariants") :: rest =>
-        sum = false
+        invariants = true
         configure(rest)
 
       case ("-m" | "-model") :: rest =>
@@ -71,12 +73,16 @@ object Main {
         debug = true
         configure(rest)
 
+      case ("-q" | "-quiet") :: rest =>
+        quiet = true
+        configure(rest)
+
       case ("-t" | "-timeout") :: arg :: rest =>
         timeout = arg.toInt
         configure(rest)
 
       case "-z3" :: rest =>
-        prove = Seq("z3", "-t:" + timeout)
+        prove = Seq("z3", "-t:" + (timeout*1000))
         write = true
         configure(rest)
 
@@ -140,36 +146,42 @@ object Main {
               val to = smt(path)
               print(unit, dump(to))
               val (_, out, err) = pipe(prove ++ List(to): _*)
+              if (!quiet) System.out.print(path + ":")
               cat(out, System.out)
-              cat(err, System.err)
+              if (!quiet) cat(err, System.err)
             } else {
               val (in, out, err) = pipe(prove: _*)
               print(unit, in)
               in.println("(exit)")
               in.flush()
+              if (!quiet) System.out.print(path + ":")
               cat(out, System.out)
-              cat(err, System.err)
+              if (!quiet) cat(err, System.err)
               in.close()
             }
           }
         }
       } catch {
         case e: beaver.Parser.Exception =>
-          System.err.println("parser error")
-          System.out.println("parser")
+          if (!quiet) System.err.println("parser error")
+          if (!quiet) System.out.print(path + ":")
+          System.out.println("error")
         case e: NotImplementedError =>
           val st = e.getStackTrace()(1)
           val file = st.getFileName + ":" + st.getLineNumber
           val code = st.getClassName + "." + st.getMethodName
           val where = code + " (" + file + ")"
-          System.err.println("not implemented: " + where)
-          System.out.println("unsupported")
+          if (!quiet) System.err.println("not implemented: " + where)
+          if (!quiet) System.out.print(path + ":")
+          System.out.println("error")
         case e: Error =>
-          System.err.println(e.msg)
+          if (!quiet) System.err.println(e.msg)
+          if (!quiet) System.out.print(path + ":")
           System.out.println("error")
         case e: Throwable =>
-          System.err.println("error: " + e.getMessage)
-          e.printStackTrace()
+          if (!quiet) System.err.println("error: " + e.getMessage)
+          if (!quiet) e.printStackTrace()
+          if (!quiet) System.out.print(path + ":")
           System.out.println("error")
       }
     }

@@ -13,6 +13,8 @@ package object korn {
 
   val known = Set(
     "main",
+    "abort",
+    "exit",
     "__VERIFIER_nondet_int",
     "__VERIFIER_assume",
     "__VERIFIER_error"
@@ -29,7 +31,7 @@ package object korn {
   object __VERIFIER {
     object assume extends FunCall.unary("__VERIFIER_assume")
     object error extends FunCall.nullary("__VERIFIER_error")
-    // object reach_error extends FunCall.nullary("reach_error")
+    object reach_error extends FunCall.nullary("reach_error")
 
     object nondet_bool extends FunCall.nullary("__VERIFIER_nondet_bool")
 

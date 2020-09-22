@@ -28,11 +28,15 @@ import korn.c.Parser.Terminals;
     	return new String( zzBuffer, zzStartRead + from, zzMarkedPos-zzStartRead-from );
   	}
 	
-	long makeInt(String text) {
+	long parseLong(String text) {
 		return Long.parseLong(text.replaceAll("([uUlL])", ""));
 	}
 	
-	double makeDouble(String text) {
+	long parseLong(String text, int base) {
+		return Long.parseLong(text.replaceAll("([uUlL])", ""), base);
+	}
+	
+	double parseDouble(String text) {
 		return Double.parseDouble(text.replaceAll("([fFlL])", ""));
 	}
 
@@ -69,8 +73,8 @@ IS = (u|U|l|L)*
 
 <YYINITIAL> {
 
+"#" .* {NL} {}
 "//" .* {NL} {}
-"#"  .* {NL} {}
 "/*" [^*] ~"*/" | "/*" "*"+ "/" {}
 {WS}+ {}
 
@@ -153,21 +157,25 @@ IS = (u|U|l|L)*
 "const"         { }
 "static"        { }
 "volatile"      { }
+"__const"       { }
 "__inline"      { }
 "__restrict"    { }
 "__extension__" { }
 "__attribute__" {WS}+ "((" .* "))" { }
+
+// has weird stuff in its definition
+"void reach_error()" .* {NL} { }
             
 [a-zA-Z_][a-zA-Z_0-9]*
             { return resolve(yytext()); }
 
-0[xX]{H}+{IS}?          { return newToken(Terminals.CONST, Long.parseLong(yytext(2), 16)); }
-0{D}+{IS}?              { return newToken(Terminals.CONST, Long.parseLong(yytext()));     }
-{D}+{IS}?               { return newToken(Terminals.CONST, Long.parseLong(yytext()));     }
+0[xX]{H}+{IS}?          { return newToken(Terminals.CONST, parseLong(yytext(2), 16)); }
+0{D}+{IS}?              { return newToken(Terminals.CONST, parseLong(yytext()));     }
+{D}+{IS}?               { return newToken(Terminals.CONST, parseLong(yytext()));     }
 
-{D}+{E}{FS}?            { return newToken(Terminals.CONST, Double.parseDouble(yytext())); }
-{D}*"."{D}+({E})?{FS}?  { return newToken(Terminals.CONST, Double.parseDouble(yytext())); }
-{D}+"."{D}*({E})?{FS}?  { return newToken(Terminals.CONST, Double.parseDouble(yytext())); }
+{D}+{E}{FS}?            { return newToken(Terminals.CONST, parseDouble(yytext())); }
+{D}*"."{D}+({E})?{FS}?  { return newToken(Terminals.CONST, parseDouble(yytext())); }
+{D}+"."{D}*({E})?{FS}?  { return newToken(Terminals.CONST, parseDouble(yytext())); }
 
 L?'(\\.|[^\'\\])+'      { return newToken(Terminals.CONST, Parsing.ch(yytext()));         }
 L?\"(\\.|[^\"\\])*\"    { return newToken(Terminals.CONST, Parsing.str(yytext()));        }

@@ -186,11 +186,9 @@ class Unit(stmts: List[Stmt]) {
       st0
     } else {
       val pre = pres(name)
-      val phi = pre(st0(names))
+      val phi = pre(st0(names1))
       st0 and phi
     }
-
-    // val exit = State(Nil, stz)
 
     val post = if (name == "main") {
       None
@@ -529,7 +527,7 @@ class Unit(stmts: List[Stmt]) {
           local(stmts)
 
         case Label(label) =>
-          val pred = here(label)
+          val pred = here("$" + name + "_" + label)
           val st = from(pred)
           Some(st)
 
@@ -594,18 +592,18 @@ class Unit(stmts: List[Stmt]) {
           None
 
         case Label(label) =>
-          val pred = here(label)
+          val pred = here("$" + name + "_" + label)
           val st1 = generalize(pred, st0, "label " + label)
           Some(st1)
 
         case Goto(label) if useHyp(label) =>
           val st1 = exit(st0)
-          val pred = here(label)
+          val pred = here("$" + name + "_" + label)
           now(pred, st1, "goto " + label)
           None
 
         case Goto(label) =>
-          val pred = here(label)
+          val pred = here("$" + name + "_" + label)
           now(pred, st0, "goto " + label)
           None
 
@@ -621,9 +619,15 @@ class Unit(stmts: List[Stmt]) {
 
           val inv = here($inv.newLabel)
 
-          now(inv, st0, "loop entry " + inv.name)
+          if (Main.invariants)
+            now(inv, st0, "loop entry " + inv.name)
 
-          val sti = from(inv)
+          val sti = if (Main.invariants) {
+            from(inv)
+          } else {
+            any
+          }
+
           val (_test, st1) = rval_test(test, sti)
 
           val sty = st1 and _test
@@ -632,7 +636,7 @@ class Unit(stmts: List[Stmt]) {
           def eval_sum(pred: Pred, st: State, st_ : State) = eval(pred, st, st_, mod)
           def eval_post(pred: Pred, st: State, st_ : State) = eval(pred, st_)
 
-          val (sum, _eval) = if (Main.sum) {
+          val (sum, _eval) = if (Main.summaries) {
             (here($sum.newLabel, mod), eval_sum: Eval)
           } else {
             (here($sum.newLabel), eval_post: Eval)
@@ -650,7 +654,8 @@ class Unit(stmts: List[Stmt]) {
           }
 
           for (st_ <- iter) yield {
-            now(inv, st_, "forwards " + inv.name)
+            if (Main.invariants)
+              now(inv, st_, "forwards " + inv.name)
 
             // XXX: this assumes all local identifiers have been initialized
             //      with variables with the same name
@@ -892,6 +897,10 @@ class Unit(stmts: List[Stmt]) {
           clause(st0, False, "error")
           (null, st0)
 
+        case __VERIFIER.reach_error() =>
+          clause(st0, False, "error")
+          (null, st0)
+
         case __VERIFIER.nondet_bool() =>
           var x = fresh("$bool", Sort.int)
           val bounds = (x === Pure.zero) or (x === Pure.one)
@@ -978,6 +987,10 @@ class Unit(stmts: List[Stmt]) {
 
           (_ret, st2 and _call)
 
+        case Cast(typ, expr) =>
+          if(Main.debug) log("cast to " + typ + " ignored")
+          rval(expr, st0)
+
         case _ =>
           error("cannot compute: " + expr)
       }
@@ -987,7 +1000,7 @@ class Unit(stmts: List[Stmt]) {
       val bound = Pure.one << (Type.sizeof(typ) * 8 - 1)
       val min = -bound
       val max = bound - 1
-      nondet_int(name, -min, max - 1, st0)
+      nondet_int(name, min, max, st0)
     }
 
     def nondet_uint(name: String, typ: Type, st0: State): (Pure, State) = {
