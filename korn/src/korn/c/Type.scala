@@ -16,31 +16,47 @@ sealed trait Type {
 
 sealed trait CompoundType extends Type
 sealed trait TypeName extends Type { def name: String }
+
 case class BaseType(name: String) extends Type
-case class Signed(name: String) extends Type
-case class Unsigned(name: String) extends Type
+case class Signed(name: String, bytes: Int) extends Type
+case class Unsigned(name: String, bytes: Int) extends Type
 
 object Type {
   val _void = BaseType("void")
   val _Bool = BaseType("_Bool")
   val _float = BaseType("float")
   val _double = BaseType("double")
+
+  def sizeof(typ: Type): Int = {
+    typ match {
+      case `_Bool` =>
+        1
+      case `_float` =>
+        4
+      case `_double` =>
+        8
+      case Signed(_, bytes) =>
+        bytes
+      case Unsigned(_, bytes) =>
+        bytes
+    }
+  }
 }
 
 object Signed {
-  val _char = Signed("char")
-  val _short = Signed("short")
-  val _int = Signed("int")
-  val _long = Signed("long")
-  val _long_long = Signed("long long")
+  val _char = Signed("char", 1)
+  val _short = Signed("short", 2)
+  val _int = Signed("int", 4)
+  val _long = Signed("long", _bits / 8)
+  val _long_long = Signed("long long", 8)
 }
 
 object Unsigned {
-  val _char = Unsigned("char")
-  val _short = Unsigned("short")
-  val _int = Unsigned("int")
-  val _long = Unsigned("long")
-  val _long_long = Unsigned("long long")
+  val _char = Unsigned("char", 1)
+  val _short = Unsigned("short", 2)
+  val _int = Unsigned("int", 4)
+  val _long = Unsigned("long", _bits / 8)
+  val _long_long = Unsigned("long long", 8)
 }
 
 case class TypedefName(name: String) extends TypeName

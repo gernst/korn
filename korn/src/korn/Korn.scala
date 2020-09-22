@@ -3,6 +3,7 @@ package korn
 import scala.collection.mutable
 
 import korn.c._
+import korn.smt._
 
 case class Clause(path: List[Prop], head: Prop, reason: String) {
   def free = head.free ++ path.flatMap(_.free)
@@ -893,58 +894,58 @@ class Unit(stmts: List[Stmt]) {
 
         // signed integers
         case __VERIFIER.nondet_char() =>
-          nondet_int("char", limits.char, st0)
+          nondet_int("char", Signed._char, st0)
 
         case __VERIFIER.nondet_short() =>
-          nondet_int("short", limits.short, st0)
+          nondet_int("short", Signed._short, st0)
 
         case __VERIFIER.nondet_int() =>
-          nondet_int("int", limits.int, st0)
+          nondet_int("int", Signed._int, st0)
 
         case __VERIFIER.nondet_long() =>
-          nondet_int("long", limits.long, st0)
+          nondet_int("long", Signed._long, st0)
 
         case __VERIFIER.nondet_longlong() =>
-          nondet_int("longlong", limits.longlong, st0)
+          nondet_int("longlong", Signed._long_long, st0)
 
         // unsigned integers
         case __VERIFIER.nondet_uchar() =>
-          nondet_uint("uchar", limits.char, st0)
+          nondet_uint("uchar", Unsigned._char, st0)
 
         case __VERIFIER.nondet_ushort() =>
-          nondet_uint("ushort", limits.short, st0)
+          nondet_uint("ushort", Unsigned._short, st0)
 
         case __VERIFIER.nondet_uint() =>
-          nondet_uint("uint", limits.int, st0)
+          nondet_uint("uint", Unsigned._int, st0)
 
         case __VERIFIER.nondet_ulong() =>
-          nondet_uint("ulong", limits.long, st0)
+          nondet_uint("ulong", Unsigned._long, st0)
 
         case __VERIFIER.nondet_ulonglong() =>
-          nondet_uint("ulonglong", limits.longlong, st0)
+          nondet_uint("ulonglong", Unsigned._long_long, st0)
 
         // nonstandard
         case __VERIFIER.nondet_unsigned_char() =>
-          nondet_uint("uchar", limits.char, st0)
+          nondet_uint("uchar", Unsigned._char, st0)
 
         case __VERIFIER.nondet_unsigned() =>
-          nondet_uint("int", limits.int, st0)
+          nondet_uint("int", Signed._int, st0)
 
         case __VERIFIER.nondet_unsigned_int() =>
-          nondet_uint("int", limits.int, st0)
+          nondet_uint("int", Unsigned._int, st0)
 
         case __VERIFIER.nondet_unsigned_long() =>
-          nondet_uint("ulong", limits.long, st0)
+          nondet_uint("ulong", Unsigned._long, st0)
 
         // explicit size
         case __VERIFIER.nondet_u8() =>
-          nondet_uint("uchar", 1, st0)
+          nondet_uint("uchar", Unsigned._char, st0)
 
         case __VERIFIER.nondet_u16() =>
-          nondet_uint("ushort", 2, st0)
+          nondet_uint("ushort", Unsigned._short, st0)
 
         case __VERIFIER.nondet_u32() =>
-          nondet_uint("uint", 4, st0)
+          nondet_uint("uint", Unsigned._int, st0)
 
         case expr @ FunCall(name, args) =>
           avoid(name startsWith "__VERIFIER_nondet", "unsupported function: " + name)
@@ -976,15 +977,15 @@ class Unit(stmts: List[Stmt]) {
       }
     }
 
-    def nondet_int(name: String, bytes: Int, st0: State): (Pure, State) = {
-      val bound = Pure.one << (bytes * 8 - 1)
+    def nondet_int(name: String, typ: Type, st0: State): (Pure, State) = {
+      val bound = Pure.one << (Type.sizeof(typ) * 8 - 1)
       val min = -bound
       val max = bound - 1
       nondet_int(name, -min, max - 1, st0)
     }
 
-    def nondet_uint(name: String, bytes: Int, st0: State): (Pure, State) = {
-      val bound = Pure.one << (bytes * 8)
+    def nondet_uint(name: String, typ: Type, st0: State): (Pure, State) = {
+      val bound = Pure.one << (Type.sizeof(typ) * 8)
       val min = Pure.zero
       val max = bound - 1
       nondet_int(name, min, max, st0)

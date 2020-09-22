@@ -1,5 +1,6 @@
 package object korn {
   import korn.c._
+  import korn.smt._
 
   type Store = Map[String, Pure]
 
@@ -53,14 +54,6 @@ package object korn {
     object nondet_unsigned_long extends FunCall.nullary("__VERIFIER_nondet_unsigned_long")
   }
 
-  object limits {
-    def char = 1
-    def short = 2
-    def int = 4
-    def long = if (Main.arch64) 8 else 4
-    def longlong = 8
-  }
-
   def log() = {
     System.err.println()
   }
@@ -87,16 +80,5 @@ package object korn {
 
   def unpack[A](a: Option[A], msg: => String) = {
     a getOrElse error(msg)
-  }
-
-  def sexpr(arg0: Any, args: Any*) = {
-    if (args.isEmpty)
-      "(" + arg0 + ")"
-    else
-      "(" + arg0 + " " + args.mkString(" ") + ")"
-  }
-
-  def sexpr(args: Iterable[Any]) = {
-    args mkString ("(", " ", ")")
   }
 }

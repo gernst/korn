@@ -18,7 +18,6 @@ object Main {
   var model = false
   var write = false
   var timeout = 10
-  var arch64 = false
   var prove: Seq[String] = Seq()
 
   var files = mutable.Buffer[String]()
@@ -93,11 +92,11 @@ object Main {
         configure(rest)
 
       case "-32" :: rest =>
-        arch64 = false
+        c._bits = 32
         configure(rest)
 
       case "-64" :: rest =>
-        arch64 = true
+        c._bits = 64
         configure(rest)
 
       case "--" :: rest =>
@@ -177,6 +176,7 @@ object Main {
   }
 
   def print(unit: Unit, out: PrintStream) {
+    import korn.smt.sexpr
     out.println(sexpr("set-logic", "HORN"))
 
     if (model)
@@ -188,7 +188,7 @@ object Main {
     out.println()
 
     for (pred <- unit.preds) {
-      val Pred(name, args) = pred
+      val korn.smt.Pred(name, args) = pred
       val defn = sexpr("declare-fun", name, sexpr(args), "Bool")
       out.println(defn)
     }
@@ -227,7 +227,8 @@ object Main {
     out.flush()
   }
 
-  def bind(vars: Iterable[Var]): String = {
+  def bind(vars: Iterable[korn.smt.Var]): String = {
+    import korn.smt.sexpr
     sexpr(vars map { x => sexpr(x, x.typ) })
   }
 
