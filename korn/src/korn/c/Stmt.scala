@@ -1,4 +1,4 @@
-package korn
+package korn.c
 
 case class Dims(ptr: Boolean, bounds: List[Expr]) {
   def this(ptr: Boolean, bounds: Array[Expr]) = this(ptr, bounds.toList)
@@ -33,14 +33,14 @@ object Parsing {
       case '\"' :: Nil       => Nil
       case '\\' :: x :: rest => x :: unescape(rest)
       case x :: rest         => x :: unescape(rest)
-      case _                 => error("nonterminated string")
+      case _                 => korn.error("nonterminated string")
     }
   }
 
   def unescape(xs: List[Char]): List[Char] = {
     xs match {
       case '\"' :: rest => unescape0(rest)
-      case _            => error("nonterminated string")
+      case _            => korn.error("nonterminated string")
     }
   }
 
@@ -48,7 +48,7 @@ object Parsing {
     s.toList match {
       case List('\'', '\\', x, '\'') => x
       case List('\'', x, '\'')       => x
-      case _                         => error("invalid character: " + s)
+      case _                         => korn.error("invalid character: " + s)
     }
   }
 
@@ -267,7 +267,7 @@ object Stmt {
         (List(formal_), Assume(id_, init_, typ), re0 + (name -> name_))
 
       case _ =>
-        error("cannot normalize: " + stmt)
+        korn.error("cannot normalize: " + stmt)
     }
 }
 

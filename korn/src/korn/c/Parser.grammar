@@ -1,4 +1,4 @@
-%package "korn";
+%package "korn.c";
 %class "Parser";
 
 %import "java.util.Set";

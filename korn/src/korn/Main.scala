@@ -1,10 +1,11 @@
 package korn
 
 import scala.collection.mutable
+import scala.annotation.tailrec
+
 import java.io.Reader
 import java.io.File
 import java.io.FileReader
-import scala.annotation.tailrec
 import java.io.PrintStream
 import java.io.InputStream
 import java.io.OutputStream
@@ -108,26 +109,6 @@ object Main {
     }
   }
 
-  def parse(path: String): List[Stmt] = {
-    parse(new FileReader(path), path)
-  }
-
-  def parse(file: File): List[Stmt] = {
-    parse(new FileReader(file), file.getPath)
-  }
-
-  def parse(reader: Reader, path: String): List[Stmt] = {
-    val scanner = new Scanner(reader)
-    val parser = new Parser()
-
-    val types = new java.util.HashSet[String]
-    scanner.types = types
-    parser.types = types
-
-    val Block(stmts) = parser parse scanner
-    stmts
-  }
-
   def smt(path: String) = {
     ensure((path endsWith ".c") || (path endsWith ".i"), "unrecognized file ending: " + path)
     (path dropRight 2) + ".smt2"
@@ -140,7 +121,7 @@ object Main {
         System.err.flush()
 
         if (debug) System.err.println(path)
-        val stmts = parse(path)
+        val stmts = korn.c.parse(path)
 
         if (!dry) {
           object unit extends Unit(stmts)

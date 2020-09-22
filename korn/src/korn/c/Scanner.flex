@@ -1,9 +1,9 @@
-package korn;
+package korn.c;
 
 import beaver.Symbol;
 import java.util.Set;
 import scala.math.BigInt;
-import korn.Parser.Terminals;
+import korn.c.Parser.Terminals;
 
 %%
 

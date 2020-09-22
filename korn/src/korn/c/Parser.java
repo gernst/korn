@@ -1,4 +1,4 @@
-package korn;
+package korn.c;
 
 import java.util.Set;
 import beaver.*;

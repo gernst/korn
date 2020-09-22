@@ -2,6 +2,8 @@ package korn
 
 import scala.collection.mutable
 
+import korn.c._
+
 case class Clause(path: List[Prop], head: Prop, reason: String) {
   def free = head.free ++ path.flatMap(_.free)
   override def toString = path.mkString(", ") + " ==> " + head + " # " + reason

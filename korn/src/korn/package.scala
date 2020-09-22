@@ -1,4 +1,6 @@
 package object korn {
+  import korn.c._
+
   type Store = Map[String, Pure]
 
   object Store {
@@ -26,9 +28,9 @@ package object korn {
     object assume extends FunCall.unary("__VERIFIER_assume")
     object error extends FunCall.nullary("__VERIFIER_error")
     // object reach_error extends FunCall.nullary("reach_error")
-    
+
     object nondet_bool extends FunCall.nullary("__VERIFIER_nondet_bool")
-    
+
     object nondet_char extends FunCall.nullary("__VERIFIER_nondet_char")
     object nondet_short extends FunCall.nullary("__VERIFIER_nondet_short")
     object nondet_int extends FunCall.nullary("__VERIFIER_nondet_int")
@@ -55,7 +57,7 @@ package object korn {
     def char = 1
     def short = 2
     def int = 4
-    def long = if(Main.arch64) 8 else 4
+    def long = if (Main.arch64) 8 else 4
     def longlong = 8
   }
 
