@@ -327,7 +327,7 @@ class Unit(stmts: List[Stmt]) {
       body: Stmt) {
 
     val scope = params ++ locals
-    val any = entry.arbitrary
+    // val any = entry.arbitrary
 
     type Eval = (Pred, State, State) => Prop
 
@@ -436,17 +436,24 @@ class Unit(stmts: List[Stmt]) {
       clause(st, cond, reason)
     }
 
+    def havoc(mod: Iterable[String], st: State) = {
+      // XXX: this assumes all local identifiers have been initialized
+      //      with variables with the same name
+      val xs = mod map { name => (name, fresh(name, typing(name))) }
+      st ++ xs
+    }
+
     def from(pred: Pred) = {
-      val st = any
+      val st = havoc(params ++ locals, entry.arbitrary)
       val cond = eval(pred, st)
       st and cond
     }
 
-    def from(pred: Pred, st0: State, dup: Set[String]) = {
+    /* def from(pred: Pred, st0: State, dup: Set[String]) = {
       val st = any
       val cond = eval(pred, st0, st, dup)
       st and cond
-    }
+    } */
 
     def generalize(pred: Pred, st: State, reason: String) = {
       now(pred, st, reason)
@@ -625,7 +632,7 @@ class Unit(stmts: List[Stmt]) {
           val sti = if (Main.invariants) {
             from(inv)
           } else {
-            any
+            ??? // any
           }
 
           val (_test, st1) = rval_test(test, sti)
@@ -657,10 +664,7 @@ class Unit(stmts: List[Stmt]) {
             if (Main.invariants)
               now(inv, st_, "forwards " + inv.name)
 
-            // XXX: this assumes all local identifiers have been initialized
-            //      with variables with the same name
-            val xs = mod map { name => (name, fresh(name, typing(name))) }
-            val st2 = st0 ++ xs
+            val st2 = havoc(mod, st0)
             val prem = _eval(sum, st_, st2)
             val concl = _eval(sum, sty, st2)
             clause(st_ and prem, concl, "backwards " + sum.name)
@@ -988,7 +992,7 @@ class Unit(stmts: List[Stmt]) {
           (_ret, st2 and _call)
 
         case Cast(typ, expr) =>
-          if(Main.debug) log("cast to " + typ + " ignored")
+          if (Main.debug) log("cast to " + typ + " ignored")
           rval(expr, st0)
 
         case _ =>
