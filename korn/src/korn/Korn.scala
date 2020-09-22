@@ -10,43 +10,41 @@ case class Clause(path: List[Prop], head: Prop, reason: String) {
   override def toString = path.mkString(", ") + " ==> " + head + " # " + reason
 }
 
-case class State(path: List[Prop], store: Store) {
-  def arbitrary = State(Nil, store)
+case class State(path: List[Prop], store: Store, typing: Typing) {
+  def arbitrary = State(Nil, store, typing)
 
   def and(that: Prop): State = {
     that match {
       case Prop.and(phi, psi) =>
         this and psi and phi
       case _ =>
-        State(that :: path, store)
+        State(that :: path, store, typing)
     }
   }
+
+  def declare(that: (String, Sort)) = State(path, store, typing + that)
+  def declare(that: Iterable[(String, Sort)]) = State(path, store, typing ++ that)
+  def types(that: List[String]) = that map typing
 
   def contains(name: String) = store contains name
   def apply(name: String) = store(name)
   def apply(names: List[String]) = names map store
-  def +(that: (String, Pure)) = State(path, store + that)
-  def ++(that: Iterable[(String, Pure)]) = State(path, store ++ that)
+  def +(that: (String, Pure)) = State(path, store + that, typing)
+  def ++(that: Iterable[(String, Pure)]) = State(path, store ++ that, typing)
+
+  def havoc(names: Iterable[String]) = {
+    val re = names map { name => name -> Pure.fresh(name, typing(name)) }
+    this ++ re
+  }
+
+  def init(names: Iterable[String]) = {
+    val re = names map { name => name -> Var(name, typing(name)) }
+    this ++ re
+  }
 }
 
-case class Scope(names: List[String], types: List[Sort]) {
-  def ++(that: Scope) = Scope(this.names ++ that.names, this.types ++ that.types)
-  def vars = Pure.vars(names, types)
-  def vars_ = vars map (_.prime)
-
-  def names(some: Set[String]): List[String] = {
-    this.names filter some
-  }
-
-  def types(some: Set[String]): List[Sort] = {
-    for ((name, typ) <- (this.names zip this.types) if some contains name)
-      yield typ
-  }
-
-  def fresh(some: Set[String]) = {
-    for ((name, typ) <- (this.names zip this.types) if some contains name)
-      yield (name -> Pure.fresh(name, typ))
-  }
+object State {
+  val empty = State(Nil, Map(), Map())
 }
 
 class Unit(stmts: List[Stmt]) {
@@ -71,8 +69,8 @@ class Unit(stmts: List[Stmt]) {
   var preds = mutable.Set[Pred]()
   val clauses = mutable.Buffer[Clause]()
 
-  /** symbolic value of global variables */
-  var store: Store = Map()
+  /** symbolic state with global variables */
+  var state: State = State.empty
 
   def run() {
     global(stmts)
@@ -120,13 +118,13 @@ class Unit(stmts: List[Stmt]) {
       case VarDef(Formal(typ, name), None) =>
         vars += name -> typ
         val x = Var(name, resolve(typ))
-        store += name -> x
+        state += name -> x
       case VarDef(Formal(typ, name), Some(init)) =>
         vars += name -> typ
         val x = Var(name, resolve(typ))
-        store += name -> x
-        val y = eval(init, store)
-        store += name -> y
+        state += name -> x
+        val y = eval(init, state)
+        state += name -> y
       case FunDecl(ret, name, types) =>
         declare(name, ret, types)
       case FunDef(ret, name, formals, body) =>
@@ -170,21 +168,18 @@ class Unit(stmts: List[Stmt]) {
     val names = names1 ++ names2
     val types = types1 ++ types2
 
-    val sig = Scope(names1, types1)
-    val env = Scope(names, types)
-
-    val st0 = store ++ (names zip env.vars)
-    val stz = store ++ (names zip env.vars_)
+    val st0 = state declare (names zip types)
+    val st1 = st0 init names
 
     val entry = if (name == "main") {
-      State(Nil, st0)
+      st1
     } else {
       val pre = pres(name)
-      val phi = pre(sig.vars)
-      State(List(phi), st0)
+      val phi = pre(st1(names))
+      st1 and phi
     }
 
-    val exit = State(Nil, stz)
+    // val exit = State(Nil, stz)
 
     val post = if (name == "main") {
       None
@@ -192,7 +187,7 @@ class Unit(stmts: List[Stmt]) {
       Some(posts(name))
     }
 
-    object define extends Function(name, post, sig, env, entry, exit, stmt)
+    object define extends Function(name, names1, names2, post, entry, stmt)
     define.run()
   }
 
@@ -253,11 +248,11 @@ class Unit(stmts: List[Stmt]) {
     }
   }
 
-  def eval_test(expr: Expr, st: Store) = {
+  def eval_test(expr: Expr, st: State) = {
     truth(eval(expr, st))
   }
 
-  def eval(expr: Expr, st: Store): Pure = {
+  def eval(expr: Expr, st: State): Pure = {
     expr match {
       case Id(name) if st contains name =>
         st(name)
@@ -316,13 +311,13 @@ class Unit(stmts: List[Stmt]) {
 
   class Function(
       name: String,
+      params: List[String],
+      locals: List[String],
       post: Option[(Pred, Option[Sort])],
-      sig: Scope,
-      env: Scope,
       entry: State,
-      exit: State,
       body: Stmt) {
 
+    val scope = params ++ locals
     val any = entry.arbitrary
 
     type Eval = (Pred, State, State) => Prop
@@ -391,24 +386,24 @@ class Unit(stmts: List[Stmt]) {
     }
 
     def here(label: String) = {
-      val types0 = env.types
+      val types0 = entry types scope
       newPred(label, types0)
     }
 
     def here(label: String, dup: Set[String]) = {
-      val types0 = env.types
-      val types1 = env types dup
+      val types0 = entry types scope
+      val types1 = entry types (scope filter dup)
       newPred(label, types0 ++ types1)
     }
 
     def eval(pred: Pred, st: State) = {
-      val names0 = env.names
+      val names0 = scope
       pred(st(names0))
     }
 
     def eval(pred: Pred, st0: State, st1: State, dup: Set[String]) = {
-      val names0 = env.names
-      val names1 = env names dup
+      val names0 = scope
+      val names1 = scope filter dup
       pred(st0(names0) ++ st1(names1))
     }
 
@@ -423,12 +418,12 @@ class Unit(stmts: List[Stmt]) {
     }
 
     def result(pred: Pred, st: State, reason: String) {
-      val cond = pred(st(sig.names))
+      val cond = pred(st(params))
       clause(st, cond, reason)
     }
 
     def result(pred: Pred, st: State, res: Pure, reason: String) {
-      val cond = pred(st(sig.names), res)
+      val cond = pred(st(params), res)
       clause(st, cond, reason)
     }
 
@@ -647,9 +642,7 @@ class Unit(stmts: List[Stmt]) {
           for (st_ <- iter) yield {
             now(inv, st_, "forwards " + inv.name)
 
-            val re = env fresh mod
-            val st2 = st0 ++ re
-
+            val st2 = st0 havoc mod
             val prem = _eval(sum, st_, st2)
             val concl = _eval(sum, sty, st2)
             clause(st_ and prem, concl, "backwards " + sum.name)

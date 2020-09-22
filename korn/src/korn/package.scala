@@ -2,6 +2,7 @@ package object korn {
   import korn.c._
   import korn.smt._
 
+  type Typing = Map[String, Sort]
   type Store = Map[String, Pure]
 
   object Store {
