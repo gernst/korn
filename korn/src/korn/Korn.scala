@@ -880,7 +880,7 @@ class Unit(stmts: List[Stmt]) {
           (null, st0 and False)
 
         case stdlib.abort() =>
-          clause(st0, False, "abort")
+          // clause(st0, False, "abort")
           (null, st0 and False)
 
         case stdlib.assert(phi) =>
