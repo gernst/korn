@@ -70,6 +70,15 @@ object Pure extends korn.Counter with Alpha[Pure, Var] {
   object plus extends binary(Fun.plus)
   object minus extends binary(Fun.minus)
 
+  /* def fresh(name: String) = {
+    Var(name, Some(Pure.next))
+  }
+
+  def vars(names: List[String]) = {
+    for (name <- names)
+      yield Var(name)
+  } */
+
   def fresh(name: String, typ: Sort) = {
     Var(name, typ, Some(Pure.next))
   }
@@ -77,6 +86,11 @@ object Pure extends korn.Counter with Alpha[Pure, Var] {
   def vars(names: List[String], types: List[Sort]) = {
     for ((name, typ) <- (names zip types))
       yield Var(name, typ)
+  }
+
+  val apps: List[Pure] => Pure = {
+    case List(arg)   => arg
+    case fun :: args => ???
   }
 
   case class const(value: BigInt) extends Pure {
@@ -159,7 +173,24 @@ object Pure extends korn.Counter with Alpha[Pure, Var] {
           List(expr)
       }
   }
+
+  def x: String => Var = {
+    case name => Var(name, null)
+  }
 }
+
+
+/*case class Var(name: String, index: Option[Int] = None) extends Pure with Pure.x {
+  def prime = Var(name + "@", index)
+  def fresh(index: Int) = Var(name, Some(index))
+
+  override def toString = {
+    index match {
+      case None        => name
+      case Some(index) => name + index
+    }
+  }
+} */
 
 case class Var(name: String, typ: Sort, index: Option[Int] = None) extends Pure with Pure.x {
   def prime = Var(name + "@", typ, index)

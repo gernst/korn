@@ -39,6 +39,18 @@ object Prop {
   object gt extends binary(Pred.gt)
   object ge extends binary(Pred.ge)
 
+  val ands: List[Prop] => Prop = {
+    case Nil       => True
+    case List(arg) => arg
+    case args      => args reduce Prop.and
+  }
+
+  val ors: List[Prop] => Prop = {
+    case Nil       => False
+    case List(arg) => arg
+    case args      => args reduce Prop.or
+  }
+
   class unary(val pred: Pred) {
     def unapply(prop: Prop) =
       prop match {
@@ -95,7 +107,7 @@ object Prop {
     override def toString = {
       arg match {
         case truth(arg) => sexpr("=", arg, 0)
-        case _ => sexpr("not", arg)
+        case _          => sexpr("not", arg)
       }
     }
   }
