@@ -1,13 +1,22 @@
 package korn
 
+import korn.c._
+import korn.smt._
+
+sealed trait Val
+class Ptr extends Val
+
 object Val {
-  /* sealed trait Sort
-  sealed trait Fun
+  case class signed(pure: Pure, bytes: Int) extends Val
+  case class unsigned(pure: Pure, bytes: Int) extends Val
 
-  case class Signed(name: String, min: Int, max: Int) extends Sort
-  case class Unsigned(name: String, min: Int, max: Int) extends Sort
+  case class array(content: Pure, length: Pure, elem: Type) extends Val
+  case class struct(fields: Map[String, Val]) extends Val
 
-  case class Struct() extends Sort
+  case class index(base: Ptr, index: Pure) extends Val
+  case class member(base: Ptr, field: String) extends Val
+
+  /* case class Struct() extends Sort
 
   case class Arr(value: Val, length: Val) extends Val
   case class Arr2(values: List[Val]) extends Val

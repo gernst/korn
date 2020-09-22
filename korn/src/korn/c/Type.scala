@@ -39,6 +39,8 @@ object Type {
         bytes
       case Unsigned(_, bytes) =>
         bytes
+      case _ =>
+        korn.error("unknown size: " + typ)
     }
   }
 }
