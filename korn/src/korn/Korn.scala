@@ -347,12 +347,12 @@ class Unit(stmts: List[Stmt]) {
       hyps.nonEmpty && !(hyps.head.dont contains label)
     }
 
-    def exit(st: State) = {
+    def exit(st: State, force: Boolean, reason: String) = {
       hyps match {
-        case Hyp(sum, stz, sty, _, eval) :: _ =>
+        case Hyp(sum, stz, sty, _, eval) :: _ if force || Main.summaries =>
           val prem = eval(sum, sty, st)
           val concl = eval(sum, stz, st)
-          goal(st, prem, "loop exit " + sum.name)
+          clause(st, prem, "loop " + reason + " " + sum.name)
           st and concl
         case _ =>
           st
@@ -533,10 +533,10 @@ class Unit(stmts: List[Stmt]) {
         case Group(stmts) =>
           local(stmts)
 
-        case Label(label) =>
+        case Label(label, stmt) =>
           val pred = here("$" + name + "_" + label)
-          val st = from(pred)
-          Some(st)
+          val st1 = from(pred)
+          local(stmt, st1)
 
         case If(test, left, right) =>
           val st1 = local(left)
@@ -561,7 +561,7 @@ class Unit(stmts: List[Stmt]) {
 
         case Assume(Id(name), expr, typ) =>
           val (_expr, st1) = rval(expr, st0)
-          val x = Var(name)
+          val x = st1(name) // XXX: WEIRD
           val eq = (x === _expr)
           val st2 = st1 and eq
           Some(st2)
@@ -575,12 +575,12 @@ class Unit(stmts: List[Stmt]) {
 
         case Break =>
           ensure(hyps.nonEmpty, "stray break")
-          val st1 = exit(st0)
+          val st1 = exit(st0, true, "break")
 
           None // successor states not immediately reachable
 
         case Return(None) =>
-          val st1 = exit(st0)
+          val st1 = exit(st0, false, "return")
 
           for ((cond, _) <- post) {
             result(cond, st1, "return " + name)
@@ -589,7 +589,7 @@ class Unit(stmts: List[Stmt]) {
           None
 
         case Return(Some(res)) =>
-          val st1 = exit(st0)
+          val st1 = exit(st0, false, "return")
           val (_res, st2) = rval(res, st1)
 
           for ((cond, _) <- post) {
@@ -598,13 +598,13 @@ class Unit(stmts: List[Stmt]) {
 
           None
 
-        case Label(label) =>
+        case Label(label, stmt) =>
           val pred = here("$" + name + "_" + label)
           val st1 = generalize(pred, st0, "label " + label)
-          Some(st1)
+          local(stmt, st1)
 
         case Goto(label) if useHyp(label) =>
-          val st1 = exit(st0)
+          val st1 = exit(st0, false, "goto")
           val pred = here("$" + name + "_" + label)
           now(pred, st1, "goto " + label)
           None

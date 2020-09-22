@@ -8,6 +8,8 @@ int main() {
     assume(P(x,y));
     while(t(x,y)) {
         y = B(x,y);
+        if(0) break;
+        if(1) return;
     }
     assert(Q(x,y));
 }

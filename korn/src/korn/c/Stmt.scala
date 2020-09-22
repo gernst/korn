@@ -169,7 +169,7 @@ object Stmt {
     stmt match {
       case Block(stmts)          => ???
       case Group(stmts)          => Set(stmts flatMap labels: _*)
-      case Label(label)          => Set(label)
+      case Label(label, stmt)    => Set(label) ++ labels(stmt)
       case If(test, left, right) => labels(left) ++ labels(right)
       case While(test, body)     => labels(body)
       case _                     => Set()
@@ -222,8 +222,9 @@ object Stmt {
       case Return(Some(expr)) =>
         (Nil, Return(Some(expr rename re0)), re0)
 
-      case Label(label) =>
-        (Nil, stmt, re0)
+      case Label(label, stmt) =>
+        val (formals, stmt_, re1) = norm(stmt, re0)
+        (formals, Label(label, stmt_), re1)
 
       case Goto(label) =>
         (Nil, stmt, re0)
@@ -295,7 +296,7 @@ object Atomic {
   // def assume(expr: Expr) = Atomic(Some(__VERIFIER.assume(expr)))
 }
 
-case class Label(label: String) extends Stmt
+case class Label(label: String, stmt: Stmt) extends Stmt
 
 case class Case(const: Any) extends Stmt
 
