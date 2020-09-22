@@ -12,6 +12,9 @@ class Parseable[+A](p: Parser[A]) {
 }
 
 object Parser {
+  var funs: Map[String, Fun] = Map()
+  var preds: Map[String, Pred] = Map()
+
   implicit val whitespace: Whitespace = {
     new Whitespace("(\\s|(\\s*;.*(\\n|$)))*")
   }
@@ -37,25 +40,38 @@ object Parser {
   val sort = P(Sort.base(name))
   val array_ = P(Sort.array("Array" ~ typ ~ typ))
 
+  val fun = name collect {
+    case name if funs contains name =>
+      funs(name)
+  }
+
+  val pred = name collect {
+    case name if preds contains name =>
+      preds(name)
+  }
+
   // val pat: Parser[Pat] = P(id | parens(unapp_))
   // val pure: Parser[Pure] = P(id | num | parens(as_ | bind_ | distinct_ | ite_ | let_ | match_ | select_ | store_ | old_ | wp_ | box_ | dia_ | app_))
 
-  val pure: Parser[Pure] = P(id | num | parens(ite_ | select_ | store_ | app_))
-  val prop: Parser[Prop] = P(t | f | parens(not_ | and_ | or_ | imp_ | eqv_))
+  val pure: Parser[Pure] = P(const | id | num | parens(ite_ | select_ | store_ | app_))
+  val prop: Parser[Prop] = P(t | f | parens(not_ | and_ | or_ | imp_ | eqv_ | papp_))
 
-  val id = P(Pure.x(name | op))
-
+  val const = P(Pure.app(fun ~ ret(Nil)))
   val num = P(Pure.const(bigint))
+  val id = P(Var(name | op))
+  val ite_ = P(Pure.ite("ite" ~ prop ~ pure ~ pure))
+  val select_ = P(Pure.select("select" ~ pure ~ pure))
+  val store_ = P(Pure.store("store" ~ pure ~ pure ~ pure))
+  val app_ = P(Pure.app(fun ~ pure.+))
 
   val t = P(True("true"))
   val f = P(True("false"))
-  val not_ : Parser[Prop] = ??? //
-  val and_ : Parser[Prop] = ??? // P(Prop.ands("and" ~ prop.*))
-  val or_ : Parser[Prop] = ??? // P(Prop.ors("or" ~ prop.*))
-  val imp_ : Parser[Prop] = ??? //
-  val eqv_ : Parser[Prop] = ??? //
-
-  val ite_ = P(Pure.ite("ite" ~ prop ~ pure ~ pure))
+  val not_ = P(Prop.not("not" ~ prop))
+  val and_ = P(Prop.ands("and" ~ prop.*))
+  val or_ = P(Prop.ors("or" ~ prop.*))
+  val imp_ = P(Prop.imp("=>" ~ prop ~ prop))
+  val eqv_ = P(Prop.eqv("=" ~ prop ~ prop))
+  val papp_ = P(Prop.app(pred ~ pure.+))
 
   // val pair = P(Pair(parens(id ~ pure)))
   // val pairs = P(pair.*)
@@ -71,10 +87,7 @@ object Parser {
   // val cs = P(parens(Case(pat ~ pure)))
   // val match_ = P(Match("match" ~ pure ~ cs.*))
 
-  val select_ = P(Pure.select("select" ~ pure ~ pure))
-  val store_ = P(Pure.store("store" ~ pure ~ pure ~ pure))
-
-  val app_ = P(Pure.apps(pure.+))
+  // val app_ = P(Pure.apps(pure.+))
   // val unapp_ = P(UnApps(id.+))
 
   // val forall = Forall("forall")

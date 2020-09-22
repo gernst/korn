@@ -74,11 +74,6 @@ object Pure extends korn.Counter with Alpha[Pure, Var] {
     Var(name, Some(Pure.next))
   }
 
-  val apps: List[Pure] => Pure = {
-    case List(arg)   => arg
-    case fun :: args => ???
-  }
-
   case class const(value: BigInt) extends Pure {
     def free = Set()
     def rename(re: Map[Var, Var]) = this
@@ -159,13 +154,9 @@ object Pure extends korn.Counter with Alpha[Pure, Var] {
           List(expr)
       }
   }
-
-  def x: String => Var = {
-    case name => Var(name, null)
-  }
 }
 
-case class Var(name: String, index: Option[Int] = None) extends Pure with Pure.x {
+case class Var(name: String, index: Option[Int]) extends Pure with Pure.x {
   def fresh(index: Int) = Var(name, Some(index))
 
   override def toString = {
@@ -173,5 +164,11 @@ case class Var(name: String, index: Option[Int] = None) extends Pure with Pure.x
       case None        => name
       case Some(index) => name + index
     }
+  }
+}
+
+object Var extends (String => Var) {
+  def apply(name: String) = {
+    Var(name, None)
   }
 }
