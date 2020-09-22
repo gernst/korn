@@ -70,9 +70,9 @@ object Pure extends korn.Counter with Alpha[Pure, Var] {
   object plus extends binary(Fun.plus)
   object minus extends binary(Fun.minus)
 
-  def fresh(name: String) = {
-    Var(name, Some(Pure.next))
-  }
+  // def fresh(name: String) = {
+  //   Var(name, Some(Pure.next))
+  // }
 
   case class const(value: BigInt) extends Pure {
     def free = Set()
@@ -99,6 +99,17 @@ object Pure extends korn.Counter with Alpha[Pure, Var] {
     override def toString = {
       if (args.isEmpty) fun.toString
       else sexpr(fun :: args)
+    }
+  }
+
+  // Parsing only
+  case class let(eqs: List[(Var, Pure)], body: Pure) extends Pure {
+    def free = ???
+    def rename(re: Map[Var, Var]) = ???
+    def subst(su: Map[Var, Pure]) = ???
+    override def toString = {
+      val ps = eqs map { case (x,a) => sexpr(x,a) }
+      sexpr("let", sexpr(ps), body)
     }
   }
 

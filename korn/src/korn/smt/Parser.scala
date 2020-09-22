@@ -50,16 +50,16 @@ object Parser {
       preds(name)
   }
 
-  // val pat: Parser[Pat] = P(id | parens(unapp_))
-  // val pure: Parser[Pure] = P(id | num | parens(as_ | bind_ | distinct_ | ite_ | let_ | match_ | select_ | store_ | old_ | wp_ | box_ | dia_ | app_))
-
-  val pure: Parser[Pure] = P(const | id | num | parens(ite_ | select_ | store_ | app_))
+  val pure: Parser[Pure] = P(const | id | num | parens(ite_ | let_ | select_ | store_ | app_))
   val prop: Parser[Prop] = P(t | f | parens(not_ | and_ | or_ | imp_ | eqv_ | papp_))
 
-  val const = P(Pure.app(fun ~ ret(Nil)))
-  val num = P(Pure.const(bigint))
   val id = P(Var(name | op))
+  val pair = P(parens(id ~ pure))
+  val const = P(Pure.app(fun ~ ret(Nil)))
+
+  val num = P(Pure.const(bigint))
   val ite_ = P(Pure.ite("ite" ~ prop ~ pure ~ pure))
+  val let_ = P(Pure.let("let" ~ parens(pair.+) ~ pure))
   val select_ = P(Pure.select("select" ~ pure ~ pure))
   val store_ = P(Pure.store("store" ~ pure ~ pure ~ pure))
   val app_ = P(Pure.app(fun ~ pure.+))
@@ -72,6 +72,19 @@ object Parser {
   val imp_ = P(Prop.imp("=>" ~ prop ~ prop))
   val eqv_ = P(Prop.eqv("=" ~ prop ~ prop))
   val papp_ = P(Prop.app(pred ~ pure.+))
+
+  val formal = P(parens(id ~ sort))
+  val fundef = P(parens("define-fun" ~ name ~ (parens(formal.+) ~ pure)))
+  val fundefs = fundef.*
+  val model = P(parens(Model("model" ~ fundefs)))
+
+  val sat = P(Sat("sat"))
+  val unsat = P(Unsat("unsat"))
+  val unknown = P(Unknown("unknown"))
+  val status: Parser[Status] = P(sat | unsat | unknown)
+
+  // val error = P(Error("error" ~ ret("unknown")))
+  // val error_ = P(Error("error" ~ string))
 
   // val pair = P(Pair(parens(id ~ pure)))
   // val pairs = P(pair.*)
@@ -100,11 +113,7 @@ object Parser {
 
   /* val success = P(Success("success"))
   val unsupported = P(Unsupported("unsupported"))
-  val sat = P(Sat("sat"))
-  val unsat = P(Unsat("unsat"))
-  val unknown = P(Unknown("unknown"))
-  val error = P(Error("error" ~ ret("unknown")))
-  val error_ = P(Error("error" ~ string))
+
 
   // Note: explicit types prevent some complication weirdness about cyclic references
   val ack: Parser[Ack] = P(success | unsupported | error | parens(error_))
