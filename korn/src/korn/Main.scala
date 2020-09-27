@@ -82,7 +82,7 @@ object Main {
         configure(rest)
 
       case "-z3" :: rest =>
-        prove = Seq("z3", "-t:" + (timeout*1000))
+        prove = Seq("z3", "-t:" + (timeout * 1000))
         write = true
         configure(rest)
 
@@ -196,8 +196,10 @@ object Main {
 
     out.println()
 
-    out.println(sexpr("declare-sort", "Pointer", "1"))
-    out.println()
+    if (unit.pointers) {
+      out.println(sexpr("declare-sort", "Pointer", "1"))
+      out.println()
+    }
 
     for (pred <- unit.preds) {
       val korn.smt.Pred(name, args) = pred

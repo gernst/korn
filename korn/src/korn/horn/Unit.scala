@@ -16,6 +16,7 @@ class Unit(stmts: List[Stmt]) {
   /** global C variables and functions */
   val vars = mutable.Map[String, Type]()
   val funs = mutable.Map[String, (Type, List[Type])]()
+  var pointers = false
 
   /** numeric constants defined by enums */
   val consts = mutable.Map[String, Pure]()

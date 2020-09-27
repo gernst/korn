@@ -17,7 +17,7 @@ class Sig(unit: Unit) {
       case Type._Bool          => Sort.int
       case _: Signed           => Sort.int
       case _: Unsigned         => Sort.int
-      case PtrType(elem)       => Sort.pointer(resolve(elem))
+      case PtrType(elem)       => pointers = true; Sort.pointer(resolve(elem))
       case ArrayType(typ, dim) => Sort.array(Sort.int, resolve(typ))
       case _                   => korn.error("cannot resolve: " + typ)
     }

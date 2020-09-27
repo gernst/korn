@@ -88,9 +88,9 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
     clause(st, prop, "post " + name)
   }
 
-  def havoc(st: State) = {
+  def havoc: Store = {
     val vars = fresh(names zip sorts)
-    st ++ (names zip vars)
+    Map(names zip vars: _*)
   }
 
   def here(label: String): Pred = {
@@ -119,10 +119,14 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
   }
 
   def from(pred: Pred): State = {
-    val st0 = havoc(state)
-    val st1 = st0.resetOrigin
-    val prop = apply(pred, st1.origin, st1.store)
-    st1 and prop
+    val st0 = havoc
+    val st1 = havoc
+    val prop = apply(pred, st0, st1)
+    State(List(prop), st0, st1)
+  }
+
+  def unreach(st: State): State = {
+    st and False
   }
 
   def join(st1: State, reason1: String, st2: State, reason2: String): State = {
@@ -168,41 +172,36 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
         val st1 = from(pred)
         local(stmt, st1)
 
+      case Return(None) =>
+        // val st1 = exit(st0, false, "return")
+        val st1 = st0
+        leave(st1)
+        unreach(st1)
+
+      case Return(Some(res)) =>
+        // val st1 = exit(st0, false, "return")
+        val st1 = st0
+        val (_res, st2) = rval(res, st1)
+        leave(st2, _res)
+        unreach(st2)
+
+      case Goto(label) =>
+        val pred = here("$" + name + "_" + label)
+        now(pred, st0, "goto " + label)
+        unreach(st0)
+
       /* case Break =>
         korn.ensure(hyps.nonEmpty, "stray break")
         val st1 = exit(st0, true, "break")
 
         None // successor states not immediately reachable
 
-      case Return(None) =>
-        val st1 = exit(st0, false, "return")
-
-        for ((cond, _) <- post) {
-          result(cond, st1, "return " + name)
-        }
-
-        None
-
-      case Return(Some(res)) =>
-        val st1 = exit(st0, false, "return")
-        val (_res, st2) = rval(res, st1)
-
-        for ((cond, _) <- post) {
-          result(cond, st2, _res, "return " + name)
-        }
-
-        None
-
       case Goto(label) if useHyp(label) =>
         val st1 = exit(st0, false, "goto")
         val pred = here("$" + name + "_" + label)
         now(pred, st1, "goto " + label)
         None
-
-      case Goto(label) =>
-        val pred = here("$" + name + "_" + label)
-        now(pred, st0, "goto " + label)
-        None */
+       */
 
       case If(test, left, right) =>
         val (_test, st) = rval_test(test, st0)
