@@ -9,9 +9,6 @@ class Main(unit: Unit, name: String, params: List[Formal], locals: List[Formal],
     extends Proc(unit, name, params, locals, body) {
 
   /** Main function has pre/postcondition true implicitly */
-  override val pre = null
-  override val post = null
-
   override def enter(st: State) = st
   override def leave(st: State) {}
   override def leave(st: State, res: Pure) {}
@@ -31,9 +28,6 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
   val types = scope map (_.typ)
   val sorts = types map (resolve(_))
   val sorts2 = sorts ++ sorts // signature of relational predicates
-
-  val pre = pres(name)
-  val (post, ret) = posts(name)
 
   object eval extends unit.eval.scoped(this)
   import eval._
@@ -55,7 +49,7 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
   }
 
   def init() {
-    for ((typ, sort) <- (names zip sorts)) {
+    for ((name, sort) <- (names zip sorts)) {
       env += (name -> sort)
       state += (name -> vr(name, sort))
     }
@@ -69,11 +63,14 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
   }
 
   def enter(st: State) = {
+    val pre = pres(name)
     val prop = apply(pre, st.store)
     st and prop
   }
 
   def leave(st: State) {
+    val (post, ret) = posts(name)
+
     val prop = if (ret.isEmpty) {
       apply(post, st.store)
     } else {
@@ -85,6 +82,7 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
   }
 
   def leave(st: State, res: Pure) {
+    val (post, ret) = posts(name)
     korn.ensure(ret.nonEmpty, "return value given for " + name)
     val prop = apply(post, res, st.store)
     clause(st, prop, "post " + name)
@@ -96,7 +94,7 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
   }
 
   def here(label: String): Pred = {
-    newPred(name, sorts2)
+    newPred(label, sorts2)
   }
 
   def apply(pred: Pred, st0: Store): Prop = {
