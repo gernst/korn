@@ -92,7 +92,7 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
     clause(st, prop, "post " + name)
   }
 
-  def havoc: Store = {
+  def havoc: Origin = {
     val vars = fresh(names zip sorts)
     Map(names zip vars: _*)
   }
@@ -117,9 +117,16 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
     pred(args0 ++ args1)
   }
 
-  def now(pred: Pred, st0: Origin, st: State, reason: String) {
+  def now(pred: Pred, st0: Store, st: State, reason: String) {
     val prop = apply(pred, st0, st.store)
     clause(st, prop, reason)
+  }
+
+  def from(pred: Pred): (Origin, State) = {
+    val st0 = havoc
+    val st1 = st0
+    val prop = apply(pred, st0, st1)
+    (st0, State(List(prop), st1))
   }
 
   def from(pred: Pred, st0: Origin): State = {
@@ -219,19 +226,19 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
         val sum = here($sum.newLabel)
 
         // val st0 = st1.store // set origin to loop head
-        now(inv, st0, st1, "loop entry " + inv.name)
-        val sti = from(inv, st0)
+        now(inv, st1.store, st1, "loop entry " + inv.name)
+        val (stz, sti) = from(inv)
 
-        val (_test, st) = rval_test(test, st0, sti)
+        val (_test, st) = rval_test(test, stz, sti)
         val sty = st and _test
         val stn = st and !_test
 
-        now(sum, st0, stn, "loop term " + sum.name)
+        now(sum, stz, stn, "loop term " + sum.name)
 
-        val st_ = local(body, st0, sty)
-        now(inv, st0, st_, "forwards " + inv.name)
+        val st_ = local(body, stz, sty)
+        now(inv, stz, st_, "forwards " + inv.name)
 
-        from(sum, st0)
+        from(sum, stz)
 
         /* val st2 = havoc(mod, st0)
         val prem = _eval(sum, st_, st2)
