@@ -29,7 +29,6 @@ class Sig(unit: Unit) {
     res
   }
 
-
   def vr(name: String, typ: Sort): Var = {
     var x = Var(name)
     typing += (x.toString -> typ)

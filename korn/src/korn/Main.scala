@@ -129,7 +129,7 @@ object Main {
         val stmts = korn.c.parse(path)
 
         if (!dry) {
-          object unit extends Unit(stmts)
+          object unit extends horn.Unit(stmts)
           unit.run()
 
           if (prove.isEmpty) {
@@ -187,7 +187,7 @@ object Main {
     }
   }
 
-  def print(unit: Unit, out: PrintStream) {
+  def print(unit: horn.Unit, out: PrintStream) {
     import korn.smt.sexpr
     out.println(sexpr("set-logic", "HORN"))
 

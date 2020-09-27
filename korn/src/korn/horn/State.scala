@@ -3,8 +3,6 @@ package korn.horn
 import korn.smt._
 
 case class State(path: List[Prop], origin: Store, store: Store) {
-  def arbitrary = State(Nil, Map(), store)
-
   def and(that: Prop): State = {
     that match {
       case Prop.and(phi, psi) =>
@@ -14,6 +12,7 @@ case class State(path: List[Prop], origin: Store, store: Store) {
     }
   }
 
+  def resetOrigin = copy(origin = store)
   def contains(name: String) = store contains name
   def apply(name: String) = store(name)
   def apply(names: List[String]) = names map store
