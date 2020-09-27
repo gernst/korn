@@ -1,5 +1,10 @@
 package korn.smt
 
+case class Clause(path: List[Prop], head: Prop, reason: String) {
+  def free = head.free ++ path.flatMap(_.free)
+  override def toString = path.mkString(", ") + " ==> " + head + " # " + reason
+}
+
 case class Pred(name: String, types: List[Sort]) {
   def apply(args: List[Pure]) = Prop.app(this, args)
   def apply(args: List[Pure], res: Pure) = Prop.app(this, args ++ List(res))

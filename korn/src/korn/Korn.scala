@@ -5,32 +5,27 @@ import scala.collection.mutable
 import korn.c._
 import korn.smt._
 
-case class Clause(path: List[Prop], head: Prop, reason: String) {
-  def free = head.free ++ path.flatMap(_.free)
-  override def toString = path.mkString(", ") + " ==> " + head + " # " + reason
-}
-
-case class State(path: List[Prop], store: Store) {
-  def arbitrary = State(Nil, store)
+case class State(path: List[Prop], origin: Store, store: Store) {
+  def arbitrary = State(Nil, Map(), store)
 
   def and(that: Prop): State = {
     that match {
       case Prop.and(phi, psi) =>
         this and psi and phi
       case _ =>
-        State(that :: path, store)
+        copy(path = that :: path)
     }
   }
 
   def contains(name: String) = store contains name
   def apply(name: String) = store(name)
   def apply(names: List[String]) = names map store
-  def +(that: (String, Pure)) = State(path, store + that)
-  def ++(that: Iterable[(String, Pure)]) = State(path, store ++ that)
+  def +(that: (String, Pure)) = copy(store = store + that)
+  def ++(that: Iterable[(String, Pure)]) = copy(store = store ++ that)
 }
 
 object State {
-  val empty = State(Nil, Map())
+  val empty = State(Nil, Map(), Map())
 }
 
 class Unit(stmts: List[Stmt]) {

@@ -207,7 +207,7 @@ object Main {
     out.println()
 
     for (clause <- unit.clauses) {
-      val Clause(path, head, reason) = clause
+      val korn.smt.Clause(path, head, reason) = clause
       val bound = clause.free map (_.toString)
 
       out.println("; " + reason)
