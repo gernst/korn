@@ -20,7 +20,6 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
 
   /** types of code identifiers (params and locals) */
   val env = mutable.Map[String, Sort]()
-  var state = unit.state
 
   /** collect identifiers in scope and their types */
   val scope = params ++ locals
@@ -48,18 +47,22 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
     def newLabel(label: String) = "$" + name + "_" + label
   }
 
-  def init() {
+  def init() = {
+    var st = unit.state
+
     for ((name, sort) <- (names zip sorts)) {
       env += (name -> sort)
-      state += (name -> vr(name, sort))
+      st += (name -> vr(name, sort))
     }
+
+    st
   }
 
   def run() {
-    init()
-    val st0 = enter(state.resetOrigin)
-    val st1 = local(body, st0)
-    leave(st1) // implicit return without value
+    val st0 = init()
+    val st1 = enter(st0)
+    val st2 = local(body, st1.store, st1)
+    leave(st2) // implicit return without value
   }
 
   def enter(st: State) = {
@@ -113,84 +116,82 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
     pred(args0 ++ args1)
   }
 
-  def now(pred: Pred, st: State, reason: String) {
-    val prop = apply(pred, st.origin, st.store)
+  def now(pred: Pred, st0: Store, st: State, reason: String) {
+    val prop = apply(pred, st0, st.store)
     clause(st, prop, reason)
   }
 
-  def from(pred: Pred): State = {
-    val st0 = havoc
+  def from(pred: Pred, st0: Store): State = {
     val st1 = havoc
     val prop = apply(pred, st0, st1)
-    State(List(prop), st0, st1)
+    State(List(prop), st1)
   }
 
-  def unreach(st: State): State = {
+  def join(st0: Store, st1: State, reason1: String, st2: State, reason2: String): State = {
+    val pred = here($if.newLabel)
+    now(pred, st0, st1, reason1)
+    now(pred, st0, st2, reason2)
+    from(pred, st0)
+  }
+
+  def unreach(st: State) = {
     st and False
   }
 
-  def join(st1: State, reason1: String, st2: State, reason2: String): State = {
-    val pred = here($if.newLabel)
-    now(pred, st1, reason1)
-    now(pred, st2, reason2)
-    from(pred)
-  }
-
-  def local(stmts: List[Stmt], st0: State): State = {
+  def local(stmts: List[Stmt], st0: Store, st1: State): State = {
     stmts match {
       case Nil =>
-        st0
+        st1
       case first :: rest =>
-        val st1 = local(first, st0)
-        val st2 = local(rest, st1)
-        st2
+        val st2 = local(first, st0, st1)
+        val st3 = local(rest, st0, st2)
+        st3
     }
   }
 
-  def local(stmt: Stmt, st0: State): State = {
+  def local(stmt: Stmt, st0: Store, st1: State): State = {
     stmt match {
       case Group(stmts) =>
-        local(stmts, st0)
+        local(stmts, st0, st1)
 
       case Assume(Id(name), expr, typ) =>
-        val (_expr, st1) = rval(expr, st0)
-        val x = st1(name) // XXX: WEIRD
+        val (_expr, st2) = rval(expr, st0, st1)
+        val x = st2(name) // XXX: WEIRD
         val eq = (x === _expr)
-        val st2 = st1 and eq
-        st2
+        val st3 = st2 and eq
+        st3
 
       case Atomic(None) =>
-        st0
-
-      case Atomic(Some(expr)) =>
-        val (_, st1) = rval(expr, st0)
         st1
 
+      case Atomic(Some(expr)) =>
+        val (_, st2) = rval(expr, st0, st1)
+        st2
+
       case Label(label, stmt) =>
-        val pred = here($label.newLabel(label))
-        now(pred, st0, "label " + label)
-        val st1 = from(pred)
-        local(stmt, st1)
+        // val pred = here($label.newLabel(label))
+        // now(pred, st0, st1, "label " + label)
+        // val st2 = from(pred, st0)
+        // local(stmt, st2.store, st2)
+        ???
 
       case Return(None) =>
         // val st1 = exit(st0, false, "return")
-        val st1 = st0
         leave(st1)
         unreach(st1)
 
       case Return(Some(res)) =>
         // val st1 = exit(st0, false, "return")
-        val st1 = st0
-        val (_res, st2) = rval(res, st1)
+        val (_res, st2) = rval(res, st0, st1)
         leave(st2, _res)
         unreach(st2)
 
-      case Goto(label) =>
+      /* case Goto(label) =>
         val pred = here("$" + name + "_" + label)
-        now(pred, st0, "goto " + label)
-        unreach(st0)
+        now(pred, st0, st1, "goto " + label)
+        unreach(st1)
 
-      /* case Break =>
+      case Break =>
         korn.ensure(hyps.nonEmpty, "stray break")
         val st1 = exit(st0, true, "break")
 
@@ -204,63 +205,40 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
        */
 
       case If(test, left, right) =>
-        val (_test, st) = rval_test(test, st0)
-        val st1 = local(left, st and _test)
-        val st2 = local(right, st and !_test)
-        join(st1, "if then", st2, "if else")
+        val (_test, st) = rval_test(test, st0, st1)
+        val sty = local(left, st0, st and _test)
+        val stn = local(right, st0, st and !_test)
+        join(st0, sty, "if then", stn, "if else")
 
-      /* case While(test, body) =>
+      case While(test, body) =>
         val mod = Stmt.modifies(body)
         val dont = Stmt.labels(body)
 
         val inv = here($inv.newLabel)
+        val sum = here($sum.newLabel)
 
-        if (Main.invariants)
-          now(inv, st0, "loop entry " + inv.name)
+        // val st0 = st1.store // set origin to loop head
+        now(inv, st0, st1, "loop entry " + inv.name)
+        val sti = from(inv, st0)
 
-        val sti = if (Main.invariants) {
-          from(inv)
-        } else {
-          ??? // any
-        }
+        val (_test, st) = rval_test(test, st0, sti)
+        val sty = st and _test
+        val stn = st and !_test
 
-        val (_test, st1) = rval_test(test, sti)
+        now(sum, st0, stn, "loop term " + sum.name)
 
-        val sty = st1 and _test
-        val stn = st1 and !_test
+        val st_ = local(body, st0, sty)
+        now(inv, st0, st_, "forwards " + inv.name)
 
-        def eval_sum(pred: Pred, st: State, st_ : State) = eval(pred, st, st_, mod)
-        def eval_post(pred: Pred, st: State, st_ : State) = eval(pred, st_)
+        from(sum, st0)
 
-        val (sum, _eval) = if (Main.summaries) {
-          (here($sum.newLabel, mod), eval_sum: Eval)
-        } else {
-          (here($sum.newLabel), eval_post: Eval)
-        }
+        /* val st2 = havoc(mod, st0)
+        val prem = _eval(sum, st_, st2)
+        val concl = _eval(sum, sty, st2)
+        clause(st_ and prem, concl, "backwards " + sum.name)
 
-        /* base case: exit */
-        val fin = _eval(sum, stn, stn)
-        clause(stn, fin, "loop term " + sum.name)
-
-        /* inductive case: loop once */
-        val hyp = Hyp(sum, st0, sty, dont, _eval)
-
-        val iter = withinLoop(hyp) {
-          local(body, sty)
-        }
-
-        for (st_ <- iter) yield {
-          if (Main.invariants)
-            now(inv, st_, "forwards " + inv.name)
-
-          val st2 = havoc(mod, st0)
-          val prem = _eval(sum, st_, st2)
-          val concl = _eval(sum, sty, st2)
-          clause(st_ and prem, concl, "backwards " + sum.name)
-
-          val st3 = st2 and _eval(sum, st0, st2)
-          st3
-        } */
+        val st3 = st2 and _eval(sum, st0, st2)
+        st3 */
     }
   }
 }

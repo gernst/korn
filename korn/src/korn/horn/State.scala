@@ -2,7 +2,7 @@ package korn.horn
 
 import korn.smt._
 
-case class State(path: List[Prop], origin: Store, store: Store) {
+case class State(path: List[Prop], store: Store) {
   def and(that: Prop): State = {
     that match {
       case Prop.and(phi, psi) =>
@@ -12,7 +12,6 @@ case class State(path: List[Prop], origin: Store, store: Store) {
     }
   }
 
-  def resetOrigin = copy(origin = store)
   def contains(name: String) = store contains name
   def apply(name: String) = store(name)
   def apply(names: List[String]) = names map store
@@ -21,5 +20,5 @@ case class State(path: List[Prop], origin: Store, store: Store) {
 }
 
 object State {
-  val empty = State(Nil, Map(), Map())
+  val empty = State(Nil, Map())
 }
