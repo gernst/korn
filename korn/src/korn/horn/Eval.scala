@@ -133,7 +133,7 @@ class Eval(unit: Unit) {
   class scoped(proc: Proc) {
     import proc._
 
-    def assign(lhs: Expr, rhs: Expr, st0: Store, st1: State): (Pure, Pure, State) = {
+    def assign(lhs: Expr, rhs: Expr, st0: Origin, st1: State): (Pure, Pure, State) = {
       lhs match {
         case Id(name) if st1 contains name =>
           val _old = st1(name)
@@ -184,12 +184,12 @@ class Eval(unit: Unit) {
       }
     }
 
-    def rval_test(expr: Expr, st0: Store, st1: State): (Prop, State) = {
+    def rval_test(expr: Expr, st0: Origin, st1: State): (Prop, State) = {
       val (_res, st2) = rval(expr, st0, st1)
       (truth(_res), st2)
     }
 
-    def rvals(exprs: List[Expr], st0: Store, st1: State): (List[Pure], State) = {
+    def rvals(exprs: List[Expr], st0: Origin, st1: State): (List[Pure], State) = {
       exprs match {
         case Nil =>
           (Nil, st1)
@@ -201,7 +201,7 @@ class Eval(unit: Unit) {
       }
     }
 
-    def rval(expr: Expr, st0: Store, st1: State): (Pure, State) = {
+    def rval(expr: Expr, st0: Origin, st1: State): (Pure, State) = {
       expr match {
         case BinOp(",", fst, snd) =>
           val (_fst, st2) = rval(fst, st0, st1)

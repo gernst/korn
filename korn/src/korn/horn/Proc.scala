@@ -9,7 +9,7 @@ class Main(unit: Unit, name: String, params: List[Formal], locals: List[Formal],
     extends Proc(unit, name, params, locals, body) {
 
   /** Main function has pre/postcondition true implicitly */
-  override def enter(st: State) = st
+  override def enter(st: Origin) = State(Nil, st)
   override def leave(st: State) {}
   override def leave(st: State, res: Pure) {}
 }
@@ -48,27 +48,28 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
   }
 
   def init() = {
-    var st = unit.state
+    // var st = unit.state
+    var st0: Origin = Map()
 
     for ((name, sort) <- (names zip sorts)) {
       env += (name -> sort)
-      st += (name -> vr(name, sort))
+      st0 += (name -> vr(name, sort))
     }
 
-    st
+    st0
   }
 
   def run() {
     val st0 = init()
     val st1 = enter(st0)
-    val st2 = local(body, st1.store, st1)
+    val st2 = local(body, st0, st1)
     leave(st2) // implicit return without value
   }
 
-  def enter(st: State) = {
+  def enter(st0: Origin) = {
     val pre = pres(name)
-    val prop = apply(pre, st.store)
-    st and prop
+    val prop = apply(pre, st0)
+    State(List(prop), st0)
   }
 
   def leave(st: State) {
@@ -116,18 +117,18 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
     pred(args0 ++ args1)
   }
 
-  def now(pred: Pred, st0: Store, st: State, reason: String) {
+  def now(pred: Pred, st0: Origin, st: State, reason: String) {
     val prop = apply(pred, st0, st.store)
     clause(st, prop, reason)
   }
 
-  def from(pred: Pred, st0: Store): State = {
+  def from(pred: Pred, st0: Origin): State = {
     val st1 = havoc
     val prop = apply(pred, st0, st1)
     State(List(prop), st1)
   }
 
-  def join(st0: Store, st1: State, reason1: String, st2: State, reason2: String): State = {
+  def join(st0: Origin, st1: State, reason1: String, st2: State, reason2: String): State = {
     val pred = here($if.newLabel)
     now(pred, st0, st1, reason1)
     now(pred, st0, st2, reason2)
@@ -138,7 +139,7 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
     st and False
   }
 
-  def local(stmts: List[Stmt], st0: Store, st1: State): State = {
+  def local(stmts: List[Stmt], st0: Origin, st1: State): State = {
     stmts match {
       case Nil =>
         st1
@@ -149,7 +150,7 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
     }
   }
 
-  def local(stmt: Stmt, st0: Store, st1: State): State = {
+  def local(stmt: Stmt, st0: Origin, st1: State): State = {
     stmt match {
       case Group(stmts) =>
         local(stmts, st0, st1)
