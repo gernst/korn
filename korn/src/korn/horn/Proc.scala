@@ -147,7 +147,8 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
   def from(pred: Pred, st0: Origin): State = {
     val st1 = havoc // new state
     val prop = apply(pred, internal.names, st0, st1)
-    State(List(prop), st1)
+    state ++ st1 and prop
+    // State(List(prop), st1)
   }
 
   def join(st0: Origin, st1: State, reason1: String, st2: State, reason2: String): State = {
