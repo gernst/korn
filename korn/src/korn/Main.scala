@@ -19,6 +19,7 @@ object Main {
   var debug = false
   var quiet = false
   var model = false
+  var unbounded = false
   var write = false
   var timeout = 10
   var prove: Seq[String] = Seq()
@@ -56,6 +57,10 @@ object Main {
 
       case ("-m" | "-model") :: rest =>
         model = true
+        configure(rest)
+
+      case ("-u" | "-unbounded") :: rest =>
+        unbounded = true
         configure(rest)
 
       case ("-p" | "-parse") :: rest =>

@@ -64,9 +64,13 @@ class Eval(unit: Unit) {
 
   def nondet_int(name: String, min: Pure, max: Pure, st1: State): (Pure, State) = {
     var x = fresh("$" + name, Sort.int)
-    val bounds = (min <= x) and (x <= max)
-    val st2 = st1 and bounds
-    (x, st2)
+    if (korn.Main.unbounded) {
+      (x, st1)
+    } else {
+      val bounds = (min <= x) and (x <= max)
+      val st2 = st1 and bounds
+      (x, st2)
+    }
   }
 
   def value_test(expr: Expr, st: State) = {
