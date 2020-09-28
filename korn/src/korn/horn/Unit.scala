@@ -14,6 +14,7 @@ class Unit(stmts: List[Stmt]) {
   val enums = mutable.Map[String, Option[List[String]]]()
 
   /** global C variables and functions */
+  var globals: List[Formal] = Nil
   val vars = mutable.Map[String, Type]()
   val funs = mutable.Map[String, (Type, List[Type])]()
   var pointers = false
@@ -89,11 +90,13 @@ class Unit(stmts: List[Stmt]) {
         enum(cases)
         enums += name -> Some(cases)
       // Definitions
-      case VarDef(Formal(typ, name), None) =>
+      case VarDef(formal @ Formal(typ, name), None) =>
+        globals ++= List(formal)
         vars += name -> typ
         var x = fresh(name, resolve(typ))
         state += (name -> x)
-      case VarDef(Formal(typ, name), Some(init)) =>
+      case VarDef(formal @ Formal(typ, name), Some(init)) =>
+        globals ++= List(formal)
         vars += name -> typ
         var x = fresh(name, resolve(typ))
         state += (name -> x)

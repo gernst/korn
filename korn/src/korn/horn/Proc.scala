@@ -7,9 +7,10 @@ import scala.collection.mutable
 
 class Main(unit: Unit, name: String, params: List[Formal], locals: List[Formal], body: Stmt)
     extends Proc(unit, name, params, locals, body) {
+  import unit._
 
   /** Main function has pre/postcondition true implicitly */
-  override def enter(st: Origin) = State(Nil, st)
+  override def enter(st0: Origin) = state ++ st0
   override def leave(st: State) {}
   override def leave(st: State, res: Pure) {}
 }
@@ -22,12 +23,9 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
   val env = mutable.Map[String, Sort]()
 
   /** collect identifiers in scope and their types */
-  val scope = params ++ locals
-  val args = params map (_.name)
-  val names = scope map (_.name)
-  val types = scope map (_.typ)
-  val sorts = types map (resolve(_))
-  val sorts2 = sorts ++ sorts // signature of relational predicates
+  object external extends Scope(params)
+  object internal extends Scope(params ++ locals)
+  // val sorts2 = sorts ++ sorts // signature of relational predicates
 
   case class Hyp(sum: Pred, st0: Origin, sty: State, dont: Set[String])
   var hyps: List[Hyp] = Nil
@@ -55,7 +53,7 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
     // var st = unit.state
     var st0: Origin = Map()
 
-    for ((name, sort) <- (names zip sorts)) {
+    for ((name, sort) <- internal.sig) {
       env += (name -> sort)
       st0 += (name -> vr(name, sort))
     }
@@ -72,18 +70,19 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
 
   def enter(st0: Origin) = {
     val pre = pres(name)
-    val prop = apply(pre, args, st0)
-    State(List(prop), st0)
+    val prop = apply(pre, external.names, st0)
+    state ++ st0 and prop
+    // State(List(prop), st0)
   }
 
   def leave(st: State) {
     val (post, ret) = posts(name)
 
     val prop = if (ret.isEmpty) {
-      apply(post, args, st.store)
+      apply(post, external.names, st.store)
     } else {
       // implicitly return 0
-      apply(post, args, Pure.zero, st.store)
+      apply(post, external.names, Pure.zero, st.store)
     }
 
     clause(st, prop, "post " + name)
@@ -92,7 +91,7 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
   def leave(st: State, res: Pure) {
     val (post, ret) = posts(name)
     korn.ensure(ret.nonEmpty, "return value given for " + name)
-    val prop = apply(post, args, res, st.store)
+    val prop = apply(post, external.names, res, st.store)
     clause(st, prop, "post " + name)
   }
 
@@ -109,12 +108,13 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
   }
 
   def havoc: Origin = {
-    val vars = fresh(names zip sorts)
-    Map(names zip vars: _*)
+    val vars = fresh(internal.sig)
+    Map(internal.names zip vars: _*)
   }
 
   def here(label: String): Pred = {
-    newPred(label, sorts2)
+    val sorts = internal.sorts ++ internal.sorts
+    newPred(label, sorts)
   }
 
   def apply(pred: Pred, names: List[String], st0: Store): Prop = {
@@ -134,7 +134,7 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
   }
 
   def now(pred: Pred, st0: Store, st: State, reason: String) {
-    val prop = apply(pred, names, st0, st.store)
+    val prop = apply(pred, internal.names, st0, st.store)
     clause(st, prop, reason)
   }
 
@@ -146,7 +146,7 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
 
   def from(pred: Pred, st0: Origin): State = {
     val st1 = havoc // new state
-    val prop = apply(pred, names, st0, st1)
+    val prop = apply(pred, internal.names, st0, st1)
     State(List(prop), st1)
   }
 
