@@ -124,7 +124,7 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
 
   def from(pred: Pred): (Origin, State) = {
     val st0 = havoc
-    val st1 = st0
+    val st1 = havoc
     val prop = apply(pred, st0, st1)
     (st0, State(List(prop), st1))
   }
@@ -225,19 +225,30 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
         val inv = here($inv.newLabel)
         val sum = here($sum.newLabel)
 
-        // val st0 = st1.store // set origin to loop head
-        now(inv, st1.store, st1, "loop entry " + inv.name)
+        // stz is the new origin at the loop head
+        // sti is an arbitrary state that satisfies the invariant wrt. stz
         val (stz, sti) = from(inv)
 
+        // initially the invariant must hold  wrt. current state st1 as origin
+        now(inv, st1.store, st1, "loop entry " + inv.name)
+
+        // evaluate test, and branch into states sty, stn
         val (_test, st) = rval_test(test, stz, sti)
         val sty = st and _test
         val stn = st and !_test
 
+        // base case (terminate loop):
+        // establish summary for going round the loop
+        // from negated test and invariant in stn
         now(sum, stz, stn, "loop term " + sum.name)
 
+        // step case (iterate once):
+        // execute body to state st_ and re-establish invariant wrt. loop origin stz
         val st_ = local(body, stz, sty)
         now(inv, stz, st_, "forwards " + inv.name)
 
+        // the result after the loop is another arbitrary state
+        // that satisfies the sumary wrt. loop origin stz
         from(sum, stz)
 
         /* val st2 = havoc(mod, st0)
