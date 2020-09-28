@@ -243,11 +243,6 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
         val sty = st and _test
         val stn = st and !_test
 
-        // base case (terminate loop):
-        // establish summary for going round the loop
-        // from negated test and invariant in stn
-        now(sum, stz, stn, "loop term " + sum.name)
-
         // step case (iterate once):
         // execute body to state st_ and re-establish invariant wrt. loop origin stz
         val hyp = if(korn.Main.summaries) {
@@ -255,6 +250,12 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
         } else {
             loops.inv(inv, sum, stz)
         }
+
+        // base case (terminate loop):
+        // establish summary for going round the loop
+        // from negated test and invariant in stn
+        // now(sum, stz, stn, "loop term " + sum.name)
+        hyp.term(stn)
 
         val st_ = withinLoop(hyp) { local(body, stz, sty) }
         hyp.iter(st_)

@@ -3,6 +3,7 @@ package korn.horn
 import korn.smt._
 
 sealed trait Loop {
+  def term(st1: State)
   def iter(st1: State)
   def break(st1: State)
   def return_(st1: State): State
@@ -14,6 +15,7 @@ class Loops(proc: Proc) {
   import proc._
 
   case object default extends Loop {
+    def term(st1: State) {}
     def iter(st1: State) {}
     def break(st1: State) {}
     def return_(st1: State): State = st1
@@ -21,6 +23,10 @@ class Loops(proc: Proc) {
   }
 
   case class inv(inv: Pred, sum: Pred, stz: Origin) extends Loop {
+    def term(st1: State) {
+      now(sum, stz, st1, "loop term " + sum.name)
+    }
+
     def iter(st1: State) {
       now(inv, stz, st1, "forwards " + inv.name)
     }
@@ -39,12 +45,19 @@ class Loops(proc: Proc) {
   }
 
   case class sum(inv: Pred, sum: Pred, stz: Origin, sty: State, dont: Set[String]) extends Loop {
+    def term(st1: State) {
+      // val st2 = st1 without inv
+      now(sum, stz, st1, "loop term " + sum.name)
+    }
+
     def iter(st1: State) {
       now(inv, stz, st1, "forwards " + inv.name)
 
       val stn = havoc
       val prem = apply(sum, internal.names, st1.store, stn)
       val concl = apply(sum, internal.names, sty.store, stn)
+
+      //val st2 = st1 without inv
       clause(st1 and prem, concl, "backwards " + sum.name)
     }
 

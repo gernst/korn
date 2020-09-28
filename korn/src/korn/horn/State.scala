@@ -12,6 +12,13 @@ case class State(path: List[Prop], store: Store) {
     }
   }
 
+  def without(pred: Pred) = {
+    copy(path = path filter {
+      case Prop.app(`pred`, _) => false
+      case _ => true
+    })
+  }
+
   def contains(name: String) = store contains name
   def apply(name: String) = store(name)
   def apply(names: List[String]) = names map store

@@ -19,7 +19,7 @@ KORN_LAUNCHER = out/korn/launcher/dest/run
 KORN_SH  = ./korn.sh
 KORN_FLAGS ?=
 
-all: $(KORN_JAR) $(KORN_SH)
+all: $(KORN_JAR) $(KORN_ASSEMBLY) $(KORN_SH)
 
 examples: $(KORN_SMT)
 
@@ -40,7 +40,7 @@ $(KORN_JAR): $(KORN_JAVA) $(KORN_SCALA)
 	@echo $@
 	$(MILL) korn.jar
 
-$(KORN_ASSEMBLY):
+$(KORN_ASSEMBLY): $(KORN_JAVA) $(KORN_SCALA)
 	@echo $@
 	$(MILL) korn.assembly
 	@cp out/korn/assembly/dest/out-tmp.jar $(KORN_ASSEMBLY)
