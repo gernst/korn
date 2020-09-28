@@ -12,8 +12,9 @@ import java.io.OutputStream
 import java.io.FileOutputStream
 
 object Main {
+  val version = "0.1"
+
   var dry = false
-  var invariants = false
   var summaries = false
   var debug = false
   var quiet = false
@@ -51,10 +52,6 @@ object Main {
 
       case ("-s" | "-summaries") :: rest =>
         summaries = true
-        configure(rest)
-
-      case ("-i" | "-invariants") :: rest =>
-        invariants = true
         configure(rest)
 
       case ("-m" | "-model") :: rest =>
@@ -247,7 +244,13 @@ object Main {
   }
 
   def main(args: Array[String]) {
-    configure(args.toList)
-    run(files.toList)
+    args.toList match {
+      case List("-v") | List("-version") | List("--version") =>
+        System.out.println(version)
+        System.out.flush()
+      case args =>
+        configure(args)
+        run(files.toList)
+    }
   }
 }

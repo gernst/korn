@@ -19,6 +19,8 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
   import unit._
   import unit.sig._
 
+  object loops extends Loops(this)
+
   /** types of code identifiers (params and locals) */
   val env = mutable.Map[String, Sort]()
 
@@ -27,7 +29,7 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
   object internal extends Scope(params ++ locals)
   // val sorts2 = sorts ++ sorts // signature of relational predicates
 
-  var loops: List[Loop] = List(Loop.default)
+  var hyps: List[Loop] = List(loops.default)
 
   object eval extends unit.eval.scoped(this)
   import eval._
@@ -96,9 +98,9 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
 
   def withinLoop[A](loop: Loop)(thunk: => A) = {
     try {
-      loops = loop :: loops; thunk
+      hyps = loop :: hyps; thunk
     } finally {
-      loops = loops.tail
+      hyps = hyps.tail
     }
   }
 
@@ -193,28 +195,28 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
         local(stmt, stz, st2)
 
       case Goto(label) =>
-        val loop :: _ = loops
+        val loop :: _ = hyps
         val st2 = loop.goto(label, st1)
         val pred = here("$" + name + "_" + label)
         now(pred, st0, st2, "goto " + label)
         unreach(st1)
 
       case Return(None) =>
-        val loop :: _ = loops
+        val loop :: _ = hyps
         val st2 = loop.return_(st1)
         leave(st2)
         unreach(st2)
 
       case Return(Some(res)) =>
-        val loop :: _ = loops
+        val loop :: _ = hyps
         val st2 = loop.return_(st1)
         val (_res, st3) = rval(res, st0, st2)
         leave(st3, _res)
         unreach(st3)
 
       case Break =>
-        val loop :: _ = loops
-        korn.ensure(loop != Loop.default, "stray break")
+        val loop :: _ = hyps
+        korn.ensure(loop != loops.default, "stray break")
         loop.break(st1)
         unreach(st1)
 
@@ -248,70 +250,18 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
 
         // step case (iterate once):
         // execute body to state st_ and re-establish invariant wrt. loop origin stz
-        val hyp = Inv(inv, sum, stz /*, sty, dont */ )
+        val hyp = if(korn.Main.summaries) {
+            loops.sum(inv, sum, stz, sty, dont)
+        } else {
+            loops.inv(inv, sum, stz)
+        }
+
         val st_ = withinLoop(hyp) { local(body, stz, sty) }
         hyp.iter(st_)
 
         // the result after the loop is another arbitrary state
         // that satisfies the sumary wrt. loop origin stz
         from(sum, stz)
-    }
-  }
-
-  sealed trait Loop {
-    def iter(st1: State)
-    def break(st1: State)
-    def return_(st1: State): State
-    def goto(label: String, st1: State): State
-  }
-
-  object Loop {
-    case object default extends Loop {
-      def iter(st1: State) {}
-      def break(st1: State) {}
-      def return_(st1: State): State = st1
-      def goto(label: String, st1: State): State = st1
-    }
-  }
-
-  case class Inv(inv: Pred, sum: Pred, stz: Origin) extends Loop {
-    def iter(st1: State) {
-      now(inv, stz, st1, "forwards " + inv.name)
-    }
-
-    def break(st1: State) = {
-      now(sum, stz, st1, "break " + sum.name)
-    }
-
-    def return_(st1: State) = {
-      st1
-    }
-
-    def goto(label: String, st1: State) = {
-      st1
-    }
-  }
-
-  case class Sum(inv: Pred, sum: Pred, stz: Origin, sty: State, dont: Set[String]) extends Loop {
-    def iter(st1: State) {
-      now(inv, stz, st1, "forwards " + inv.name)
-
-      val stn = havoc
-      val prem = apply(sum, internal.names, st1.store, stn)
-      val concl = apply(sum, internal.names, sty.store, stn)
-      clause(st1 and prem, concl, "backwards " + sum.name)
-    }
-
-    def break(st1: State) = {
-      now(sum, st1.store, st1, "break " + sum.name)
-    }
-
-    def return_(st1: State) = {
-      st1
-    }
-
-    def goto(label: String, st1: State) = {
-      st1
     }
   }
 }

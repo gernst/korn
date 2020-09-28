@@ -13,6 +13,7 @@ BEAVER = ./beaver
 JFLEX  = ./jflex
 
 KORN_JAR = out/korn/jar/dest/out.jar
+KORN_ASSEMBLY = korn.jar
 
 KORN_LAUNCHER = out/korn/launcher/dest/run
 KORN_SH  = ./korn.sh
@@ -38,6 +39,11 @@ $(KORN_LAUNCHER):
 $(KORN_JAR): $(KORN_JAVA) $(KORN_SCALA)
 	@echo $@
 	$(MILL) korn.jar
+
+$(KORN_ASSEMBLY):
+	@echo $@
+	$(MILL) korn.assembly
+	@cp out/korn/assembly/dest/out-tmp.jar $(KORN_ASSEMBLY)
 
 $(KORN_SH): $(KORN_LAUNCHER)
 	@echo "[echo]  $@"
