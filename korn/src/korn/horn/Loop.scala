@@ -49,15 +49,23 @@ class Loops(proc: Proc) {
     }
 
     def break(st1: State) = {
-      now(sum, st1.store, st1, "break " + sum.name)
+      now(sum, sty.store, st1, "break " + sum.name)
     }
 
     def return_(st1: State) = {
-      st1
+      now(sum, sty.store, st1, "return " + sum.name)
+      val concl = apply(sum, internal.names, stz, st1.store)
+      st1 and concl
     }
 
     def goto(label: String, st1: State) = {
-      st1
+      if (dont contains label) {
+        st1
+      } else {
+        now(sum, sty.store, st1, "goto " + sum.name)
+        val concl = apply(sum, internal.names, stz, st1.store)
+        st1 and concl
+      }
     }
   }
 }
