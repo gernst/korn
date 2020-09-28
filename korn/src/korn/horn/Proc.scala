@@ -23,10 +23,14 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
 
   /** collect identifiers in scope and their types */
   val scope = params ++ locals
+  val args = params map (_.name)
   val names = scope map (_.name)
   val types = scope map (_.typ)
   val sorts = types map (resolve(_))
   val sorts2 = sorts ++ sorts // signature of relational predicates
+
+  case class Hyp(sum: Pred, st0: Origin, sty: State, dont: Set[String])
+  var hyps: List[Hyp] = Nil
 
   object eval extends unit.eval.scoped(this)
   import eval._
@@ -68,7 +72,7 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
 
   def enter(st0: Origin) = {
     val pre = pres(name)
-    val prop = apply(pre, st0)
+    val prop = apply(pre, args, st0)
     State(List(prop), st0)
   }
 
@@ -76,10 +80,10 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
     val (post, ret) = posts(name)
 
     val prop = if (ret.isEmpty) {
-      apply(post, st.store)
+      apply(post, args, st.store)
     } else {
       // implicitly return 0
-      apply(post, Pure.zero, st.store)
+      apply(post, args, Pure.zero, st.store)
     }
 
     clause(st, prop, "post " + name)
@@ -88,8 +92,20 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
   def leave(st: State, res: Pure) {
     val (post, ret) = posts(name)
     korn.ensure(ret.nonEmpty, "return value given for " + name)
-    val prop = apply(post, res, st.store)
+    val prop = apply(post, args, res, st.store)
     clause(st, prop, "post " + name)
+  }
+
+  def withinLoop[A](hyp: Hyp)(thunk: => A) = {
+    try {
+      hyps = hyp :: hyps; thunk
+    } finally {
+      hyps = hyps.tail
+    }
+  }
+
+  def useHyp(label: String) = {
+    hyps.nonEmpty && !(hyps.head.dont contains label)
   }
 
   def havoc: Origin = {
@@ -101,37 +117,36 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
     newPred(label, sorts2)
   }
 
-  def apply(pred: Pred, st0: Store): Prop = {
+  def apply(pred: Pred, names: List[String], st0: Store): Prop = {
     val args0 = names map st0
     pred(args0)
   }
 
-  def apply(pred: Pred, res: Pure, st0: Store): Prop = {
+  def apply(pred: Pred, names: List[String], res: Pure, st0: Store): Prop = {
     val args0 = names map st0
     pred(args0 ++ List(res))
   }
 
-  def apply(pred: Pred, st0: Store, st1: Store): Prop = {
+  def apply(pred: Pred, names: List[String], st0: Store, st1: Store): Prop = {
     val args0 = names map st0
     val args1 = names map st1
     pred(args0 ++ args1)
   }
 
   def now(pred: Pred, st0: Store, st: State, reason: String) {
-    val prop = apply(pred, st0, st.store)
+    val prop = apply(pred, names, st0, st.store)
     clause(st, prop, reason)
   }
 
-  def from(pred: Pred): (Origin, State) = {
-    val st0 = havoc
-    val st1 = havoc
-    val prop = apply(pred, st0, st1)
-    (st0, State(List(prop), st1))
+  def generalize(pred: Pred, st1: State, reason: String): (Origin, State) = {
+    now(pred, st1.store, st1, reason)
+    val st0 = havoc // new origin
+    (st0, from(pred, st0))
   }
 
   def from(pred: Pred, st0: Origin): State = {
-    val st1 = havoc
-    val prop = apply(pred, st0, st1)
+    val st1 = havoc // new state
+    val prop = apply(pred, names, st0, st1)
     State(List(prop), st1)
   }
 
@@ -177,40 +192,34 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
         st2
 
       case Label(label, stmt) =>
-        // val pred = here($label.newLabel(label))
-        // now(pred, st0, st1, "label " + label)
-        // val st2 = from(pred, st0)
-        // local(stmt, st2.store, st2)
-        ???
+        val pred = here($label.newLabel(label))
+        val (stz, st2) = generalize(pred, st1, "label " + label)
+        local(stmt, stz, st2)
+
+      case Goto(label) =>
+        // breakSome()
+        val pred = here("$" + name + "_" + label)
+        now(pred, st0, st1, "goto " + label)
+        unreach(st1)
 
       case Return(None) =>
+        // breakAll()
         // val st1 = exit(st0, false, "return")
         leave(st1)
         unreach(st1)
 
       case Return(Some(res)) =>
+        // breakAll()
         // val st1 = exit(st0, false, "return")
         val (_res, st2) = rval(res, st0, st1)
         leave(st2, _res)
         unreach(st2)
 
-      /* case Goto(label) =>
-        val pred = here("$" + name + "_" + label)
-        now(pred, st0, st1, "goto " + label)
-        unreach(st1)
-
       case Break =>
         korn.ensure(hyps.nonEmpty, "stray break")
-        val st1 = exit(st0, true, "break")
-
-        None // successor states not immediately reachable
-
-      case Goto(label) if useHyp(label) =>
-        val st1 = exit(st0, false, "goto")
-        val pred = here("$" + name + "_" + label)
-        now(pred, st1, "goto " + label)
-        None
-       */
+        val Hyp(sum, stz, sty, dont) :: _ = hyps
+        now(sum, stz, st1, "break " + sum.name)
+        unreach(st1)
 
       case If(test, left, right) =>
         val (_test, st) = rval_test(test, st0, st1)
@@ -225,12 +234,10 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
         val inv = here($inv.newLabel)
         val sum = here($sum.newLabel)
 
+        // generalize state to come from the invariant
         // stz is the new origin at the loop head
         // sti is an arbitrary state that satisfies the invariant wrt. stz
-        val (stz, sti) = from(inv)
-
-        // initially the invariant must hold  wrt. current state st1 as origin
-        now(inv, st1.store, st1, "loop entry " + inv.name)
+        val (stz, sti) = generalize(inv, st1, "loop entry " + inv.name)
 
         // evaluate test, and branch into states sty, stn
         val (_test, st) = rval_test(test, stz, sti)
@@ -244,14 +251,15 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
 
         // step case (iterate once):
         // execute body to state st_ and re-establish invariant wrt. loop origin stz
-        val st_ = local(body, stz, sty)
+        val hyp = Hyp(sum, stz, sty, dont)
+        val st_ = withinLoop(hyp) { local(body, stz, sty) }
         now(inv, stz, st_, "forwards " + inv.name)
 
         // the result after the loop is another arbitrary state
         // that satisfies the sumary wrt. loop origin stz
         from(sum, stz)
 
-        /* val st2 = havoc(mod, st0)
+      /* val st2 = havoc(mod, st0)
         val prem = _eval(sum, st_, st2)
         val concl = _eval(sum, sty, st2)
         clause(st_ and prem, concl, "backwards " + sum.name)
