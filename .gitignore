@@ -1,5 +1,12 @@
-out
 .bloop/
 .metals/
 .vscode/
-examples/*.smt2
+ReachSafety-Loops.files
+archives-2021/
+examples/
+korn.jar
+korn.sh
+out/
+sv-benchmarks
+test/
+
