@@ -1,4 +1,4 @@
-.PHONY: all test clean mrproper parser check-dependencies
+.PHONY: all test clean mrproper parser check-dependencies archives-2021
 
 MILL = ./mill
 
@@ -19,15 +19,25 @@ KORN_LAUNCHER = out/korn/launcher/dest/run
 KORN_SH  = ./korn.sh
 KORN_FLAGS ?=
 
+ARCHIVES = archives-2021/2021
+KORN_DIST = run korn.jar z3 eld eld.jar LICENSE LICENSE.z3 LICENSE.Eldarica
+
 all: $(KORN_JAR) $(KORN_ASSEMBLY) $(KORN_SH)
 
 examples: $(KORN_SMT)
 
 parser: $(KORN_JAVA)
 
+archives-2021: $(ARCHIVES)/korn.zip
+
+$(ARCHIVES)/korn.zip: $(ARCHIVES)/korn $(KORN_DIST)
+	@echo $@
+	@cp $(KORN_DIST) $(ARCHIVES)/korn
+	@zip $(ARCHIVES)/korn.zip -r $(ARCHIVES)/korn
+
 clean:
 	$(MILL) clean
-	rm -f $(KORN_SH)
+	@rm -f $(KORN_SH)
 
 check-dependencies:
 	$(MILL) mill.scalalib.Dependency/updates

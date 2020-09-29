@@ -53,6 +53,7 @@ class Loops(proc: Proc) {
     def iter(st1: State) {
       now(inv, stz, st1, "forwards " + inv.name)
 
+      ??? // XXX: lack of path condition here!
       val stn = havoc
       val prem = apply(sum, internal.names, st1.store, stn)
       val concl = apply(sum, internal.names, sty.store, stn)
