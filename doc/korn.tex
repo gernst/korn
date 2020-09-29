@@ -2,7 +2,10 @@
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage[scaled=0.8]{beramono}
-
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{stmaryrd}
+\usepackage{mathtools}
 \usepackage{tabto}
 \usepackage{xspace}
 
@@ -14,6 +17,10 @@
 \newcommand{\mailto}[1]{\href{mailto:#1}{\ttfamily #1}}
 
 \newcommand{\Korn}{\textsc{Korn}\xspace}
+\newcommand{\err}{\lightning}
+\newcommand{\brk}[1]{{#1}_\downarrow}
+\newcommand{\False}{\mathit{false}}
+\newcommand{\True}{\mathit{true}}
 
 \author{Gidon Ernst}
 \title{\Korn - Software Verification \\ with Invariants and Summaries}
@@ -36,15 +43,36 @@
 \section{Verification Approach}
 \label{sec:approach}
 
+\begin{align*}
+    P(s_0)
+        & \implies I(s_0,s_0) \\
+    I(s_0,s) \land t(s) \land B(s,\err)
+        & \implies \False \\
+    I(s_0,s) \land t(s) \land B(s,\brk s')
+        & \implies Q(s') \\
+    I(s_0,s) \land t(s) \land B(s,s')
+        & \implies I(s_0,s') \\
+    I(s_0,s) \land \lnot t(s)
+        & \implies Q(s)
+\end{align*}
+
 \cite{hoare1969axiomatic}
 A short overview of the theory that the tool is based on. Description of the abstract domains and algorithms that are used. Reference to the concept papers that describe the technical details.
 
 \section{Software Architecture}
 \label{sec:architecture}
 
-    Libraries and external tools that the verification tool uses (e.g., parser frontend, SAT solver)
-    Software structure and architecture (e.g., components that are used in the competition)
-    Implementation technology (e.g., programming language)
+\Korn is written in Scala and runs on the JVM,
+the frontend is hand-crafted with JFlex and Beaver,
+and supports a substantial fraction of the C~language.
+
+Verification conditions are generated in the fragment of SMT-LIB of the \texttt{HORN} logic.
+It can invoke any compliant solver as a backend either using its standard input or a file to communicate the verification task.
+\Korn comes with some explicit support for Z3~\cite{gurfinkel2019science} and Eldarica~\cite{hojjat2018eldarica}
+to pass e.g. timeouts or specific options to output models.
+
+Currently, \Korn makes use of the theory of integers (possibly using modulo and division of the C program uses it),
+and also the theory of arrays (C arrays are treated as value types so far, which is unsound in the presence of aliasing).
 
 \section{Discussion of Strengths and Weaknesses of the Approach}
 \label{sec:discussion}
