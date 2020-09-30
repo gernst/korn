@@ -10,27 +10,25 @@ case class Clause(path: List[Prop], head: Prop, reason: String) {
   override def toString = path.mkString(", ") + " ==> " + head + " # " + reason
 }
 
-case class State(path: List[Prop], store: Store) {
-  def arbitrary = State(Nil, store)
-
+case class State(origin: Store, store: Store, path: List[Prop]) {
   def and(that: Prop): State = {
     that match {
       case Prop.and(phi, psi) =>
         this and psi and phi
       case _ =>
-        State(that :: path, store)
+        copy(path = that :: path)
     }
   }
 
   def contains(name: String) = store contains name
   def apply(name: String) = store(name)
-  def apply(names: List[String]) = names map store
-  def +(that: (String, Pure)) = State(path, store + that)
-  def ++(that: Iterable[(String, Pure)]) = State(path, store ++ that)
+  // def apply(names: List[String]) = names map store
+  def +(that: (String, Pure)) = copy(store = store + that)
+  def ++(that: Iterable[(String, Pure)]) = copy(store = store ++ that)
 }
 
 object State {
-  val empty = State(Nil, Map())
+  val empty = State(Map(), Map(), Nil)
 }
 
 class Unit(stmts: List[Stmt]) {
@@ -395,19 +393,12 @@ class Unit(stmts: List[Stmt]) {
     }
 
     def here(label: String) = {
-      val types0 = scope map typing
-      newPred(label, types0)
-    }
-
-    def here(label: String, dup: Set[String]) = {
-      val types0 = scope map typing
-      val types1 = (scope filter dup) map typing
-      newPred(label, types0 ++ types1)
+      val types = scope map typing
+      newPred(label, types ++ types)
     }
 
     def eval(pred: Pred, st: State) = {
-      val names0 = scope
-      pred(st(names0))
+      pred(st(names))
     }
 
     def eval(pred: Pred, st0: State, st1: State, dup: Set[String]) = {
@@ -443,17 +434,17 @@ class Unit(stmts: List[Stmt]) {
       st ++ xs
     }
 
-    def from(pred: Pred) = {
-      val st = havoc(params ++ locals, entry.arbitrary)
-      val cond = eval(pred, st)
-      st and cond
+    def from(pred: Pred, st0: State) = {
+      val st1 = havoc(params ++ locals, st0)
+      val cond = eval(pred, st1)
+      st1 and cond
     }
 
-    /* def from(pred: Pred, st0: State, dup: Set[String]) = {
+    def from(pred: Pred, st0: State, dup: Set[String]) = {
       val st = any
       val cond = eval(pred, st0, st, dup)
       st and cond
-    } */
+    }
 
     def generalize(pred: Pred, st: State, reason: String) = {
       now(pred, st, reason)
