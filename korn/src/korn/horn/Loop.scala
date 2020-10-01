@@ -44,22 +44,30 @@ class Loops(proc: Proc) {
     }
   }
 
-  case class sum(inv: Pred, sum: Pred, stz: Origin, sty: State, dont: Set[String]) extends Loop {
+  case class sum(inv: Pred, sum: Pred, stz: Origin, sty: State, dont: Set[String], min: Boolean)
+      extends Loop {
     def term(st1: State) {
-      // val st2 = st1 without inv
-      now(sum, stz, st1, "loop term " + sum.name)
+      if (min) {
+        val st2 = st1 without inv
+        now(sum, stz, st2, "loop term " + sum.name)
+      } else {
+        now(sum, stz, st1, "loop term " + sum.name)
+      }
     }
 
     def iter(st1: State) {
       now(inv, stz, st1, "forwards " + inv.name)
 
-      ??? // XXX: lack of path condition here!
       val stn = havoc
       val prem = apply(sum, internal.names, st1.store, stn)
       val concl = apply(sum, internal.names, sty.store, stn)
 
-      //val st2 = st1 without inv
-      clause(st1 and prem, concl, "backwards " + sum.name)
+      if (min) {
+        val st2 = st1 without inv
+        clause(st2 and prem, concl, "backwards " + sum.name)
+      } else {
+        clause(st1 and prem, concl, "backwards " + sum.name)
+      }
     }
 
     def break(st1: State) = {

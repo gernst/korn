@@ -138,13 +138,13 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
   def generalize(pred: Pred, st1: State, reason: String): (Origin, State) = {
     now(pred, st1.store, st1, reason)
     val st0 = havoc // new origin
-    (st0, from(pred, st0))
+    (st0, from(pred, st0, st1))
   }
 
-  def from(pred: Pred, st0: Origin): State = {
-    val st1 = havoc // new state
-    val prop = apply(pred, internal.names, st0, st1)
-    state ++ st1 and prop
+  def from(pred: Pred, st0: Origin, st1: State): State = {
+    val st2 = havoc // new state
+    val prop = apply(pred, internal.names, st0, st2)
+    st1 ++ st2 and prop
     // State(List(prop), st1)
   }
 
@@ -152,7 +152,7 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
     val pred = here($if.newLabel)
     now(pred, st0, st1, reason1)
     now(pred, st0, st2, reason2)
-    from(pred, st0)
+    from(pred, st0, state)
   }
 
   def unreach(st: State) = {
@@ -246,7 +246,7 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
         // step case (iterate once):
         // execute body to state st_ and re-establish invariant wrt. loop origin stz
         val hyp = if(korn.Main.summaries) {
-            loops.sum(inv, sum, stz, sty, dont)
+            loops.sum(inv, sum, stz, sty, dont, korn.Main.minimal)
         } else {
             loops.inv(inv, sum, stz)
         }
@@ -262,7 +262,7 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
 
         // the result after the loop is another arbitrary state
         // that satisfies the sumary wrt. loop origin stz
-        from(sum, stz)
+        from(sum, stz, st1)
     }
   }
 }
