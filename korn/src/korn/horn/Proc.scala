@@ -27,7 +27,6 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
   /** collect identifiers in scope and their types */
   object external extends Scope(params)
   object internal extends Scope(params ++ locals)
-  // val sorts2 = sorts ++ sorts // signature of relational predicates
 
   var hyps: List[Loop] = List(loops.default)
 
@@ -51,7 +50,6 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
   }
 
   def init() = {
-    // var st = unit.state
     var st0: Origin = Map()
 
     for ((name, sort) <- internal.sig) {
@@ -73,7 +71,6 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
     val pre = pres(name)
     val prop = apply(pre, external.names, st0)
     state ++ st0 and prop
-    // State(List(prop), st0)
   }
 
   def leave(st: State) {
@@ -138,21 +135,20 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
   def generalize(pred: Pred, st1: State, reason: String): (Origin, State) = {
     now(pred, st1.store, st1, reason)
     val st0 = havoc // new origin
-    (st0, from(pred, st0, st1))
+    (st0, from(pred, st0))
   }
 
-  def from(pred: Pred, st0: Origin, st1: State): State = {
+  def from(pred: Pred, st0: Origin): State = {
     val st2 = havoc // new state
     val prop = apply(pred, internal.names, st0, st2)
-    st1 ++ st2 and prop
-    // State(List(prop), st1)
+    state ++ st2 and prop
   }
 
   def join(st0: Origin, st1: State, reason1: String, st2: State, reason2: String): State = {
     val pred = here($if.newLabel)
     now(pred, st0, st1, reason1)
     now(pred, st0, st2, reason2)
-    from(pred, st0, state)
+    from(pred, st0)
   }
 
   def unreach(st: State) = {
@@ -261,8 +257,12 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
         hyp.iter(st_)
 
         // the result after the loop is another arbitrary state
-        // that satisfies the sumary wrt. loop origin stz
-        from(sum, stz, st1)
+        // that satisfies the sumary wrt. st1
+        val st2 = havoc
+        val prop = apply(sum, internal.names, st1.store, st2)
+        val st3 = st1 ++ st2 and prop
+        st3
+        // from(sum, stz, st1)
     }
   }
 }

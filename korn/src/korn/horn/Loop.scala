@@ -49,9 +49,9 @@ class Loops(proc: Proc) {
     def term(st1: State) {
       if (min) {
         val st2 = st1 without inv
-        now(sum, stz, st2, "loop term " + sum.name)
+        now(sum, st2.store, st2, "loop term " + sum.name)
       } else {
-        now(sum, stz, st1, "loop term " + sum.name)
+        now(sum, st1.store, st1, "loop term " + sum.name)
       }
     }
 
