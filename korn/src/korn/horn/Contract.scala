@@ -20,7 +20,7 @@ object Contract {
       import proc._
       import proc.unit._
       val pre = pres(name)
-      val prop = apply(pre, external.names, st0.store)
+      val prop = apply(pre, external.names, st0)
       st0 and prop
     }
 
@@ -31,10 +31,10 @@ object Contract {
       val (post, ret) = posts(name)
 
       val prop = if (ret.isEmpty) {
-        apply(post, external.names, st.store)
+        apply(post, external.names, st)
       } else {
         // implicitly return 0
-        apply(post, external.names, Pure.zero, st.store)
+        apply(post, external.names, Pure.zero, st)
       }
 
       clause(st, prop, "post " + name)
@@ -46,7 +46,7 @@ object Contract {
 
       val (post, ret) = posts(name)
       korn.ensure(ret.nonEmpty, "return value given for " + name)
-      val prop = apply(post, external.names, res, st.store)
+      val prop = apply(post, external.names, res, st)
       clause(st, prop, "post " + name)
     }
   }

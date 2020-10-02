@@ -5,13 +5,18 @@ import korn.smt._
 
 import scala.collection.mutable
 
-case class Hyp(inv: Pred, sum: Pred, stz: Store, sty: State, dont: Set[String])
+case class Hyp(inv: Pred, sum: Pred, stz: State, sty: State, dont: Set[String])
 
-class Proc(val unit: Unit, val name: String, params: List[Formal], locals: List[Formal], body: Stmt, contract: Contract) {
+class Proc(
+    val unit: Unit,
+    val name: String,
+    params: List[Formal],
+    locals: List[Formal],
+    body: Stmt,
+    contract: Contract,
+    loop: Loop) {
   import unit._
   import unit.sig._
-
-  object loops extends Loops(this)
 
   /** types of code identifiers (params and locals) */
   val env = mutable.Map[String, Sort]()
@@ -20,7 +25,7 @@ class Proc(val unit: Unit, val name: String, params: List[Formal], locals: List[
   object external extends Scope(params)
   object internal extends Scope(params ++ locals)
 
-  var hyps: List[Loop] = List(loops.default)
+  var hyps: List[Hyp] = Nil
 
   object eval extends unit.eval.scoped(this)
   import eval._
@@ -59,12 +64,24 @@ class Proc(val unit: Unit, val name: String, params: List[Formal], locals: List[
     contract.leave(st2, this) // implicit return without value
   }
 
-  def withinLoop[A](loop: Loop)(thunk: => A) = {
+  def withinLoop[A](hyp: Hyp)(thunk: => A) = {
     try {
-      hyps = loop :: hyps; thunk
+      hyps = hyp :: hyps; thunk
     } finally {
       hyps = hyps.tail
     }
+  }
+
+  def clause(st: State, phi: Prop, reason: String) {
+    val f = (st.path contains False)
+    val t = (st.path contains phi) || (phi == True)
+
+    if (!t && !f)
+      clauses += Clause(st.path, phi, reason)
+  }
+
+  def goal(st: State, phi: Prop, reason: String) {
+    clause(st and !phi, False, reason)
   }
 
   def havoc: Store = {
@@ -77,20 +94,16 @@ class Proc(val unit: Unit, val name: String, params: List[Formal], locals: List[
     newPred(label, sorts)
   }
 
-  def apply(pred: Pred, names: List[String], st0: Store): Prop = {
-    val args0 = names map st0
-    pred(args0)
+  def apply(pred: Pred, names: List[String], st0: State): Prop = {
+    pred(st0(names))
   }
 
-  def apply(pred: Pred, names: List[String], res: Pure, st0: Store): Prop = {
-    val args0 = names map st0
-    pred(args0 ++ List(res))
+  def apply(pred: Pred, names: List[String], res: Pure, st0: State): Prop = {
+    pred(st0(names) ++ List(res))
   }
 
   def apply(pred: Pred, names: List[String], st0: State, st1: State): Prop = {
-    val args0 = names map st0
-    val args1 = names map st1
-    pred(args0 ++ args1)
+    pred(st0(names) ++ st1(names))
   }
 
   def now(pred: Pred, st0: State, st: State, reason: String) {
@@ -158,29 +171,24 @@ class Proc(val unit: Unit, val name: String, params: List[Formal], locals: List[
         local(stmt, stz, st2)
 
       case Goto(label) =>
-        val loop :: _ = hyps
-        val st2 = loop.goto(label, st1)
+        val st2 = loop.goto(label, st1, this)
         val pred = here("$" + name + "_" + label)
         now(pred, st0, st2, "goto " + label)
         unreach(st1)
 
       case Return(None) =>
-        val loop :: _ = hyps
-        val st2 = loop.return_(st1)
+        val st2 = loop.return_(st1, this)
         contract.leave(st2, this)
         unreach(st2)
 
       case Return(Some(res)) =>
-        val loop :: _ = hyps
-        val st2 = loop.return_(st1)
+        val st2 = loop.return_(st1, this)
         val (_res, st3) = rval(res, st0, st2)
         contract.leave(st3, _res, this)
         unreach(st3)
 
       case Break =>
-        val loop :: _ = hyps
-        korn.ensure(loop != loops.default, "stray break")
-        loop.break(st1)
+        loop.break(st1, this)
         unreach(st1)
 
       case If(test, left, right) =>
@@ -208,28 +216,25 @@ class Proc(val unit: Unit, val name: String, params: List[Formal], locals: List[
 
         // step case (iterate once):
         // execute body to state st_ and re-establish invariant wrt. loop origin stz
-        val hyp = if(korn.Main.summaries) {
-            loops.sum(inv, sum, stz, sty, dont, korn.Main.minimal)
-        } else {
-            loops.inv(inv, sum, stz)
+        val hyp = Hyp(inv, sum, stz, sty, dont)
+
+        withinLoop(hyp) {
+          // base case (terminate loop):
+          // establish summary for going round the loop
+          // from negated test and invariant in stn
+          // now(sum, stz, stn, "loop term " + sum.name)
+          loop.term(stn, this)
+
+          val st_ = local(body, stz, sty)
+          loop.iter(st_, this)
+
+          // the result after the loop is another arbitrary state
+          // that satisfies the sumary wrt. st1
+          val st2 = st1 ++ havoc
+          val prop = apply(sum, internal.names, st1, st2)
+          val st3 = st2 and prop
+          st3
         }
-
-        // base case (terminate loop):
-        // establish summary for going round the loop
-        // from negated test and invariant in stn
-        // now(sum, stz, stn, "loop term " + sum.name)
-        hyp.term(stn)
-
-        val st_ = withinLoop(hyp) { local(body, stz, sty) }
-        hyp.iter(st_)
-
-        // the result after the loop is another arbitrary state
-        // that satisfies the sumary wrt. st1
-        val st2 = st1 ++ havoc
-        val prop = apply(sum, internal.names, st1, st2)
-        val st3 = st2 and prop
-        st3
-        // from(sum, stz, st1)
     }
   }
 }
