@@ -22,7 +22,7 @@ class Loops(proc: Proc) {
     def goto(label: String, st1: State): State = st1
   }
 
-  case class inv(inv: Pred, sum: Pred, stz: Origin) extends Loop {
+  case class inv(inv: Pred, sum: Pred, stz: State) extends Loop {
     def term(st1: State) {
       now(sum, stz, st1, "loop term " + sum.name)
     }
@@ -44,23 +44,23 @@ class Loops(proc: Proc) {
     }
   }
 
-  case class sum(inv: Pred, sum: Pred, stz: Origin, sty: State, dont: Set[String], min: Boolean)
+  case class sum(inv: Pred, sum: Pred, stz: State, sty: State, dont: Set[String], min: Boolean)
       extends Loop {
     def term(st1: State) {
       if (min) {
         val st2 = st1 without inv
-        now(sum, st2.store, st2, "loop term " + sum.name)
+        now(sum, st2, st2, "loop term " + sum.name)
       } else {
-        now(sum, st1.store, st1, "loop term " + sum.name)
+        now(sum, st1, st1, "loop term " + sum.name)
       }
     }
 
     def iter(st1: State) {
       now(inv, stz, st1, "forwards " + inv.name)
 
-      val stn = havoc
-      val prem = apply(sum, internal.names, st1.store, stn)
-      val concl = apply(sum, internal.names, sty.store, stn)
+      val stn = st1 ++ havoc
+      val prem = apply(sum, internal.names, st1, stn)
+      val concl = apply(sum, internal.names, sty, stn)
 
       if (min) {
         val st2 = st1 without inv
@@ -71,12 +71,12 @@ class Loops(proc: Proc) {
     }
 
     def break(st1: State) = {
-      now(sum, sty.store, st1, "break " + sum.name)
+      now(sum, sty, st1, "break " + sum.name)
     }
 
     def return_(st1: State) = {
-      now(sum, sty.store, st1, "return " + sum.name)
-      val concl = apply(sum, internal.names, stz, st1.store)
+      now(sum, sty, st1, "return " + sum.name)
+      val concl = apply(sum, internal.names, stz, st1)
       st1 and concl
     }
 
@@ -84,8 +84,8 @@ class Loops(proc: Proc) {
       if (dont contains label) {
         st1
       } else {
-        now(sum, sty.store, st1, "goto " + sum.name)
-        val concl = apply(sum, internal.names, stz, st1.store)
+        now(sum, sty, st1, "goto " + sum.name)
+        val concl = apply(sum, internal.names, stz, st1)
         st1 and concl
       }
     }

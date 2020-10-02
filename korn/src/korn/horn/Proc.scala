@@ -5,17 +5,9 @@ import korn.smt._
 
 import scala.collection.mutable
 
-class Main(unit: Unit, name: String, params: List[Formal], locals: List[Formal], body: Stmt)
-    extends Proc(unit, name, params, locals, body) {
-  import unit._
+case class Hyp(inv: Pred, sum: Pred, stz: Store, sty: State, dont: Set[String])
 
-  /** Main function has pre/postcondition true implicitly */
-  override def enter(st0: Origin) = state ++ st0
-  override def leave(st: State) {}
-  override def leave(st: State, res: Pure) {}
-}
-
-class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Formal], body: Stmt) {
+class Proc(val unit: Unit, val name: String, params: List[Formal], locals: List[Formal], body: Stmt, contract: Contract) {
   import unit._
   import unit.sig._
 
@@ -50,47 +42,21 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
   }
 
   def init() = {
-    var st0: Origin = Map()
+    var st0: Store = Map()
 
     for ((name, sort) <- internal.sig) {
       env += (name -> sort)
       st0 += (name -> vr(name, sort))
     }
 
-    st0
+    state ++ st0
   }
 
   def run() {
     val st0 = init()
-    val st1 = enter(st0)
+    val st1 = contract.enter(st0, this)
     val st2 = local(body, st0, st1)
-    leave(st2) // implicit return without value
-  }
-
-  def enter(st0: Origin) = {
-    val pre = pres(name)
-    val prop = apply(pre, external.names, st0)
-    state ++ st0 and prop
-  }
-
-  def leave(st: State) {
-    val (post, ret) = posts(name)
-
-    val prop = if (ret.isEmpty) {
-      apply(post, external.names, st.store)
-    } else {
-      // implicitly return 0
-      apply(post, external.names, Pure.zero, st.store)
-    }
-
-    clause(st, prop, "post " + name)
-  }
-
-  def leave(st: State, res: Pure) {
-    val (post, ret) = posts(name)
-    korn.ensure(ret.nonEmpty, "return value given for " + name)
-    val prop = apply(post, external.names, res, st.store)
-    clause(st, prop, "post " + name)
+    contract.leave(st2, this) // implicit return without value
   }
 
   def withinLoop[A](loop: Loop)(thunk: => A) = {
@@ -101,7 +67,7 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
     }
   }
 
-  def havoc: Origin = {
+  def havoc: Store = {
     val vars = fresh(internal.sig)
     Map(internal.names zip vars: _*)
   }
@@ -121,30 +87,31 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
     pred(args0 ++ List(res))
   }
 
-  def apply(pred: Pred, names: List[String], st0: Store, st1: Store): Prop = {
+  def apply(pred: Pred, names: List[String], st0: State, st1: State): Prop = {
     val args0 = names map st0
     val args1 = names map st1
     pred(args0 ++ args1)
   }
 
-  def now(pred: Pred, st0: Store, st: State, reason: String) {
-    val prop = apply(pred, internal.names, st0, st.store)
+  def now(pred: Pred, st0: State, st: State, reason: String) {
+    val prop = apply(pred, internal.names, st0, st)
     clause(st, prop, reason)
   }
 
-  def generalize(pred: Pred, st1: State, reason: String): (Origin, State) = {
-    now(pred, st1.store, st1, reason)
+  def generalize(pred: Pred, st1: State, reason: String): (State, State) = {
+    now(pred, st1, st1, reason)
     val st0 = havoc // new origin
-    (st0, from(pred, st0))
+    val st2 = st1 ++ havoc
+    (st2, from(pred, st2))
   }
 
-  def from(pred: Pred, st0: Origin): State = {
-    val st2 = havoc // new state
+  def from(pred: Pred, st0: State): State = {
+    val st2 = st0 ++ havoc // new state
     val prop = apply(pred, internal.names, st0, st2)
-    state ++ st2 and prop
+    st2 and prop
   }
 
-  def join(st0: Origin, st1: State, reason1: String, st2: State, reason2: String): State = {
+  def join(st0: State, st1: State, reason1: String, st2: State, reason2: String): State = {
     val pred = here($if.newLabel)
     now(pred, st0, st1, reason1)
     now(pred, st0, st2, reason2)
@@ -155,7 +122,7 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
     st and False
   }
 
-  def local(stmts: List[Stmt], st0: Origin, st1: State): State = {
+  def local(stmts: List[Stmt], st0: State, st1: State): State = {
     stmts match {
       case Nil =>
         st1
@@ -166,7 +133,7 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
     }
   }
 
-  def local(stmt: Stmt, st0: Origin, st1: State): State = {
+  def local(stmt: Stmt, st0: State, st1: State): State = {
     stmt match {
       case Group(stmts) =>
         local(stmts, st0, st1)
@@ -200,14 +167,14 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
       case Return(None) =>
         val loop :: _ = hyps
         val st2 = loop.return_(st1)
-        leave(st2)
+        contract.leave(st2, this)
         unreach(st2)
 
       case Return(Some(res)) =>
         val loop :: _ = hyps
         val st2 = loop.return_(st1)
         val (_res, st3) = rval(res, st0, st2)
-        leave(st3, _res)
+        contract.leave(st3, _res, this)
         unreach(st3)
 
       case Break =>
@@ -258,9 +225,9 @@ class Proc(val unit: Unit, name: String, params: List[Formal], locals: List[Form
 
         // the result after the loop is another arbitrary state
         // that satisfies the sumary wrt. st1
-        val st2 = havoc
-        val prop = apply(sum, internal.names, st1.store, st2)
-        val st3 = st1 ++ st2 and prop
+        val st2 = st1 ++ havoc
+        val prop = apply(sum, internal.names, st1, st2)
+        val st3 = st2 and prop
         st3
         // from(sum, stz, st1)
     }

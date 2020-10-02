@@ -118,11 +118,13 @@ class Unit(stmts: List[Stmt]) {
 
     val (locals, stmt) = Stmt.norm(body)
 
-    val proc = if (name == "main") {
-      new Main(this, name, params, locals, stmt)
+    val contract = if (name == "main") {
+      Contract.main
     } else {
-      new Proc(this, name, params, locals, stmt)
+      Contract.relational
     }
+
+    object proc extends Proc(this, name, params, locals, stmt, contract)
 
     proc.run()
   }
