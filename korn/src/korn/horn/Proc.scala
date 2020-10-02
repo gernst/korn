@@ -5,6 +5,11 @@ import korn.smt._
 
 import scala.collection.mutable
 
+// TODO: find better name
+sealed trait Cond
+case class Here(pred: Pred) extends Cond
+case class Between(pred: Pred) extends Cond
+
 case class Hyp(inv: Pred, sum: Pred, st0: State, stn: State, sty: State, dont: Set[String])
 
 class Proc(
@@ -214,9 +219,9 @@ class Proc(
         (st0, unreach(st1))
 
       case If(test, left, right) =>
-        val (_test, st) = rval_test(test, st0, st1)
-        val (sa0, sa1) = local(left, st0, st and _test)
-        val (sb0, sb1) = local(right, st0, st and !_test)
+        val (_test, st2) = rval_test(test, st0, st1)
+        val (sa0, sa1) = local(left, st0, st2 and _test)
+        val (sb0, sb1) = local(right, st0, st2 and !_test)
         join(sa0, sa1, "if then", sb0, sb1, "if else")
 
       case While(test, body) =>
@@ -225,6 +230,7 @@ class Proc(
         val inv = here($inv.newLabel)
         val sum = here($sum.newLabel)
 
+        now(inv, st1, st1, "loop entry " + inv.name)
         val (si0, si1) = from(inv)
 
         val (_test, si2) = rval_test(test, si0, si1)
