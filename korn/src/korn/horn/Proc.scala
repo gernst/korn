@@ -5,7 +5,7 @@ import korn.smt._
 
 import scala.collection.mutable
 
-case class Hyp(inv: Pred, sum: Pred, stz: State, sty: State, dont: Set[String])
+case class Hyp(inv: Pred, sum: Pred, st0: State, stn: State, sty: State, dont: Set[String])
 
 class Proc(
     val unit: Unit,
@@ -60,7 +60,7 @@ class Proc(
   def run() {
     val st0 = init()
     val st1 = contract.enter(st0, this)
-    val st2 = local(body, st0, st1)
+    val (_, st2) = local(body, st0, st1)
     contract.leave(st2, this) // implicit return without value
   }
 
@@ -89,6 +89,10 @@ class Proc(
     Map(internal.names zip vars: _*)
   }
 
+  def arbitrary = {
+    State(Nil, havoc)
+  }
+
   def here(label: String): Pred = {
     val sorts = internal.sorts ++ internal.sorts
     newPred(label, sorts)
@@ -111,42 +115,53 @@ class Proc(
     clause(st, prop, reason)
   }
 
-  def generalize(pred: Pred, st1: State, reason: String): (State, State) = {
-    now(pred, st1, st1, reason)
-    val st0 = havoc // new origin
-    val st2 = st1 ++ havoc
-    (st2, from(pred, st2))
-  }
-
   def from(pred: Pred, st0: State): State = {
-    val st2 = st0 ++ havoc // new state
-    val prop = apply(pred, internal.names, st0, st2)
-    st2 and prop
+    val st1 = st0 ++ havoc // new state
+    val prop = apply(pred, internal.names, st0, st1)
+    st1 and prop
   }
 
-  def join(st0: State, st1: State, reason1: String, st2: State, reason2: String): State = {
+  def from(pred: Pred): (State, State) = {
+    val st0 = arbitrary
+    (st0, from(pred, st0))
+  }
+
+  def join(st0: State, sa1: State, ra: String, sb1: State, rb: String): State = {
     val pred = here($if.newLabel)
-    now(pred, st0, st1, reason1)
-    now(pred, st0, st2, reason2)
+    now(pred, st0, sa1, ra)
+    now(pred, st0, sb1, rb)
     from(pred, st0)
+  }
+
+  def join(
+      sa0: State,
+      sa1: State,
+      ra: String,
+      sb0: State,
+      sb1: State,
+      rb: String): (State, State) = {
+    val pred = here($if.newLabel)
+    now(pred, sa0, sa1, ra)
+    now(pred, sb0, sb1, rb)
+    from(pred)
   }
 
   def unreach(st: State) = {
     st and False
   }
 
-  def local(stmts: List[Stmt], st0: State, st1: State): State = {
+  def local(stmts: List[Stmt], st0: State, st1: State): (State, State) = {
     stmts match {
       case Nil =>
-        st1
+        (st0, st1)
       case first :: rest =>
-        val st2 = local(first, st0, st1)
-        val st3 = local(rest, st0, st2)
-        st3
+        val (st0_, st2) = local(first, st0, st1)
+        val (st0__, st3) = local(rest, st0_, st2)
+        (st0__, st3)
     }
   }
 
-  def local(stmt: Stmt, st0: State, st1: State): State = {
+  def local(stmt: Stmt, st0: State, st1: State): (State, State) = {
     stmt match {
       case Group(stmts) =>
         local(stmts, st0, st1)
@@ -156,85 +171,73 @@ class Proc(
         val x = st2(name) // XXX: WEIRD
         val eq = (x === _expr)
         val st3 = st2 and eq
-        st3
+        (st0, st3)
 
       case Atomic(None) =>
-        st1
+        (st0, st1)
 
       case Atomic(Some(expr)) =>
         val (_, st2) = rval(expr, st0, st1)
-        st2
+        (st0, st2)
 
       case Label(label, stmt) =>
         val pred = here($label.newLabel(label))
-        val (stz, st2) = generalize(pred, st1, "label " + label)
-        local(stmt, stz, st2)
+        now(pred, st0, st1, "label " + label)
+        // ensure the path comes from some arbitrary origin sr0
+        // such that pred(sr0, sr1)
+        val (sr0, sr1) = from(pred)
+        local(stmt, sr0, sr1)
 
       case Goto(label) =>
         val st2 = loop.goto(label, st1, this)
-        val pred = here("$" + name + "_" + label)
+        val pred = here($label.newLabel(label))
+        // Note: using st0 here bridges the correct origin
+        //       wrt. labels for non-local forward control-flow inside a loop,
+        //       alternatively fix the origin here as st2
+        //       (would that be better for non-local loop entries?)
         now(pred, st0, st2, "goto " + label)
-        unreach(st1)
+        (st0, unreach(st2))
 
       case Return(None) =>
         val st2 = loop.return_(st1, this)
         contract.leave(st2, this)
-        unreach(st2)
+        (st0, unreach(st2))
 
       case Return(Some(res)) =>
         val st2 = loop.return_(st1, this)
         val (_res, st3) = rval(res, st0, st2)
         contract.leave(st3, _res, this)
-        unreach(st3)
+        (st0, unreach(st3))
 
       case Break =>
         loop.break(st1, this)
-        unreach(st1)
+        (st0, unreach(st1))
 
       case If(test, left, right) =>
         val (_test, st) = rval_test(test, st0, st1)
-        val sty = local(left, st0, st and _test)
-        val stn = local(right, st0, st and !_test)
-        join(st0, sty, "if then", stn, "if else")
+        val (sa0, sa1) = local(left, st0, st and _test)
+        val (sb0, sb1) = local(right, st0, st and !_test)
+        join(sa0, sa1, "if then", sb0, sb1, "if else")
 
       case While(test, body) =>
-        val mod = Stmt.modifies(body)
         val dont = Stmt.labels(body)
 
         val inv = here($inv.newLabel)
         val sum = here($sum.newLabel)
 
-        // generalize state to come from the invariant
-        // stz is the new origin at the loop head
-        // sti is an arbitrary state that satisfies the invariant wrt. stz
-        val (stz, sti) = generalize(inv, st1, "loop entry " + inv.name)
+        val (si0, si1) = from(inv)
 
-        // evaluate test, and branch into states sty, stn
-        val (_test, st) = rval_test(test, stz, sti)
-        val sty = st and _test
-        val stn = st and !_test
+        val (_test, si2) = rval_test(test, si0, si1)
 
-        // step case (iterate once):
-        // execute body to state st_ and re-establish invariant wrt. loop origin stz
-        val hyp = Hyp(inv, sum, stz, sty, dont)
+        val sin = si2 and !_test
+        now(sum, si0, sin, "loop term " + sum.name)
 
-        withinLoop(hyp) {
-          // base case (terminate loop):
-          // establish summary for going round the loop
-          // from negated test and invariant in stn
-          // now(sum, stz, stn, "loop term " + sum.name)
-          loop.term(stn, this)
+        val siy = si2 and _test
+        val (sb0, sb1) = local(body, si0, siy)
+        now(inv, sb0, sb1, "forwards " + inv.name)
 
-          val st_ = local(body, stz, sty)
-          loop.iter(st_, this)
-
-          // the result after the loop is another arbitrary state
-          // that satisfies the sumary wrt. st1
-          val st2 = st1 ++ havoc
-          val prop = apply(sum, internal.names, st1, st2)
-          val st3 = st2 and prop
-          st3
-        }
+        val st2 = from(sum, st0)
+        (st0, st2)
     }
   }
 }

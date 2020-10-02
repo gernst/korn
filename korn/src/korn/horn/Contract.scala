@@ -9,6 +9,12 @@ sealed trait Contract {
 }
 
 object Contract {
+  def apply(name: String) =
+    name match {
+      case "main" => main
+      case _      => relational
+    }
+
   object main extends Contract {
     def enter(st: State, proc: Proc): State = { st }
     def leave(st: State, proc: Proc) {}
@@ -20,21 +26,21 @@ object Contract {
       import proc._
       import proc.unit._
       val pre = pres(name)
-      val prop = apply(pre, external.names, st0)
+      val prop = proc.apply(pre, external.names, st0)
       st0 and prop
     }
 
     def leave(st: State, proc: Proc) {
       import proc._
       import proc.unit._
-      
+
       val (post, ret) = posts(name)
 
       val prop = if (ret.isEmpty) {
-        apply(post, external.names, st)
+        proc.apply(post, external.names, st)
       } else {
         // implicitly return 0
-        apply(post, external.names, Pure.zero, st)
+        proc.apply(post, external.names, Pure.zero, st)
       }
 
       clause(st, prop, "post " + name)
@@ -45,8 +51,14 @@ object Contract {
       import proc.unit._
 
       val (post, ret) = posts(name)
-      korn.ensure(ret.nonEmpty, "return value given for " + name)
-      val prop = apply(post, external.names, res, st)
+
+      val prop = if (ret.isEmpty) {
+        // discard return, warning only in gcc
+        proc.apply(post, external.names, st)
+      } else {
+        proc.apply(post, external.names, res, st)
+      }
+
       clause(st, prop, "post " + name)
     }
   }

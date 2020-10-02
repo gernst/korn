@@ -2,6 +2,10 @@ package korn.horn
 
 import korn.smt._
 
+object State {
+  val empty = State(Nil, Map())
+}
+
 case class State(path: List[Prop], store: Store) extends (String => Pure) {
   def and(that: Prop): State = {
     that match {
@@ -24,8 +28,4 @@ case class State(path: List[Prop], store: Store) extends (String => Pure) {
   def apply(names: List[String]) = names map store
   def +(that: (String, Pure)) = copy(store = store + that)
   def ++(that: Iterable[(String, Pure)]) = copy(store = store ++ that)
-}
-
-object State {
-  val empty = State(Nil, Map())
 }
