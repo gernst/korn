@@ -161,7 +161,7 @@ class Eval(unit: Unit) {
           val _old2 = _old1 select _idx2
           val _new1 = _old1 store (_idx2, _rhs)
           val _new0 = _old0 store (_idx1, _new1)
-          (_old2, _rhs, st3 + (name -> _new0))
+          (_old2, _rhs, st4 + (name -> _new0))
 
         /* case PreOp("*", ptr) =>
         for (
