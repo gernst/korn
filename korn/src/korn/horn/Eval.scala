@@ -85,6 +85,9 @@ class Eval(unit: Unit) {
       case Id(name) if consts contains name =>
         consts(name)
 
+      case Lit(value: Char) =>
+        Pure.const(value)
+
       case Lit(value: Int) =>
         Pure.const(value)
 
@@ -212,23 +215,11 @@ class Eval(unit: Unit) {
           val (_snd, st3) = rval(fst, st0, st2)
           (_snd, st3)
 
-        case Id(name) if st1 contains name =>
-          (st1(name), st1)
+        case id: Id =>
+          (value(id, st1), st1)
 
-        case Id(name) if consts contains name =>
-          (consts(name), st1)
-
-        case Id(name) =>
-          korn.error("unknown identifier: " + name)
-
-        case Lit(value: Int) =>
-          (Pure.const(value), st1)
-
-        case Lit(value: Long) =>
-          (Pure.const(value), st1)
-
-        case Lit(value) =>
-          korn.error("unknown constant: " + value + " of type " + value.getClass())
+        case lit: Lit =>
+          (value(lit, st1), st1)
 
         case PreOp("&", id: Id) =>
           korn.error("cannot take address of variable: " + expr)

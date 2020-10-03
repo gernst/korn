@@ -49,13 +49,14 @@ class Sig(unit: Unit) {
 
   def resolve(typ: Type): Sort = {
     typ match {
-      case Type._void          => null
-      case Type._Bool          => Sort.int
-      case _: Signed           => Sort.int
-      case _: Unsigned         => Sort.int
-      case PtrType(elem)       => pointers = true; Sort.pointer(resolve(elem))
-      case ArrayType(typ, dim) => Sort.array(Sort.int, resolve(typ))
-      case _                   => korn.error("cannot resolve: " + typ)
+      case Type._void            => null
+      case Type._Bool            => Sort.int
+      case _: Signed             => Sort.int
+      case _: Unsigned           => Sort.int
+      case PtrType(elem)         => pointers = true; Sort.pointer(resolve(elem))
+      case ArrayType(typ, dim)   => Sort.array(Sort.int, resolve(typ))
+      case TypedefName("size_t") => Sort.int
+      case _                     => korn.error("cannot resolve: " + typ)
     }
   }
 
