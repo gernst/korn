@@ -149,7 +149,7 @@ class Proc(
         val si3 = local(body, si0, siy, hyp :: ctx)
         loop.iter(si3, hyp, this)
 
-        loop.leave(st0, hyp, this)
+        loop.leave(st1, hyp, this)
 
       case _ =>
         korn.error("cannot execute as local statement: " + stmt)

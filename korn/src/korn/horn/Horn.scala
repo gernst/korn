@@ -33,7 +33,7 @@ sealed trait Loop {
   def enter(st0: State, st1: State, proc: Proc): (Pred, Pred, State)
   def term(hyp: Hyp, proc: Proc)
   def iter(si2: State, hyp: Hyp, proc: Proc)
-  def leave(st0: State, hyp: Hyp, proc: Proc): State
+  def leave(st1: State, hyp: Hyp, proc: Proc): State
 
   def break(st0: State, st1: State, hyp: Hyp, proc: Proc)
   def return_(st0: State, st1: State, hyps: List[Hyp], proc: Proc): State
@@ -198,7 +198,7 @@ object Loop {
       now(inv, si2, "forwards " + inv.name)
     }
 
-    def leave(st0: State, hyp: Hyp, proc: Proc): State = {
+    def leave(st1: State, hyp: Hyp, proc: Proc): State = {
       import proc._
       val Hyp(inv, sum, _, _, _, _) = hyp
       from(sum, internal.arbitrary)
@@ -244,17 +244,17 @@ object Loop {
       val Hyp(inv, sum, _, _, sty, _) = hyp
       now(inv, si2, "forwards " + inv.name)
 
-      val st = sty maybePrune (inv, keep = !only)
+      val st = si2 maybePrune (inv, keep = !only)
       val stn = internal.arbitrary
       val prem = internal.apply(sum, si2, stn)
       val concl = internal.apply(sum, sty, stn)
       clause(st and prem, concl, "backwards " + sum.name)
     }
 
-    def leave(st0: State, hyp: Hyp, proc: Proc): State = {
+    def leave(st1: State, hyp: Hyp, proc: Proc): State = {
       import proc._
       val Hyp(inv, sum, _, _, _, _) = hyp
-      from(sum, st0, internal.arbitrary)
+      from(sum, st1, st1 ++ internal.havoc)
     }
 
     def break(st0: State, st1: State, hyp: Hyp, proc: Proc) {
