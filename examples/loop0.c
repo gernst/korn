@@ -1,8 +1,9 @@
 int main() {
     int i=0,n;
-    int k = 7;
     assume(0 <= n);
-    while(i < n) i++;
+    while(1) {
+        if(i >= n) break;
+        i++;
+    }
     assert(i == n);
-    assert(k == 7);
 }

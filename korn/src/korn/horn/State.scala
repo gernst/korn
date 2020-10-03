@@ -6,6 +6,10 @@ object State {
   val empty = State(Nil, Map())
 }
 
+object Context {
+  val empty = Context(Nil, Nil)
+}
+
 case class State(path: List[Prop], store: Store) extends (String => Pure) {
   def and(that: Prop): State = {
     that match {
@@ -19,7 +23,7 @@ case class State(path: List[Prop], store: Store) extends (String => Pure) {
   def without(pred: Pred) = {
     copy(path = path filter {
       case Prop.app(`pred`, _) => false
-      case _ => true
+      case _                   => true
     })
   }
 
@@ -28,4 +32,11 @@ case class State(path: List[Prop], store: Store) extends (String => Pure) {
   def apply(names: List[String]) = names map store
   def +(that: (String, Pure)) = copy(store = store + that)
   def ++(that: Iterable[(String, Pure)]) = copy(store = store ++ that)
+}
+
+case class Hyp(inv: Pred, sum: Pred, si0: State, sin: State, siy: State, dont: Set[String])
+
+case class Context(hyps: List[Hyp], switches: List[Pure]) {
+  def ::(hyp: Hyp) = copy(hyps = hyp :: hyps)
+  def ::(sw: Pure) = copy(switches = sw :: switches)
 }

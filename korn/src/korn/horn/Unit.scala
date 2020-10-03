@@ -120,7 +120,7 @@ class Unit(stmts: List[Stmt]) {
 
     val contract = Contract(name)
     val branch = Branch.default
-    val loop = Loop.default
+    val loop = Loop.relational
     object proc extends Proc(this, name, params, locals, stmt, contract, branch, loop)
 
     proc.run()

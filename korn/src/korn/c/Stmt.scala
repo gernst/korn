@@ -298,7 +298,7 @@ object Atomic {
 
 case class Label(label: String, stmt: Stmt) extends Stmt
 
-case class Case(const: Any) extends Stmt
+case class Case(const: Any, stmt: Stmt) extends Stmt
 
 case class Goto(label: String) extends Stmt
 

@@ -178,14 +178,14 @@ stmt
     
     | type.t vars.vs SEMICOLON                          {: return s(new Group(Parsing.vars(t, vs)));          :}
 
-    | SEMICOLON                                         {: return s(Atomic.none()); :}
-    | expr.a    SEMICOLON                               {: return s(new Atomic(a)); :}
-    | GOTO ID.n SEMICOLON                               {: return s(new Goto(n));   :}
-    | CASE CONST.n COLON                                {: return s(new Case(n));   :}
+    | SEMICOLON                                         {: return s(Atomic.none());     :}
+    | expr.a    SEMICOLON                               {: return s(new Atomic(a));     :}
+    | GOTO ID.n SEMICOLON                               {: return s(new Goto(n));       :}
+    | CASE CONST.n COLON stmt.s                         {: return s(new Case(n, s));    :}
     | ID.n COLON stmt.s                                 {: return s(new Label(n, s));   :}
-    | RETURN   SEMICOLON                                {: return s(Return.none()); :}
-    | RETURN expr.a SEMICOLON                           {: return s(new Return(a)); :}
-    | BREAK    SEMICOLON                                {: return s(Break.self());  :}
+    | RETURN   SEMICOLON                                {: return s(Return.none());     :}
+    | RETURN expr.a SEMICOLON                           {: return s(new Return(a));     :}
+    | BREAK    SEMICOLON                                {: return s(Break.self());      :}
     | CONTINUE SEMICOLON                                {: return s(Continue.self());   :}
     | SWITCH LPAREN expr.e RPAREN stmt.b                {: return s(new Switch(e, b));  :}
     | IF LPAREN expr.a RPAREN stmt.b                    {: return s(new If(a, b));      :}
