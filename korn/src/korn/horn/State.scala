@@ -20,9 +20,9 @@ case class State(path: List[Prop], store: Store) extends (String => Pure) {
     }
   }
 
-  def without(pred: Pred) = {
+  def maybePrune(pred: Pred, keep: Boolean) = {
     copy(path = path filter {
-      case Prop.app(`pred`, _) => false
+      case Prop.app(`pred`, _) => keep
       case _                   => true
     })
   }

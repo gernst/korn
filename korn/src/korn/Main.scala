@@ -15,8 +15,7 @@ object Main {
   val version = "0.1"
 
   var dry = false
-  var minimal = false
-  var summaries = false
+  var config = "default"
   var debug = false
   var quiet = false
   var model = false
@@ -53,12 +52,11 @@ object Main {
       case Nil =>
 
       case ("-s" | "-summaries") :: rest =>
-        summaries = true
+        config = "summaries"
         configure(rest)
 
       case ("-s0" | "-summaries-only") :: rest =>
-        minimal = true
-        summaries = true
+        config = "summaries-only"
         configure(rest)
 
       case ("-m" | "-model") :: rest =>

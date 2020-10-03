@@ -12,13 +12,15 @@ class Proc(
     val locals: List[Formal],
     val body: Stmt,
     val contract: Contract,
-    val branch: Branch,
-    val loop: Loop) {
+    val config: Config) {
   import unit._
   import unit.sig._
 
   /** types of code identifiers (params and locals) */
   val env = mutable.Map[String, Sort]()
+
+  val branch = config.branch
+  val loop = config.loop
 
   /** collect identifiers in scope and their types */
   object external extends Scope(params)
@@ -42,7 +44,7 @@ class Proc(
     val st0 = init()
     val st1 = contract.enter(st0, this)
     val ctx = Context.empty
-    val (_, st2) = local(body, st0, st1, ctx)
+    val st2 = local(body, st0, st1, ctx)
     contract.leave(st2, this) // implicit return without value
   }
 
@@ -70,18 +72,18 @@ class Proc(
     st and False
   }
 
-  def local(stmts: List[Stmt], st0: State, st1: State, ctx: Context): (State, State) = {
+  def local(stmts: List[Stmt], st0: State, st1: State, ctx: Context): State = {
     stmts match {
       case Nil =>
-        (st0, st1)
+        st1
       case first :: rest =>
-        val (st0_, st2) = local(first, st0, st1, ctx)
-        val (st0__, st3) = local(rest, st0_, st2, ctx)
-        (st0__, st3)
+        val st2 = local(first, st0, st1, ctx)
+        val st3 = local(rest, st0, st2, ctx)
+        st3
     }
   }
 
-  def local(stmt: Stmt, st0: State, st1: State, ctx: Context): (State, State) = {
+  def local(stmt: Stmt, st0: State, st1: State, ctx: Context): State = {
     stmt match {
       case Group(stmts) =>
         local(stmts, st0, st1, ctx)
@@ -91,63 +93,63 @@ class Proc(
         val x = st2(name) // XXX: WEIRD
         val eq = (x === _expr)
         val st3 = st2 and eq
-        (st0, st3)
+        st3
 
       case Atomic(None) =>
-        (st0, st1)
+        st1
 
       case Atomic(Some(expr)) =>
         val (_, st2) = rval(expr, st0, st1)
-        (st0, st2)
+        st2
 
       case Label(label, stmt) =>
-        val (sr0, sr1) = branch.label(label, st0, st1, this)
-        local(stmt, sr0, sr1, ctx)
+        val st2 = branch.label(label, st0, st1, this)
+        local(stmt, st0, st2, ctx)
 
       case Goto(label) =>
         val st2 = loop.goto(label, st0, st1, ctx.hyps, this)
         branch.goto(label, st0, st2, this)
-        (st0, unreach(st2))
+        unreach(st2)
 
       case Return(None) =>
         val st2 = loop.return_(st0, st1, ctx.hyps, this)
         contract.leave(st2, this)
-        (st0, unreach(st2))
+        unreach(st2)
 
       case Return(Some(res)) =>
         val st2 = loop.return_(st0, st1, ctx.hyps, this)
         val (_res, st3) = rval(res, st0, st2)
         contract.leave(st3, _res, this)
-        (st0, unreach(st3))
+        unreach(st3)
 
       case Break =>
         val hyp :: _ = ctx.hyps
         loop.break(st0, st1, hyp, this)
-        (st0, unreach(st1))
+        unreach(st1)
 
       case If(test, left, right) =>
         val (_test, st2) = rval_test(test, st0, st1)
-        val (sa0, sa1) = local(left, st0, st2 and _test, ctx)
-        val (sb0, sb1) = local(right, st0, st2 and !_test, ctx)
-        branch.join(sa0, sa1, "if then", sb0, sb1, "if else", this)
+        val sa1 = local(left, st0, st2 and _test, ctx)
+        val sb1 = local(right, st0, st2 and !_test, ctx)
+        branch.join(st0, sa1, "if then", sb1, "if else", this)
 
       case While(test, body) =>
         val dont = Stmt.labels(body)
 
-        val (inv, sum, si0, si1) = loop.enter(st0, st1, this)
+        val (inv, sum, si0) = loop.enter(st0, st1, this)
 
-        val (_test, si2) = rval_test(test, si0, si1)
-        val sin = si2 and !_test
-        val siy = si2 and _test
+        val (_test, si1) = rval_test(test, si0, si0)
+        val sin = si1 and !_test
+        val siy = si1 and _test
 
         val hyp = Hyp(inv, sum, si0, sin, siy, dont)
 
         loop.term(hyp, this)
 
-        val (sb0, sb1) = local(body, si0, siy, hyp :: ctx)
-        loop.iter(sb0, sb1, hyp, this)
+        val si3 = local(body, si0, siy, hyp :: ctx)
+        loop.iter(si3, hyp, this)
 
-        loop.leave(hyp, this)
+        loop.leave(st0, hyp, this)
 
       case _ =>
         korn.error("cannot execute as local statement: " + stmt)

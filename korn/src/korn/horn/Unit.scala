@@ -119,9 +119,8 @@ class Unit(stmts: List[Stmt]) {
     val (locals, stmt) = Stmt.norm(body)
 
     val contract = Contract(name)
-    val branch = Branch.default
-    val loop = Loop.relational
-    object proc extends Proc(this, name, params, locals, stmt, contract, branch, loop)
+    val config = Config(korn.Main.config)
+    object proc extends Proc(this, name, params, locals, stmt, contract, config)
 
     proc.run()
   }
