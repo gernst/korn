@@ -5,11 +5,6 @@ import korn.smt._
 
 import scala.collection.mutable
 
-// TODO: find better name
-sealed trait Cond
-case class Here(pred: Pred) extends Cond
-case class Between(pred: Pred) extends Cond
-
 case class Hyp(inv: Pred, sum: Pred, st0: State, stn: State, sty: State, dont: Set[String])
 
 class Proc(
@@ -77,62 +72,24 @@ class Proc(
     }
   }
 
-  def clause(st: State, phi: Prop, reason: String) {
-    val f = (st.path contains False)
-    val t = (st.path contains phi) || (phi == True)
-
-    if (!t && !f)
-      clauses += Clause(st.path, phi, reason)
-  }
-
-  def goal(st: State, phi: Prop, reason: String) {
-    clause(st and !phi, False, reason)
-  }
-
-  def havoc: Store = {
-    val vars = fresh(internal.sig)
-    Map(internal.names zip vars: _*)
-  }
-
-  def arbitrary = {
-    State(Nil, havoc)
-  }
-
-  def here(label: String): Pred = {
-    val sorts = internal.sorts ++ internal.sorts
-    newPred(label, sorts)
-  }
-
-  def apply(pred: Pred, names: List[String], st0: State): Prop = {
-    pred(st0(names))
-  }
-
-  def apply(pred: Pred, names: List[String], res: Pure, st0: State): Prop = {
-    pred(st0(names) ++ List(res))
-  }
-
-  def apply(pred: Pred, names: List[String], st0: State, st1: State): Prop = {
-    pred(st0(names) ++ st1(names))
-  }
-
   def now(pred: Pred, st0: State, st: State, reason: String) {
-    val prop = apply(pred, internal.names, st0, st)
+    val prop = internal.apply(pred, st0, st)
     clause(st, prop, reason)
   }
 
   def from(pred: Pred, st0: State): State = {
-    val st1 = st0 ++ havoc // new state
-    val prop = apply(pred, internal.names, st0, st1)
+    val st1 = st0 ++ internal.havoc // new state
+    val prop = internal.apply(pred, st0, st1)
     st1 and prop
   }
 
   def from(pred: Pred): (State, State) = {
-    val st0 = arbitrary
+    val st0 = internal.arbitrary
     (st0, from(pred, st0))
   }
 
   def join(st0: State, sa1: State, ra: String, sb1: State, rb: String): State = {
-    val pred = here($if.newLabel)
+    val pred = internal.rel($if.newLabel)
     now(pred, st0, sa1, ra)
     now(pred, st0, sb1, rb)
     from(pred, st0)
@@ -145,7 +102,7 @@ class Proc(
       sb0: State,
       sb1: State,
       rb: String): (State, State) = {
-    val pred = here($if.newLabel)
+    val pred = internal.rel($if.newLabel)
     now(pred, sa0, sa1, ra)
     now(pred, sb0, sb1, rb)
     from(pred)
@@ -186,7 +143,7 @@ class Proc(
         (st0, st2)
 
       case Label(label, stmt) =>
-        val pred = here($label.newLabel(label))
+        val pred = internal.rel($label.newLabel(label))
         now(pred, st0, st1, "label " + label)
         // ensure the path comes from some arbitrary origin sr0
         // such that pred(sr0, sr1)
@@ -195,7 +152,7 @@ class Proc(
 
       case Goto(label) =>
         val st2 = loop.goto(label, st1, this)
-        val pred = here($label.newLabel(label))
+        val pred = internal.rel($label.newLabel(label))
         // Note: using st0 here bridges the correct origin
         //       wrt. labels for non-local forward control-flow inside a loop,
         //       alternatively fix the origin here as st2
@@ -227,8 +184,8 @@ class Proc(
       case While(test, body) =>
         val dont = Stmt.labels(body)
 
-        val inv = here($inv.newLabel)
-        val sum = here($sum.newLabel)
+        val inv = internal.rel($inv.newLabel)
+        val sum = internal.rel($sum.newLabel)
 
         now(inv, st1, st1, "loop entry " + inv.name)
         val (si0, si1) = from(inv)

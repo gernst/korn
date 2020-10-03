@@ -7,12 +7,41 @@ class Sig(unit: Unit) {
   import unit._
   import unit.sig._
 
-case class Scope(formals: List[Formal]) {
+  case class Scope(formals: List[Formal]) {
     val names = formals map (_.name)
     val types = formals map (_.typ)
     val sorts = types map (resolve(_))
     val sig = names zip sorts
-}
+
+    def havoc: Store = {
+      val vars = fresh(sig)
+      Map(names zip vars: _*)
+    }
+
+    def arbitrary = {
+      State(Nil, havoc)
+    }
+
+    def here(label: String): Pred = {
+      newPred(label, sorts)
+    }
+
+    def rel(label: String): Pred = {
+      newPred(label, sorts ++ sorts)
+    }
+
+    def apply(pred: Pred, st0: State): Prop = {
+      pred(st0(names))
+    }
+
+    def apply(pred: Pred, res: Pure, st0: State): Prop = {
+      pred(st0(names) ++ List(res))
+    }
+
+    def apply(pred: Pred, st0: State, st1: State): Prop = {
+      pred(st0(names) ++ st1(names))
+    }
+  }
 
   def resolve(types: List[Type]): List[Sort] = {
     types map resolve

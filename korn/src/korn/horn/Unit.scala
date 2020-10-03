@@ -38,6 +38,18 @@ class Unit(stmts: List[Stmt]) {
   object sig extends Sig(this)
   object eval extends Eval(this)
 
+  def clause(st: State, phi: Prop, reason: String) {
+    val f = (st.path contains False)
+    val t = (st.path contains phi) || (phi == True)
+
+    if (!t && !f)
+      clauses += Clause(st.path, phi, reason)
+  }
+
+  def goal(st: State, phi: Prop, reason: String) {
+    clause(st and !phi, False, reason)
+  }
+
   def enum(cases: List[String]) = {
     for ((name, index) <- cases.zipWithIndex)
       consts += name -> Pure.const(index)

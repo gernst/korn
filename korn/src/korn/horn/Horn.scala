@@ -2,6 +2,16 @@ package korn.horn
 
 import korn.smt._
 
+sealed trait Contract {
+  def enter(st: State, proc: Proc): State
+  def leave(st: State, proc: Proc)
+  def leave(st: State, res: Pure, proc: Proc)
+}
+
+sealed trait Branch {
+  
+}
+
 sealed trait Loop {
   def enter(st0: State, st1: State, proc: Proc): State
 
@@ -12,6 +22,64 @@ sealed trait Loop {
   def break(st1: State, proc: Proc)
   def return_(st1: State, proc: Proc): State
   def goto(label: String, st1: State, proc: Proc): State
+}
+
+object Contract {
+  def apply(name: String) = {
+    name match {
+      case "main" => main
+      case _      => relational
+    }
+  }
+
+  object main extends Contract {
+    def enter(st: State, proc: Proc): State = { st }
+    def leave(st: State, proc: Proc) {}
+    def leave(st: State, res: Pure, proc: Proc) {}
+  }
+
+  object relational extends Contract {
+    def enter(st0: State, proc: Proc): State = {
+      import proc._
+      import proc.unit._
+
+      val pre = pres(name)
+      val prop = external.apply(pre, st0)
+      st0 and prop
+    }
+
+    def leave(st: State, proc: Proc) {
+      import proc._
+      import proc.unit._
+
+      val (post, ret) = posts(name)
+
+      val prop = if (ret.isEmpty) {
+        external.apply(post, st)
+      } else {
+        // implicitly return 0
+        external.apply(post, Pure.zero, st)
+      }
+
+      clause(st, prop, "post " + name)
+    }
+
+    def leave(st: State, res: Pure, proc: Proc) {
+      import proc._
+      import proc.unit._
+
+      val (post, ret) = posts(name)
+
+      val prop = if (ret.isEmpty) {
+        // discard return, warning only in gcc
+        external.apply(post, st)
+      } else {
+        external.apply(post, res, st)
+      }
+
+      clause(st, prop, "post " + name)
+    }
+  }
 }
 
 object Loop {
