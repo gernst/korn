@@ -220,7 +220,7 @@ object Loop {
   }
 
   /** non-relational invariants and relational loop summaries */
-  case class summaries(only: Boolean) extends Loop {
+  case class summaries(only: Boolean, strong: Boolean = false) extends Loop {
     def enter(st0: State, st1: State, proc: Proc): (Pred, Pred, State) = {
       import proc._
       val inv = internal.here($inv newLabel name)
@@ -264,39 +264,46 @@ object Loop {
     }
 
     def return_(st0: State, st1: State, hyps: List[Hyp], proc: Proc): State = {
-      import proc._
-      var st2 = st1
+      if (strong) {
+        import proc._
+        var st2 = st1
 
-      //* collect all inductive hypotheses */
-      for (hyp <- hyps) {
-        val Hyp(inv, sum, si0, _, siy, _) = hyp
-        now(sum, siy, st2, "return " + sum.name)
-        val concl = internal.apply(sum, si0, st2)
-        st2 = st2 and concl
-      }
-
-      st2
-    }
-
-    def goto(label: String, st0: State, st1: State, hyps: List[Hyp], proc: Proc): State = {
-      import proc._
-      import scala.util.control.Breaks
-      var st2 = st1
-
-      Breaks.breakable {
-        //* collect all inductive hypotheses of loops that are left */
+        //* collect all inductive hypotheses */
         for (hyp <- hyps) {
-          val Hyp(inv, sum, si0, _, siy, dont) = hyp
-          if (dont contains label)
-            Breaks.break
-
+          val Hyp(inv, sum, si0, _, siy, _) = hyp
           now(sum, siy, st2, "return " + sum.name)
           val concl = internal.apply(sum, si0, st2)
           st2 = st2 and concl
         }
-      }
 
-      st2
+        st2
+      } else {
+        st1
+      }
+    }
+
+    def goto(label: String, st0: State, st1: State, hyps: List[Hyp], proc: Proc): State = {
+      if (strong) {
+        import proc._
+        import scala.util.control.Breaks
+        var st2 = st1
+
+        Breaks.breakable {
+          //* collect all inductive hypotheses of loops that are left */
+          for (hyp <- hyps) {
+            val Hyp(inv, sum, si0, _, siy, dont) = hyp
+            if (dont contains label)
+              Breaks.break
+
+            now(sum, siy, st2, "return " + sum.name)
+            val concl = internal.apply(sum, si0, st2)
+            st2 = st2 and concl
+          }
+        }
+        st2
+      } else {
+        st1
+      }
     }
   }
 }

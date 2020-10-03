@@ -1,3 +1,3 @@
 #!/bin/sh
 
-exec java -Xmx14g -Xss20m -cp eld.jar lazabs.Main $@
+exec java -Xmx3g -Xss20m -cp eld.jar lazabs.Main $@
