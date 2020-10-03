@@ -10,11 +10,12 @@ case class Hyp(inv: Pred, sum: Pred, st0: State, stn: State, sty: State, dont: S
 class Proc(
     val unit: Unit,
     val name: String,
-    params: List[Formal],
-    locals: List[Formal],
-    body: Stmt,
-    contract: Contract,
-    loop: Loop) {
+    val params: List[Formal],
+    val locals: List[Formal],
+    val body: Stmt,
+    val contract: Contract,
+    val branch: Branch,
+    val loop: Loop) {
   import unit._
   import unit.sig._
 
@@ -30,20 +31,12 @@ class Proc(
   object eval extends unit.eval.scoped(this)
   import eval._
 
-  object $if extends korn.Counter {
-    def newLabel = "$" + name + "_if" + next
-  }
-
   object $inv extends korn.Counter {
     def newLabel = "$" + name + "_inv" + next
   }
 
   object $sum extends korn.Counter {
     def newLabel = "$" + name + "_sum" + next
-  }
-
-  object $label {
-    def newLabel(label: String) = "$" + name + "_" + label
   }
 
   def init() = {
@@ -72,40 +65,24 @@ class Proc(
     }
   }
 
-  def now(pred: Pred, st0: State, st: State, reason: String) {
-    val prop = internal.apply(pred, st0, st)
-    clause(st, prop, reason)
+  def now(pred: Pred, st1: State, reason: String) {
+    val prop = internal.apply(pred, st1)
+    clause(st1, prop, reason)
   }
 
-  def from(pred: Pred, st0: State): State = {
-    val st1 = st0 ++ internal.havoc // new state
+  def now(pred: Pred, st0: State, st1: State, reason: String) {
     val prop = internal.apply(pred, st0, st1)
+    clause(st1, prop, reason)
+  }
+
+  def from(pred: Pred, st1: State): State = {
+    val prop = internal.apply(pred, st1)
     st1 and prop
   }
 
-  def from(pred: Pred): (State, State) = {
-    val st0 = internal.arbitrary
-    (st0, from(pred, st0))
-  }
-
-  def join(st0: State, sa1: State, ra: String, sb1: State, rb: String): State = {
-    val pred = internal.rel($if.newLabel)
-    now(pred, st0, sa1, ra)
-    now(pred, st0, sb1, rb)
-    from(pred, st0)
-  }
-
-  def join(
-      sa0: State,
-      sa1: State,
-      ra: String,
-      sb0: State,
-      sb1: State,
-      rb: String): (State, State) = {
-    val pred = internal.rel($if.newLabel)
-    now(pred, sa0, sa1, ra)
-    now(pred, sb0, sb1, rb)
-    from(pred)
+  def from(pred: Pred, st0: State, st1: State): State = {
+    val prop = internal.apply(pred, st0, st1)
+    st1 and prop
   }
 
   def unreach(st: State) = {
@@ -143,21 +120,12 @@ class Proc(
         (st0, st2)
 
       case Label(label, stmt) =>
-        val pred = internal.rel($label.newLabel(label))
-        now(pred, st0, st1, "label " + label)
-        // ensure the path comes from some arbitrary origin sr0
-        // such that pred(sr0, sr1)
-        val (sr0, sr1) = from(pred)
+        val (sr0, sr1) = branch.label(label, st0, st1, this)
         local(stmt, sr0, sr1)
 
       case Goto(label) =>
         val st2 = loop.goto(label, st1, this)
-        val pred = internal.rel($label.newLabel(label))
-        // Note: using st0 here bridges the correct origin
-        //       wrt. labels for non-local forward control-flow inside a loop,
-        //       alternatively fix the origin here as st2
-        //       (would that be better for non-local loop entries?)
-        now(pred, st0, st2, "goto " + label)
+        branch.goto(label, st0, st2, this)
         (st0, unreach(st2))
 
       case Return(None) =>
@@ -179,12 +147,12 @@ class Proc(
         val (_test, st2) = rval_test(test, st0, st1)
         val (sa0, sa1) = local(left, st0, st2 and _test)
         val (sb0, sb1) = local(right, st0, st2 and !_test)
-        join(sa0, sa1, "if then", sb0, sb1, "if else")
+        branch.join(sa0, sa1, "if then", sb0, sb1, "if else", this)
 
       case While(test, body) =>
         val dont = Stmt.labels(body)
 
-        val inv = internal.rel($inv.newLabel)
+        /* val inv = internal.rel($inv.newLabel)
         val sum = internal.rel($sum.newLabel)
 
         now(inv, st1, st1, "loop entry " + inv.name)
@@ -200,7 +168,11 @@ class Proc(
         now(inv, sb0, sb1, "forwards " + inv.name)
 
         val st2 = from(sum, st0)
-        (st0, st2)
+        (st0, st2) */
+        ???
+
+      case _ =>
+        korn.error("cannot execute as local statement: " + stmt)
     }
   }
 }

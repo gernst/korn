@@ -9,7 +9,11 @@ sealed trait Contract {
 }
 
 sealed trait Branch {
-  
+  def join(st0: State, sa1: State, ra: String, sb1: State, rb: String, proc: Proc): State
+  def join(sa0: State, sa1: State, ra: String, sb0: State, sb1: State, rb: String, proc: Proc): (State, State)
+
+  def label(label: String, st0: State, st1: State, proc: Proc): (State, State)
+  def goto(label: String, st0: State, st1: State, proc: Proc)
 }
 
 sealed trait Loop {
@@ -78,6 +82,90 @@ object Contract {
       }
 
       clause(st, prop, "post " + name)
+    }
+  }
+}
+
+object Branch {
+  object $if extends korn.Counter {
+    def newLabel(name: String) = "$" + name + "_if" + next
+  }
+
+  object $label {
+    def newLabel(name: String, label: String) = "$" + name + "_" + label
+  }
+
+  object default extends Branch {
+    def join(st0: State, sa1: State, ra: String, sb1: State, rb: String, proc: Proc): State = {
+      import proc._
+      val pred = internal.here($if newLabel name)
+      now(pred, sa1, ra)
+      now(pred, sb1, rb)
+      from(pred, internal.arbitrary)
+    }
+
+    def join(sa0: State, sa1: State, ra: String, sb0: State, sb1: State, rb: String, proc: Proc): (State, State) = {
+      import proc._
+      val pred = internal.here(($if newLabel name))
+      now(pred, sa1, ra)
+      now(pred, sb1, rb)
+      val st0 = internal.arbitrary
+      (st0, from(pred, internal.arbitrary))
+    }
+
+    def label(label: String, st0: State, st1: State, proc: Proc): (State, State) = {
+      import proc._
+      val pred = internal.here($label newLabel (name, label))
+      now(pred, st1, "label " + label)
+      val sr0 = internal.arbitrary
+      val sr1 = from(pred, internal.arbitrary)
+      (sr0, sr1)
+    }
+
+    def goto(label: String, st0: State, st1: State, proc: Proc) {
+      import proc._
+      val pred = internal.here($label newLabel (name, label))
+      now(pred, st1, "goto " + label)
+    }
+  }
+
+  object relational extends Branch {
+    def join(st0: State, sa1: State, ra: String, sb1: State, rb: String, proc: Proc): State = {
+      import proc._
+      val pred = internal.rel($if newLabel name)
+      now(pred, st0, sa1, ra)
+      now(pred, st0, sb1, rb)
+      from(pred, st0, internal.arbitrary)
+    }
+
+    def join(sa0: State, sa1: State, ra: String, sb0: State, sb1: State, rb: String, proc: Proc): (State, State) = {
+      import proc._
+      val pred = internal.rel($if newLabel name)
+      now(pred, sa0, sa1, ra)
+      now(pred, sb0, sb1, rb)
+      val st0 = internal.arbitrary
+      (st0, from(pred, st0, internal.arbitrary))
+    }
+
+    def label(label: String, st0: State, st1: State, proc: Proc): (State, State) = {
+      import proc._
+      val pred = internal.rel($label newLabel (name, label))
+      now(pred, st0, st1, "label " + label)
+      // ensure the path comes from some arbitrary origin sr0
+      // such that pred(sr0, sr1)
+      val sr0 = internal.arbitrary
+      val sr1 = from(pred, sr0, internal.arbitrary)
+      (sr0, sr1)
+    }
+
+    def goto(label: String, st0: State, st1: State, proc: Proc) {
+      import proc._
+      val pred = internal.rel($label newLabel (name, label))
+      // Note: using st0 here bridges the correct origin
+      //       wrt. labels for non-local forward control-flow inside a loop,
+      //       alternatively fix the origin here as st2
+      //       (would that be better for non-local loop entries?)
+      now(pred, st0, st1, "goto " + label)
     }
   }
 }

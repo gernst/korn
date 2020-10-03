@@ -299,13 +299,13 @@ class Eval(unit: Unit) {
         case BinOp("||", arg1, arg2) =>
           val (_arg1, st2) = rval_test(arg1, st0, st1)
           val (_arg2, st3) = rval_test(arg2, st0, st2 and !_arg1)
-          val st4 = join(st0, st2, "or left", st3, "or right")
+          val st4 = branch.join(st0, st2, "or left", st3, "or right", proc)
           (bool(_arg1 or _arg2), st4)
 
         case BinOp("&&", arg1, arg2) =>
           val (_arg1, st2) = rval_test(arg1, st0, st1)
           val (_arg2, st3) = rval_test(arg2, st0, st2 and _arg1)
-          val st4 = join(st0, st2, "and left", st3, "and right")
+          val st4 = branch.join(st0, st2, "and left", st3, "and right", proc)
           (bool(_arg1 and _arg2), st4)
 
         case PreOp(op, arg) =>
