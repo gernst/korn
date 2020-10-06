@@ -26,6 +26,15 @@ class Proc(
   object external extends Scope(params)
   object internal extends Scope(params ++ locals)
 
+  val pre = {
+    Rel(pres(name), external.names, Nil)
+  }
+
+  val post = {
+    val (pred, ret) = posts(name)
+    Rel(pred, external.names, Nil)
+  }
+
   object eval extends unit.eval.scoped(this)
   import eval._
 
@@ -45,26 +54,16 @@ class Proc(
     val st1 = contract.enter(st0, this)
     val ctx = Context.empty
     val st2 = local(body, st0, st1, ctx)
-    contract.leave(st2, this) // implicit return without value
+    contract.leave(st0, st2, this) // implicit return without value
   }
 
-  def now(pred: Pred, st1: State, reason: String) {
-    val prop = internal.apply(pred, st1)
+  def now(rel: Rel, st0: State, st1: State, reason: String) {
+    val prop = rel(st0, st1)
     clause(st1, prop, reason)
   }
 
-  def now(pred: Pred, st0: State, st1: State, reason: String) {
-    val prop = internal.apply(pred, st0, st1)
-    clause(st1, prop, reason)
-  }
-
-  def from(pred: Pred, st1: State): State = {
-    val prop = internal.apply(pred, st1)
-    st1 and prop
-  }
-
-  def from(pred: Pred, st0: State, st1: State): State = {
-    val prop = internal.apply(pred, st0, st1)
+  def from(rel: Rel, st0: State, st1: State): State = {
+    val prop = rel(st0, st1)
     st1 and prop
   }
 
@@ -113,13 +112,13 @@ class Proc(
 
       case Return(None) =>
         val st2 = loop.return_(st0, st1, ctx.hyps, this)
-        contract.leave(st2, this)
+        contract.leave(???, st2, this)
         unreach(st2)
 
       case Return(Some(res)) =>
         val st2 = loop.return_(st0, st1, ctx.hyps, this)
         val (_res, st3) = rval(res, st0, st2)
-        contract.leave(st3, _res, this)
+        contract.leave(???, st3, _res, this)
         unreach(st3)
 
       case Break =>

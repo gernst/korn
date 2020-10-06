@@ -12,7 +12,7 @@ import java.io.OutputStream
 import java.io.FileOutputStream
 
 object Main {
-  val version = "0.1"
+  val version = "0.2"
 
   var dry = false
   var config = "default"

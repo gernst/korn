@@ -22,25 +22,24 @@ class Sig(unit: Unit) {
       State(Nil, havoc)
     }
 
-    def here(label: String): Pred = {
-      newPred(label, sorts)
+    def newRel(name: String, in: List[String], out: List[String], args: List[Sort]): Rel = {
+      val pred = newPred(name, args)
+      Rel(pred, in, out)
     }
 
-    def rel(label: String): Pred = {
-      newPred(label, sorts ++ sorts)
+    def here(label: String): Rel = {
+      newRel(label, names, Nil, sorts)
     }
 
-    def apply(pred: Pred, st0: State): Prop = {
-      pred(st0(names))
+    def rel(label: String): Rel = {
+      newRel(label, names, names, sorts ++ sorts)
     }
+  }
 
-    def apply(pred: Pred, res: Pure, st0: State): Prop = {
-      pred(st0(names) ++ List(res))
-    }
-
-    def apply(pred: Pred, st0: State, st1: State): Prop = {
-      pred(st0(names) ++ st1(names))
-    }
+  def newPred(name: String, args: List[Sort]): Pred = {
+    val pred = Pred(name, args)
+    preds += pred
+    pred
   }
 
   def resolve(types: List[Type]): List[Sort] = {
@@ -58,12 +57,6 @@ class Sig(unit: Unit) {
       case TypedefName("size_t") => Sort.int
       case _                     => korn.error("cannot resolve: " + typ)
     }
-  }
-
-  def newPred(name: String, args: List[Sort]): Pred = {
-    val res = Pred(name, args)
-    preds += res
-    res
   }
 
   def vr(name: String, typ: Sort): Var = {
