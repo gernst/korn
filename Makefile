@@ -72,3 +72,8 @@ $(KORN_SH): $(KORN_LAUNCHER)
 %.smt2: %.c $(KORN_JAR) $(KORN_SH)
 	@echo $@
 	$(KORN_SH) $(KORN_FLAGS) $< > $@
+
+QUANTILE_GENERATOR = ~/tools/benchexec/contrib/plots/quantile-generator.py
+
+test/results/%.csv: test/results/%.results.sv-comp20_prop-reachsafety.ReachSafety-Loops.xml.bz2
+	$(QUANTILE_GENERATOR) $< > $@

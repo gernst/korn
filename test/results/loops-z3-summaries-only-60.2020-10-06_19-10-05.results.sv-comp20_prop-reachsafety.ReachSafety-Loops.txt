@@ -1,0 +1,333 @@
+   BENCHMARK INFORMATION
+benchmark definition:    xml/loops-z3-summaries-only-60.xml
+name:                    loops-z3-summaries-only-60
+run sets:                sv-comp20_prop-reachsafety.ReachSafety-Loops
+date:                    Tue, 2020-10-06 19:10:05 CEST
+tool:                    Korn 0.1
+tool executable:         ./run
+options:                 -q -s0 -t 60 -z3
+resource limits:
+- memory:                15000.0 MB
+- time:                  60 s
+- cpu cores:             1
+hardware requirements:
+- cpu model:             Intel Xeon E3-1230 v5 @ 3.40 GHz
+- cpu cores:             8
+- memory:                15000.0 MB
+------------------------------------------------------------
+
+
+
+sv-comp20_prop-reachsafety.ReachSafety-Loops
+Run set 1 of 1 with options '-q -s0 -t 60 -z3' and propertyfile 'None'
+
+inputfile                                                      status                       cpu time   wall time        host
+----------------------------------------------------------------------------------------------------------------------------
+loops/array-1.yml                                              true                             0.74        0.75  apollon115
+loops/array-2.yml                                              false                            0.65        0.67  apollon031
+loops/bubble_sort-1.yml                                        ERROR                            0.59        0.60  apollon053
+loops/bubble_sort-2.yml                                        ERROR                            0.45        0.45  apollon119
+loops/compact.yml                                              ERROR                            0.53        0.53  apollon059
+loops/count_up_down-1.yml                                      TIMEOUT                         60.67       60.71  apollon127
+loops/count_up_down-2.yml                                      false                            0.60        0.62  apollon014
+loops/eureka_01-1.yml                                          ERROR                            0.45        0.46  apollon056
+loops/eureka_01-2.yml                                          ERROR                            0.43        0.43  apollon152
+loops/eureka_05.yml                                            ERROR                            0.57        0.57  apollon131
+loops/for_bounded_loop1.yml                                    false                            0.67        0.68  apollon138
+loops/for_infinite_loop_1.yml                                  true                             0.64        0.65  apollon159
+loops/for_infinite_loop_2.yml                                  true                             0.63        0.65  apollon155
+loops/heavy-1.yml                                              ERROR                            0.42        0.42  apollon048
+loops/heavy-2.yml                                              ERROR                            0.43        0.44  apollon131
+loops/insertion_sort-1.yml                                     TIMEOUT                         60.92       60.95  apollon069
+loops/insertion_sort-2.yml                                     TIMEOUT                         60.83       60.87  apollon023
+loops/invert_string-1.yml                                      false                            0.80        0.82  apollon112
+loops/invert_string-3.yml                                      TIMEOUT                         60.73       60.77  apollon052
+loops/linear_sea.ch.yml                                        ERROR                            0.56        0.56  apollon033
+loops/linear_search.yml                                        ERROR                            0.55        0.55  apollon049
+loops/lu.cmp.yml                                               ERROR                            0.57        0.57  apollon017
+loops/ludcmp.yml                                               ERROR                            0.56        0.57  apollon157
+loops/matrix-1.yml                                             true                             0.79        0.81  apollon093
+loops/matrix-2.yml                                             false                            0.78        0.80  apollon033
+loops/n.c11.yml                                                true                             0.77        0.78  apollon162
+loops/n.c24.yml                                                ERROR                            0.48        0.48  apollon025
+loops/n.c40.yml                                                ERROR                            0.53        0.54  apollon060
+loops/nec11.yml                                                false                            0.63        0.64  apollon155
+loops/nec20.yml                                                ERROR                            0.55        0.56  apollon067
+loops/nec40.yml                                                ERROR                            0.54        0.54  apollon151
+loops/s3.yml                                                   ERROR                            0.43        0.43  apollon062
+loops/string-1.yml                                             true                             0.71        0.72  apollon047
+loops/string-2.yml                                             ERROR                            0.59        0.59  apollon038
+loops/sum01-1.yml                                              unknown                          0.86        0.88  apollon004
+loops/sum01-2.yml                                              TIMEOUT                         60.71       60.75  apollon124
+loops/sum01_bug02.yml                                          unknown                          0.86        0.88  apollon029
+loops/sum01_bug02_sum01_bug02_base.case.yml                    unknown                          0.88        0.90  apollon157
+loops/sum03-1.yml                                              false                            0.84        0.86  apollon053
+loops/sum03-2.yml                                              true                             0.65        0.66  apollon011
+loops/sum04-1.yml                                              false                            1.03        1.04  apollon154
+loops/sum04-2.yml                                              true                             0.80        0.82  apollon111
+loops/sum_array-1.yml                                          false                            0.69        0.71  apollon095
+loops/sum_array-2.yml                                          TIMEOUT                         60.88       60.92  apollon058
+loops/terminator_01.yml                                        ERROR                            0.52        0.53  apollon149
+loops/terminator_02-1.yml                                      false                            0.62        0.64  apollon029
+loops/terminator_02-2.yml                                      true                             0.64        0.65  apollon057
+loops/terminator_03-1.yml                                      false                            0.62        0.63  apollon075
+loops/terminator_03-2.yml                                      true                             0.64        0.66  apollon057
+loops/trex01-1.yml                                             false                            0.66        0.67  apollon104
+loops/trex01-2.yml                                             true                             0.70        0.71  apollon025
+loops/trex02-1.yml                                             ERROR                            0.54        0.54  apollon151
+loops/trex02-2.yml                                             ERROR                            0.52        0.52  apollon093
+loops/trex03-1.yml                                             false                            0.65        0.67  apollon012
+loops/trex03-2.yml                                             true                             0.74        0.75  apollon104
+loops/trex04.yml                                               true                             0.70        0.71  apollon149
+loops/veris.c_NetBSD-libc_loop.yml                             ERROR                            0.55        0.56  apollon097
+loops/veris.c_OpenSER_cases1_stripFullBoth_arr.yml             ERROR                            0.59        0.59  apollon097
+loops/veris.c_sendmail_tTflag_arr_one_loop.yml                 ERROR                            0.65        0.66  apollon046
+loops/verisec_NetBSD-libc_loop.yml                             ERROR                            0.56        0.56  apollon159
+loops/verisec_OpenSER_cases1_stripFullBoth_arr.yml             ERROR                            0.58        0.59  apollon079
+loops/vogal-1.yml                                              ERROR                            0.45        0.45  apollon070
+loops/vogal-2.yml                                              ERROR                            0.44        0.44  apollon127
+loops/while_infinite_loop_1.yml                                true                             0.58        0.59  apollon049
+loops/while_infinite_loop_2.yml                                true                             0.58        0.60  apollon060
+loops/while_infinite_loop_3.yml                                ERROR                            0.53        0.53  apollon028
+loops/while_infinite_loop_4.yml                                ERROR                            0.52        0.52  apollon050
+loop-acceleration/array_1-1.yml                                TIMEOUT                         60.70       60.74  apollon017
+loop-acceleration/array_1-2.yml                                TIMEOUT                         60.68       60.71  apollon010
+loop-acceleration/array_2-1.yml                                TIMEOUT                         60.71       60.74  apollon075
+loop-acceleration/array_2-2.yml                                TIMEOUT                         60.71       60.75  apollon001
+loop-acceleration/array_3-1.yml                                TIMEOUT                         60.72       60.76  apollon012
+loop-acceleration/array_3-2.yml                                TIMEOUT                         60.72       60.76  apollon076
+loop-acceleration/array_4.yml                                  TIMEOUT                         60.74       60.78  apollon008
+loop-acceleration/const_1-1.yml                                TIMEOUT                         60.67       60.76  apollon103
+loop-acceleration/const_1-2.yml                                TIMEOUT                         60.72       60.76  apollon165
+loop-acceleration/diamond_1-1.yml                              unknown                          1.04        1.05  apollon105
+loop-acceleration/diamond_1-2.yml                              unknown                          1.24        1.25  apollon135
+loop-acceleration/diamond_2-2.yml                              unknown                          1.71        1.72  apollon135
+loop-acceleration/functions_1-1.yml                            TIMEOUT                         60.68       60.72  apollon155
+loop-acceleration/functions_1-2.yml                            TIMEOUT                         60.67       60.71  apollon065
+loop-acceleration/multivar_1-1.yml                             true                             0.61        0.63  apollon017
+loop-acceleration/multivar_1-2.yml                             false                            0.61        0.62  apollon163
+loop-acceleration/nested_1-1.yml                               TIMEOUT                         60.73       60.77  apollon082
+loop-acceleration/nested_1-2.yml                               TIMEOUT                         60.70       60.73  apollon142
+loop-acceleration/overflow_1-1.yml                             true                             0.59        0.61  apollon128
+loop-acceleration/phases_1-1.yml                               TIMEOUT                         60.72       60.76  apollon072
+loop-acceleration/phases_1-2.yml                               TIMEOUT                         60.69       60.73  apollon109
+loop-acceleration/phases_2-1.yml                               unknown                          0.60        0.62  apollon056
+loop-acceleration/phases_2-2.yml                               unknown                          0.61        0.62  apollon160
+loop-acceleration/simple_1-1.yml                               TIMEOUT                         60.69       60.73  apollon049
+loop-acceleration/simple_1-2.yml                               TIMEOUT                         60.71       60.74  apollon041
+loop-acceleration/simple_2-1.yml                               true                             0.58        0.60  apollon161
+loop-acceleration/simple_2-2.yml                               false                            0.59        0.61  apollon063
+loop-acceleration/simple_3-1.yml                               false                            0.60        0.62  apollon081
+loop-acceleration/simple_3-2.yml                               TIMEOUT                         60.67       60.71  apollon167
+loop-acceleration/simple_4-1.yml                               TIMEOUT                         60.67       60.71  apollon088
+loop-acceleration/simple_4-2.yml                               TIMEOUT                         60.69       60.73  apollon108
+loop-acceleration/underapprox_1-1.yml                          false                            0.63        0.65  apollon143
+loop-acceleration/underapprox_1-2.yml                          true                             0.74        0.75  apollon156
+loop-acceleration/underapprox_2-1.yml                          false                            0.62        0.63  apollon120
+loop-acceleration/underapprox_2-2.yml                          true                             0.64        0.66  apollon154
+loop-crafted/simple_array_index_value_1-1.yml                  TIMEOUT                         60.74       60.78  apollon002
+loop-crafted/simple_array_index_value_1-2.yml                  false                            0.65        0.66  apollon163
+loop-crafted/simple_array_index_value_2.yml                    TIMEOUT                         60.71       60.75  apollon098
+loop-crafted/simple_array_index_value_3.yml                    TIMEOUT                         60.72       60.76  apollon091
+loop-crafted/simple_array_index_value_4.i.v+lhb-reducer.yml    ERROR                            0.58        0.58  apollon160
+loop-crafted/simple_array_index_value_4.i.v+nlh-reducer.yml    ERROR                            0.57        0.58  apollon062
+loop-crafted/simple_array_index_value_4.yml                    true                             0.77        0.79  apollon015
+loop-crafted/simple_vardep_1.yml                               true                             0.60        0.61  apollon123
+loop-crafted/simple_vardep_2.yml                               true                             0.62        0.63  apollon145
+loop-invgen/MADWiFi-encode_ie_ok.yml                           true                             0.71        0.72  apollon014
+loop-invgen/NetBSD_loop.yml                                    true                             0.68        0.70  apollon146
+loop-invgen/SpamAssassin-loop.i.v+cfa-reducer.yml              ERROR                            0.60        0.60  apollon095
+loop-invgen/SpamAssassin-loop.yml                              true                             1.23        1.24  apollon130
+loop-invgen/apache-escape-absolute.i.v+cfa-reducer.yml         ERROR                            0.61        0.62  apollon060
+loop-invgen/apache-escape-absolute.yml                         true                             0.86        0.88  apollon058
+loop-invgen/apache-get-tag.i.p+lhb-reducer.yml                 ERROR                            0.74        0.74  apollon152
+loop-invgen/apache-get-tag.i.p+nlh-reducer.yml                 ERROR                            0.79        0.79  apollon100
+loop-invgen/apache-get-tag.i.p+sep-reducer.yml                 ERROR                            0.81        0.82  apollon055
+loop-invgen/apache-get-tag.i.v+lhb-reducer.yml                 ERROR                            0.61        0.62  apollon100
+loop-invgen/apache-get-tag.i.v+nlh-reducer.yml                 ERROR                            0.60        0.61  apollon025
+loop-invgen/apache-get-tag.yml                                 true                             0.79        0.80  apollon024
+loop-invgen/down.yml                                           TIMEOUT                         60.82       60.86  apollon110
+loop-invgen/fragtest_simple.yml                                TIMEOUT                         60.93       60.97  apollon061
+loop-invgen/half_2.yml                                         TIMEOUT                         60.73       60.76  apollon160
+loop-invgen/heapsort.yml                                       TIMEOUT                         60.73       60.77  apollon140
+loop-invgen/id_build.i.p+nlh-reducer.yml                       ERROR                            0.75        0.76  apollon011
+loop-invgen/id_build.i.p+sep-reducer.yml                       ERROR                            0.84        0.85  apollon061
+loop-invgen/id_build.i.v+lhb-reducer.yml                       ERROR                            0.61        0.62  apollon054
+loop-invgen/id_build.yml                                       true                             0.77        0.78  apollon143
+loop-invgen/id_trans.yml                                       false                            0.66        0.68  apollon083
+loop-invgen/large_const.yml                                    TIMEOUT                         60.85       60.89  apollon136
+loop-invgen/nest-if3.yml                                       true                             0.69        0.70  apollon055
+loop-invgen/nested6.yml                                        TIMEOUT                         60.88       60.92  apollon016
+loop-invgen/nested9.yml                                        TIMEOUT                         60.95       60.98  apollon022
+loop-invgen/sendmail-close-angle.yml                           TIMEOUT                         60.79       60.82  apollon031
+loop-invgen/seq-3.yml                                          TIMEOUT                         60.89       60.92  apollon119
+loop-invgen/string_concat-noarr.yml                            true                            10.54       10.56  apollon122
+loop-invgen/up.yml                                             TIMEOUT                         60.85       60.89  apollon101
+loop-lit/afnp2014.yml                                          TIMEOUT                         60.69       60.73  apollon042
+loop-lit/bhmr2007.yml                                          unknown                          1.20        1.21  apollon158
+loop-lit/cggmp2005.yml                                         true                             0.68        0.70  apollon097
+loop-lit/cggmp2005_variant.yml                                 TIMEOUT                         60.71       60.75  apollon014
+loop-lit/cggmp2005b.yml                                        true                             0.66        0.67  apollon151
+loop-lit/css2003.yml                                           true                             0.61        0.62  apollon046
+loop-lit/ddlm2013.yml                                          TIMEOUT                         60.74       60.77  apollon137
+loop-lit/gcnr2008.yml                                          false                            0.65        0.66  apollon112
+loop-lit/gj2007.c.i.p+lhb-reducer.yml                          ERROR                            0.58        0.59  apollon164
+loop-lit/gj2007.c.i.p+nlh-reducer.yml                          ERROR                            0.75        0.76  apollon021
+loop-lit/gj2007.yml                                            TIMEOUT                         60.74       60.78  apollon146
+loop-lit/gj2007b.yml                                           TIMEOUT                         60.72       60.76  apollon123
+loop-lit/gr2006.yml                                            TIMEOUT                         61.00       61.01  apollon003
+loop-lit/gsv2008.c.i.p+cfa-reducer.yml                         ERROR                            0.57        0.57  apollon156
+loop-lit/gsv2008.c.i.v+cfa-reducer.yml                         ERROR                            0.58        0.58  apollon074
+loop-lit/gsv2008.c.i.v+lhb-reducer.yml                         ERROR                            0.58        0.58  apollon118
+loop-lit/gsv2008.yml                                           true                             0.80        0.82  apollon105
+loop-lit/hhk2008.yml                                           TIMEOUT                         60.68       60.72  apollon047
+loop-lit/jm2006.c.i.v+cfa-reducer.yml                          ERROR                            0.58        0.59  apollon100
+loop-lit/jm2006.yml                                            TIMEOUT                         60.68       60.72  apollon035
+loop-lit/jm2006_variant.yml                                    TIMEOUT                         60.70       60.73  apollon086
+loop-lit/mcmillan2006.yml                                      ERROR                            0.54        0.55  apollon127
+loop-new/count_by_1.yml                                        TIMEOUT                         60.73       60.76  apollon034
+loop-new/count_by_1_variant.yml                                true                             0.59        0.60  apollon039
+loop-new/count_by_2.yml                                        TIMEOUT                         60.69       60.73  apollon129
+loop-new/count_by_k.yml                                        TIMEOUT                         60.65       60.69  apollon153
+loop-new/count_by_nondet.yml                                   TIMEOUT                         60.67       60.71  apollon028
+loop-new/gauss_sum.i.p+cfa-reducer.yml                         ERROR                            0.57        0.58  apollon077
+loop-new/gauss_sum.i.p+lhb-reducer.yml                         ERROR                            0.58        0.59  apollon006
+loop-new/gauss_sum.i.v+cfa-reducer.yml                         ERROR                            0.58        0.58  apollon015
+loop-new/gauss_sum.yml                                         TIMEOUT                         60.98       61.00  apollon013
+loop-new/half.yml                                              TIMEOUT                         60.73       60.77  apollon145
+loop-new/nested-1.yml                                          true                            11.96       11.99  apollon081
+loop-industry-pattern/aiob_1.yml                               ERROR                            0.44        0.45  apollon095
+loop-industry-pattern/aiob_2.yml                               ERROR                            0.45        0.46  apollon149
+loop-industry-pattern/aiob_3.yml                               ERROR                            0.45        0.45  apollon052
+loop-industry-pattern/aiob_4.c.v+cfa-reducer.yml               ERROR                            0.46        0.47  apollon131
+loop-industry-pattern/aiob_4.c.v+lh-reducer.yml                ERROR                            0.44        0.45  apollon112
+loop-industry-pattern/aiob_4.c.v+lhb-reducer.yml               ERROR                            0.45        0.45  apollon089
+loop-industry-pattern/aiob_4.c.v+nlh-reducer.yml               ERROR                            0.45        0.46  apollon092
+loop-industry-pattern/aiob_4.yml                               ERROR                            0.41        0.42  apollon015
+loop-industry-pattern/mod3.c.v+cfa-reducer.yml                 ERROR                            0.57        0.58  apollon162
+loop-industry-pattern/mod3.c.v+lhb-reducer.yml                 ERROR                            0.59        0.60  apollon109
+loop-industry-pattern/mod3.c.v+sep-reducer.yml                 ERROR                            0.57        0.58  apollon111
+loop-industry-pattern/mod3.yml                                 true                             0.66        0.68  apollon128
+loop-industry-pattern/nested-3.yml                             ERROR                            0.54        0.55  apollon137
+loop-industry-pattern/ofuf_1.yml                               ERROR                            0.46        0.47  apollon120
+loop-industry-pattern/ofuf_2.yml                               ERROR                            0.43        0.44  apollon130
+loop-industry-pattern/ofuf_3.yml                               ERROR                            0.44        0.45  apollon165
+loop-industry-pattern/ofuf_4.yml                               ERROR                            0.42        0.43  apollon062
+loop-industry-pattern/ofuf_5.yml                               ERROR                            0.42        0.42  apollon033
+loops-crafted-1/Mono1_1-1.yml                                  TIMEOUT                         60.71       60.75  apollon066
+loops-crafted-1/Mono1_1-2.yml                                  TIMEOUT                         60.72       60.76  apollon099
+loops-crafted-1/Mono3_1.yml                                    TIMEOUT                         60.71       60.75  apollon067
+loops-crafted-1/Mono4_1.yml                                    TIMEOUT                         60.74       60.78  apollon078
+loops-crafted-1/Mono5_1.yml                                    TIMEOUT                         60.73       60.77  apollon073
+loops-crafted-1/Mono6_1.yml                                    TIMEOUT                         60.71       60.75  apollon080
+loops-crafted-1/discover_list.yml                              ERROR                            0.46        0.47  apollon039
+loops-crafted-1/iftelse.yml                                    true                             0.68        0.69  apollon024
+loops-crafted-1/in-de20.yml                                    TIMEOUT                         60.79       60.83  apollon039
+loops-crafted-1/in-de31.yml                                    TIMEOUT                         60.82       60.86  apollon007
+loops-crafted-1/in-de32.yml                                    TIMEOUT                         60.75       60.84  apollon118
+loops-crafted-1/in-de41.yml                                    TIMEOUT                         60.84       60.87  apollon043
+loops-crafted-1/in-de42.yml                                    unknown                          1.77        1.78  apollon040
+loops-crafted-1/in-de51.yml                                    TIMEOUT                         60.99       61.01  apollon125
+loops-crafted-1/in-de52.yml                                    TIMEOUT                         60.86       60.90  apollon168
+loops-crafted-1/in-de61.yml                                    TIMEOUT                         60.98       61.00  apollon134
+loops-crafted-1/in-de62.yml                                    TIMEOUT                         60.88       60.92  apollon036
+loops-crafted-1/loopv1.yml                                     unknown                          1.34        1.35  apollon026
+loops-crafted-1/loopv2.yml                                     TIMEOUT                         60.69       60.72  apollon004
+loops-crafted-1/loopv3.yml                                     ERROR                            0.53        0.53  apollon164
+loops-crafted-1/mono-crafted_1.yml                             TIMEOUT                         60.74       60.78  apollon158
+loops-crafted-1/mono-crafted_10.yml                            TIMEOUT                         60.66       60.75  apollon068
+loops-crafted-1/mono-crafted_11.yml                            TIMEOUT                         60.71       60.75  apollon020
+loops-crafted-1/mono-crafted_12.yml                            TIMEOUT                         60.69       60.73  apollon106
+loops-crafted-1/mono-crafted_13.yml                            TIMEOUT                         60.76       60.80  apollon116
+loops-crafted-1/mono-crafted_14.yml                            TIMEOUT                         60.80       60.84  apollon045
+loops-crafted-1/mono-crafted_3.yml                             TIMEOUT                         60.76       60.79  apollon084
+loops-crafted-1/mono-crafted_6.yml                             TIMEOUT                         60.70       60.78  apollon117
+loops-crafted-1/mono-crafted_7.yml                             TIMEOUT                         60.75       60.78  apollon064
+loops-crafted-1/mono-crafted_8.yml                             TIMEOUT                         60.72       60.76  apollon132
+loops-crafted-1/mono-crafted_9.yml                             TIMEOUT                         60.72       60.76  apollon164
+loops-crafted-1/nested3-1.yml                                  TIMEOUT                         60.78       60.82  apollon048
+loops-crafted-1/nested3-2.yml                                  TIMEOUT                         60.76       60.80  apollon021
+loops-crafted-1/nested5-1.yml                                  true                             0.80        0.81  apollon138
+loops-crafted-1/nested5-2.yml                                  TIMEOUT                         60.78       60.82  apollon147
+loops-crafted-1/nested_delay_nd.yml                            ERROR                            0.59        0.59  apollon054
+loops-crafted-1/nested_delay_notd2.yml                         ERROR                            0.60        0.60  apollon096
+loops-crafted-1/net_reset.yml                                  ERROR                            0.45        0.46  apollon159
+loops-crafted-1/sum_by_3.yml                                   ERROR                            0.56        0.57  apollon018
+loops-crafted-1/sum_natnum.yml                                 ERROR                            0.53        0.54  apollon141
+loops-crafted-1/sumt2.yml                                      TIMEOUT                         60.73       60.77  apollon102
+loops-crafted-1/sumt3.yml                                      TIMEOUT                         60.75       60.78  apollon144
+loops-crafted-1/sumt4.yml                                      TIMEOUT                         60.76       60.79  apollon051
+loops-crafted-1/sumt5.yml                                      TIMEOUT                         60.71       60.75  apollon071
+loops-crafted-1/sumt6.yml                                      TIMEOUT                         60.75       60.79  apollon092
+loops-crafted-1/sumt7.yml                                      true                             0.73        0.75  apollon076
+loops-crafted-1/sumt8.yml                                      true                             0.75        0.77  apollon107
+loops-crafted-1/sumt9.yml                                      true                             0.76        0.78  apollon085
+loops-crafted-1/theatreSquare.yml                              TIMEOUT                         60.74       60.78  apollon133
+loops-crafted-1/vnew1.yml                                      TIMEOUT                         60.75       60.79  apollon009
+loops-crafted-1/vnew2.yml                                      ERROR                            0.55        0.55  apollon142
+loops-crafted-1/watermelon.yml                                 TIMEOUT                         60.85       60.88  apollon152
+loop-invariants/bin-suffix-5.yml                               ERROR                            0.53        0.53  apollon148
+loop-invariants/const.yml                                      true                             0.58        0.60  apollon063
+loop-invariants/eq1.yml                                        true                             0.66        0.67  apollon081
+loop-invariants/eq2.yml                                        TIMEOUT                         60.67       60.71  apollon006
+loop-invariants/even.yml                                       TIMEOUT                         60.56       60.60  apollon087
+loop-invariants/linear-inequality-inv-a.yml                    true                            30.16       30.19  apollon037
+loop-invariants/linear-inequality-inv-b.yml                    true                            29.79       29.82  apollon121
+loop-invariants/mod4.yml                                       TIMEOUT                         60.59       60.63  apollon079
+loop-invariants/odd.yml                                        TIMEOUT                         60.67       60.71  apollon094
+loop-simple/deep-nested.yml                                    TIMEOUT                         60.81       60.84  apollon005
+loop-simple/nested_1.yml                                       true                             0.63        0.64  apollon050
+loop-simple/nested_1b.yml                                      false                            0.62        0.63  apollon012
+loop-simple/nested_2.yml                                       true                             0.83        0.85  apollon096
+loop-simple/nested_3.yml                                       true                             1.21        1.23  apollon077
+loop-simple/nested_4.yml                                       true                             2.12        2.13  apollon166
+loop-simple/nested_5.yml                                       true                             3.59        3.60  apollon038
+loop-simple/nested_6.yml                                       true                             6.32        6.34  apollon063
+verifythis/duplets.yml                                         ERROR                            0.57        0.58  apollon026
+verifythis/elimination_max.yml                                 ERROR                            0.57        0.58  apollon115
+verifythis/lcp.yml                                             ERROR                            0.58        0.58  apollon074
+verifythis/prefixsum_iter.yml                                  ERROR                            0.60        0.61  apollon120
+verifythis/tree_del_iter.yml                                   ERROR                            0.57        0.57  apollon128
+verifythis/tree_del_iter_incorrect.yml                         ERROR                            0.56        0.56  apollon085
+nla-digbench/bresenham.yml                                     TIMEOUT                         60.66       60.69  apollon139
+nla-digbench/cohencu.yml                                       TIMEOUT                         60.98       61.00  apollon161
+nla-digbench/cohendiv.yml                                      TIMEOUT                         60.67       60.70  apollon056
+nla-digbench/dijkstra.yml                                      TIMEOUT                         60.98       61.01  apollon150
+nla-digbench/divbin.yml                                        TIMEOUT                         60.66       60.69  apollon163
+nla-digbench/divbin2.yml                                       TIMEOUT                         60.66       60.70  apollon148
+nla-digbench/egcd.yml                                          TIMEOUT                         60.63       60.71  apollon044
+nla-digbench/egcd2.yml                                         TIMEOUT                         60.69       60.73  apollon114
+nla-digbench/egcd3.yml                                         TIMEOUT                         60.70       60.74  apollon083
+nla-digbench/fermat1.yml                                       ERROR                            0.51        0.51  apollon029
+nla-digbench/fermat2.yml                                       ERROR                            0.52        0.52  apollon041
+nla-digbench/freire1.yml                                       ERROR                            0.52        0.52  apollon124
+nla-digbench/freire2.yml                                       ERROR                            0.54        0.55  apollon054
+nla-digbench/geo1.yml                                          TIMEOUT                         60.62       60.66  apollon126
+nla-digbench/geo2.yml                                          TIMEOUT                         60.63       60.67  apollon070
+nla-digbench/geo3.yml                                          true                             0.68        0.70  apollon107
+nla-digbench/hard.yml                                          TIMEOUT                         60.69       60.72  apollon019
+nla-digbench/hard2.yml                                         TIMEOUT                         60.69       60.73  apollon074
+nla-digbench/knuth.yml                                         ERROR                            0.56        0.57  apollon157
+nla-digbench/lcm1.yml                                          TIMEOUT                         60.68       60.72  apollon113
+nla-digbench/lcm2.yml                                          true                             0.76        0.78  apollon141
+nla-digbench/mannadiv.yml                                      TIMEOUT                         60.66       60.70  apollon027
+nla-digbench/prod4br.yml                                       TIMEOUT                         60.68       60.71  apollon030
+nla-digbench/prodbin.yml                                       ERROR                            0.51        0.52  apollon053
+nla-digbench/ps2.yml                                           TIMEOUT                         60.60       60.64  apollon032
+nla-digbench/ps3.yml                                           TIMEOUT                         60.63       60.67  apollon018
+nla-digbench/ps4.yml                                           TIMEOUT                         60.61       60.65  apollon089
+nla-digbench/ps5.yml                                           TIMEOUT                         60.62       60.66  apollon050
+nla-digbench/ps6.yml                                           TIMEOUT                         60.65       60.69  apollon059
+nla-digbench/sqrt1.yml                                         TIMEOUT                         60.98       61.00  apollon090
+----------------------------------------------------------------------------------------------------------------------------
+Run set 1                                                      done                             None       66.05           -
+
+Statistics:            296 Files
+  correct:              76
+    correct true:       54
+    correct false:      22
+  incorrect:             1
+    incorrect true:      1
+    incorrect false:     0
+  unknown:             219
+  Score:                98 (max: 523)
