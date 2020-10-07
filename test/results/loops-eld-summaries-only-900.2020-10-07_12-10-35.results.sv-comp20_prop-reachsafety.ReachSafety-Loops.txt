@@ -1,0 +1,333 @@
+   BENCHMARK INFORMATION
+benchmark definition:    xml/loops-eld-summaries-only-900.xml
+name:                    loops-eld-summaries-only-900
+run sets:                sv-comp20_prop-reachsafety.ReachSafety-Loops
+date:                    Wed, 2020-10-07 12:10:35 CEST
+tool:                    Korn 0.1
+tool executable:         ./run
+options:                 -q -s0 -eld
+resource limits:
+- memory:                15000.0 MB
+- time:                  900 s
+- cpu cores:             8
+hardware requirements:
+- cpu model:             Intel Xeon E3-1230 v5 @ 3.40 GHz
+- cpu cores:             1
+- memory:                15000.0 MB
+------------------------------------------------------------
+
+
+
+sv-comp20_prop-reachsafety.ReachSafety-Loops
+Run set 1 of 1 with options '-q -s0 -eld' and propertyfile 'None'
+
+inputfile                                                      status                       cpu time   wall time        host
+----------------------------------------------------------------------------------------------------------------------------
+loops/array-1.yml                                              unknown                         12.46        3.49  apollon103
+loops/array-2.yml                                              unknown                         12.88        3.63  apollon045
+loops/bubble_sort-1.yml                                        ERROR                            0.57        0.36  apollon014
+loops/bubble_sort-2.yml                                        ERROR                            0.47        0.28  apollon142
+loops/compact.yml                                              ERROR                            0.54        0.34  apollon006
+loops/count_up_down-1.yml                                      true                             3.39        1.61  apollon028
+loops/count_up_down-2.yml                                      false                            3.04        1.49  apollon011
+loops/eureka_01-1.yml                                          ERROR                            0.44        0.27  apollon008
+loops/eureka_01-2.yml                                          ERROR                            0.43        0.27  apollon112
+loops/eureka_05.yml                                            ERROR                            0.55        0.34  apollon105
+loops/for_bounded_loop1.yml                                    false                            5.11        1.92  apollon038
+loops/for_infinite_loop_1.yml                                  true                             2.51        1.29  apollon063
+loops/for_infinite_loop_2.yml                                  true                             2.60        1.34  apollon118
+loops/heavy-1.yml                                              ERROR                            0.42        0.25  apollon076
+loops/heavy-2.yml                                              ERROR                            0.43        0.26  apollon125
+loops/insertion_sort-1.yml                                     unknown                         42.59       11.07  apollon166
+loops/insertion_sort-2.yml                                     unknown                         44.22       12.69  apollon066
+loops/invert_string-1.yml                                      unknown                         57.94       36.69  apollon135
+loops/invert_string-3.yml                                      unknown                         42.36       11.30  apollon113
+loops/linear_sea.ch.yml                                        ERROR                            0.56        0.35  apollon025
+loops/linear_search.yml                                        ERROR                            0.61        0.37  apollon060
+loops/lu.cmp.yml                                               ERROR                            0.56        0.33  apollon054
+loops/ludcmp.yml                                               ERROR                            0.58        0.34  apollon015
+loops/matrix-1.yml                                             unknown                         22.28        5.79  apollon033
+loops/matrix-2.yml                                             unknown                         41.07       11.09  apollon114
+loops/n.c11.yml                                                true                             9.57        2.95  apollon050
+loops/n.c24.yml                                                ERROR                            0.47        0.28  apollon035
+loops/n.c40.yml                                                ERROR                            0.54        0.33  apollon080
+loops/nec11.yml                                                unknown                          7.80        2.52  apollon085
+loops/nec20.yml                                                ERROR                            0.58        0.35  apollon106
+loops/nec40.yml                                                ERROR                            0.56        0.35  apollon073
+loops/s3.yml                                                   ERROR                            0.43        0.26  apollon079
+loops/string-1.yml                                             unknown                         40.90       11.04  apollon146
+loops/string-2.yml                                             ERROR                            0.61        0.38  apollon140
+loops/sum01-1.yml                                              unknown                         35.17       11.17  apollon138
+loops/sum01-2.yml                                              true                             3.53        1.61  apollon095
+loops/sum01_bug02.yml                                          false                           26.99        7.59  apollon165
+loops/sum01_bug02_sum01_bug02_base.case.yml                    false                           22.09        5.85  apollon088
+loops/sum03-1.yml                                              false                           24.84       10.40  apollon036
+loops/sum03-2.yml                                              true                             3.76        1.67  apollon141
+loops/sum04-1.yml                                              false                           18.14        5.78  apollon092
+loops/sum04-2.yml                                              true                             3.97        1.74  apollon052
+loops/sum_array-1.yml                                          unknown                         25.23       11.07  apollon022
+loops/sum_array-2.yml                                          unknown                         22.66       11.04  apollon107
+loops/terminator_01.yml                                        ERROR                            0.54        0.33  apollon050
+loops/terminator_02-1.yml                                      false                            4.27        1.72  apollon093
+loops/terminator_02-2.yml                                      true                             4.82        1.87  apollon034
+loops/terminator_03-1.yml                                      false                            3.59        1.62  apollon043
+loops/terminator_03-2.yml                                      true                             3.62        1.64  apollon109
+loops/trex01-1.yml                                             false                            3.86        1.67  apollon001
+loops/trex01-2.yml                                             true                             5.54        2.06  apollon019
+loops/trex02-1.yml                                             ERROR                            0.52        0.33  apollon052
+loops/trex02-2.yml                                             ERROR                            0.56        0.33  apollon017
+loops/trex03-1.yml                                             false                            7.10        2.39  apollon024
+loops/trex03-2.yml                                             true                            11.35        3.30  apollon136
+loops/trex04.yml                                               true                             4.71        1.82  apollon011
+loops/veris.c_NetBSD-libc_loop.yml                             ERROR                            0.61        0.37  apollon084
+loops/veris.c_OpenSER_cases1_stripFullBoth_arr.yml             ERROR                            0.60        0.35  apollon101
+loops/veris.c_sendmail_tTflag_arr_one_loop.yml                 unknown                         42.57       12.96  apollon128
+loops/verisec_NetBSD-libc_loop.yml                             ERROR                            0.52        0.33  apollon067
+loops/verisec_OpenSER_cases1_stripFullBoth_arr.yml             ERROR                            0.58        0.36  apollon121
+loops/vogal-1.yml                                              ERROR                            0.44        0.27  apollon011
+loops/vogal-2.yml                                              ERROR                            0.43        0.27  apollon049
+loops/while_infinite_loop_1.yml                                true                             2.43        1.27  apollon009
+loops/while_infinite_loop_2.yml                                true                             2.36        1.23  apollon124
+loops/while_infinite_loop_3.yml                                ERROR                            0.58        0.36  apollon046
+loops/while_infinite_loop_4.yml                                ERROR                            0.54        0.33  apollon152
+loop-acceleration/array_1-1.yml                                unknown                         29.08       11.04  apollon020
+loop-acceleration/array_1-2.yml                                unknown                         29.80       11.06  apollon145
+loop-acceleration/array_2-1.yml                                unknown                         34.48       11.67  apollon140
+loop-acceleration/array_2-2.yml                                unknown                         35.44       11.68  apollon013
+loop-acceleration/array_3-1.yml                                true                            15.58        4.31  apollon065
+loop-acceleration/array_3-2.yml                                unknown                         37.75       11.80  apollon157
+loop-acceleration/array_4.yml                                  unknown                         40.10       12.57  apollon028
+loop-acceleration/const_1-1.yml                                true                             3.47        1.66  apollon079
+loop-acceleration/const_1-2.yml                                unknown                         23.39       12.41  apollon062
+loop-acceleration/diamond_1-1.yml                              unknown                         39.43       11.00  apollon110
+loop-acceleration/diamond_1-2.yml                              unknown                         40.45       11.08  apollon087
+loop-acceleration/diamond_2-2.yml                              true                            32.43        8.46  apollon147
+loop-acceleration/functions_1-1.yml                            unknown                         36.09       10.97  apollon089
+loop-acceleration/functions_1-2.yml                            unknown                         35.61       11.04  apollon126
+loop-acceleration/multivar_1-1.yml                             true                             3.27        1.56  apollon163
+loop-acceleration/multivar_1-2.yml                             false                            3.32        1.55  apollon057
+loop-acceleration/nested_1-1.yml                               true                             5.48        2.06  apollon055
+loop-acceleration/nested_1-2.yml                               unknown                         26.81       11.57  apollon007
+loop-acceleration/overflow_1-1.yml                             true                             2.97        1.45  apollon008
+loop-acceleration/phases_1-1.yml                               unknown                         34.76       11.06  apollon070
+loop-acceleration/phases_1-2.yml                               unknown                         34.25       10.98  apollon074
+loop-acceleration/phases_2-1.yml                               false                            5.01        1.97  apollon037
+loop-acceleration/phases_2-2.yml                               true                             5.04        2.03  apollon117
+loop-acceleration/simple_1-1.yml                               unknown                         36.36       11.04  apollon012
+loop-acceleration/simple_1-2.yml                               unknown                         36.62       11.02  apollon048
+loop-acceleration/simple_2-1.yml                               true                             2.98        1.47  apollon098
+loop-acceleration/simple_2-2.yml                               false                            3.07        1.48  apollon034
+loop-acceleration/simple_3-1.yml                               false                            3.07        1.52  apollon125
+loop-acceleration/simple_3-2.yml                               unknown                         33.50       11.01  apollon129
+loop-acceleration/simple_4-1.yml                               unknown                         33.89       11.05  apollon168
+loop-acceleration/simple_4-2.yml                               unknown                         36.92       11.02  apollon069
+loop-acceleration/underapprox_1-1.yml                          false                            9.86        3.05  apollon045
+loop-acceleration/underapprox_1-2.yml                          true                            30.15        9.03  apollon038
+loop-acceleration/underapprox_2-1.yml                          false                            9.50        4.19  apollon152
+loop-acceleration/underapprox_2-2.yml                          true                             3.62        1.70  apollon073
+loop-crafted/simple_array_index_value_1-1.yml                  unknown                         39.97       11.01  apollon153
+loop-crafted/simple_array_index_value_1-2.yml                  unknown                          7.27        2.37  apollon163
+loop-crafted/simple_array_index_value_2.yml                    unknown                         35.10       12.25  apollon150
+loop-crafted/simple_array_index_value_3.yml                    unknown                         34.26       11.48  apollon016
+loop-crafted/simple_array_index_value_4.i.v+lhb-reducer.yml    ERROR                            0.65        0.38  apollon054
+loop-crafted/simple_array_index_value_4.i.v+nlh-reducer.yml    ERROR                            0.61        0.36  apollon165
+loop-crafted/simple_array_index_value_4.yml                    unknown                         16.02        4.32  apollon091
+loop-crafted/simple_vardep_1.yml                               true                             3.65        1.59  apollon080
+loop-crafted/simple_vardep_2.yml                               true                             3.94        1.71  apollon095
+loop-invgen/MADWiFi-encode_ie_ok.yml                           true                             5.38        2.04  apollon029
+loop-invgen/NetBSD_loop.yml                                    true                             4.74        1.87  apollon006
+loop-invgen/SpamAssassin-loop.i.v+cfa-reducer.yml              ERROR                            0.62        0.36  apollon159
+loop-invgen/SpamAssassin-loop.yml                              true                            27.58        7.24  apollon021
+loop-invgen/apache-escape-absolute.i.v+cfa-reducer.yml         ERROR                            0.61        0.38  apollon033
+loop-invgen/apache-escape-absolute.yml                         true                            14.09        3.87  apollon085
+loop-invgen/apache-get-tag.i.p+lhb-reducer.yml                 ERROR                            0.76        0.41  apollon093
+loop-invgen/apache-get-tag.i.p+nlh-reducer.yml                 ERROR                            0.86        0.44  apollon151
+loop-invgen/apache-get-tag.i.p+sep-reducer.yml                 ERROR                            0.99        0.48  apollon020
+loop-invgen/apache-get-tag.i.v+lhb-reducer.yml                 ERROR                            0.68        0.40  apollon032
+loop-invgen/apache-get-tag.i.v+nlh-reducer.yml                 ERROR                            0.60        0.36  apollon156
+loop-invgen/apache-get-tag.yml                                 true                            19.67        5.15  apollon058
+loop-invgen/down.yml                                           true                             5.38        2.04  apollon027
+loop-invgen/fragtest_simple.yml                                true                            18.55        4.99  apollon141
+loop-invgen/half_2.yml                                         true                             5.67        2.03  apollon122
+loop-invgen/heapsort.yml                                       true                            14.64        3.84  apollon041
+loop-invgen/id_build.i.p+nlh-reducer.yml                       ERROR                            0.84        0.42  apollon158
+loop-invgen/id_build.i.p+sep-reducer.yml                       ERROR                            0.93        0.44  apollon046
+loop-invgen/id_build.i.v+lhb-reducer.yml                       ERROR                            0.57        0.34  apollon058
+loop-invgen/id_build.yml                                       true                             4.47        1.84  apollon040
+loop-invgen/id_trans.yml                                       false                            6.47        2.16  apollon105
+loop-invgen/large_const.yml                                    true                             6.77        2.23  apollon114
+loop-invgen/nest-if3.yml                                       true                             4.55        1.76  apollon031
+loop-invgen/nested6.yml                                        true                             9.34        2.81  apollon015
+loop-invgen/nested9.yml                                        unknown                         37.91       11.03  apollon018
+loop-invgen/sendmail-close-angle.yml                           true                            24.82        6.52  apollon167
+loop-invgen/seq-3.yml                                          true                             7.12        2.33  apollon098
+loop-invgen/string_concat-noarr.yml                            true                             5.35        2.06  apollon042
+loop-invgen/up.yml                                             true                             5.66        2.03  apollon091
+loop-lit/afnp2014.yml                                          true                             8.51        2.67  apollon104
+loop-lit/bhmr2007.yml                                          true                             7.01        2.37  apollon023
+loop-lit/cggmp2005.yml                                         true                             4.30        1.82  apollon142
+loop-lit/cggmp2005_variant.yml                                 true                             3.52        1.61  apollon103
+loop-lit/cggmp2005b.yml                                        true                             4.63        1.88  apollon032
+loop-lit/css2003.yml                                           true                             4.29        1.79  apollon099
+loop-lit/ddlm2013.yml                                          true                            30.20        8.19  apollon108
+loop-lit/gcnr2008.yml                                          false                            6.11        2.17  apollon159
+loop-lit/gj2007.c.i.p+lhb-reducer.yml                          ERROR                            0.60        0.35  apollon122
+loop-lit/gj2007.c.i.p+nlh-reducer.yml                          ERROR                            0.79        0.41  apollon045
+loop-lit/gj2007.yml                                            unknown                         29.04       11.08  apollon120
+loop-lit/gj2007b.yml                                           true                             9.48        2.81  apollon150
+loop-lit/gr2006.yml                                            unknown                         33.36       11.50  apollon005
+loop-lit/gsv2008.c.i.p+cfa-reducer.yml                         ERROR                            0.55        0.34  apollon084
+loop-lit/gsv2008.c.i.v+cfa-reducer.yml                         ERROR                            0.55        0.34  apollon057
+loop-lit/gsv2008.c.i.v+lhb-reducer.yml                         ERROR                            0.59        0.36  apollon099
+loop-lit/gsv2008.yml                                           true                             3.87        1.69  apollon035
+loop-lit/hhk2008.yml                                           true                             3.89        1.67  apollon142
+loop-lit/jm2006.c.i.v+cfa-reducer.yml                          ERROR                            0.57        0.35  apollon051
+loop-lit/jm2006.yml                                            true                             3.66        1.67  apollon084
+loop-lit/jm2006_variant.yml                                    true                             3.86        1.71  apollon158
+loop-lit/mcmillan2006.yml                                      ERROR                            0.60        0.36  apollon069
+loop-new/count_by_1.yml                                        true                             3.41        1.60  apollon106
+loop-new/count_by_1_variant.yml                                true                             3.13        1.45  apollon164
+loop-new/count_by_2.yml                                        unknown                         34.61       11.00  apollon047
+loop-new/count_by_k.yml                                        unknown                         26.70       11.21  apollon054
+loop-new/count_by_nondet.yml                                   true                             6.30        2.27  apollon051
+loop-new/gauss_sum.i.p+cfa-reducer.yml                         ERROR                            0.55        0.35  apollon151
+loop-new/gauss_sum.i.p+lhb-reducer.yml                         ERROR                            0.54        0.34  apollon121
+loop-new/gauss_sum.i.v+cfa-reducer.yml                         ERROR                            0.59        0.37  apollon051
+loop-new/gauss_sum.yml                                         unknown                         30.46       11.32  apollon030
+loop-new/half.yml                                              unknown                         39.40       11.52  apollon134
+loop-new/nested-1.yml                                          unknown                         34.98       12.67  apollon003
+loop-industry-pattern/aiob_1.yml                               ERROR                            0.46        0.28  apollon078
+loop-industry-pattern/aiob_2.yml                               ERROR                            0.46        0.28  apollon023
+loop-industry-pattern/aiob_3.yml                               ERROR                            0.43        0.26  apollon058
+loop-industry-pattern/aiob_4.c.v+cfa-reducer.yml               ERROR                            0.42        0.26  apollon061
+loop-industry-pattern/aiob_4.c.v+lh-reducer.yml                ERROR                            0.43        0.26  apollon024
+loop-industry-pattern/aiob_4.c.v+lhb-reducer.yml               ERROR                            0.48        0.29  apollon159
+loop-industry-pattern/aiob_4.c.v+nlh-reducer.yml               ERROR                            0.43        0.27  apollon155
+loop-industry-pattern/aiob_4.yml                               ERROR                            0.42        0.25  apollon087
+loop-industry-pattern/mod3.c.v+cfa-reducer.yml                 ERROR                            0.54        0.34  apollon151
+loop-industry-pattern/mod3.c.v+lhb-reducer.yml                 ERROR                            0.60        0.36  apollon150
+loop-industry-pattern/mod3.c.v+sep-reducer.yml                 ERROR                            0.60        0.34  apollon126
+loop-industry-pattern/mod3.yml                                 true                             5.74        2.10  apollon101
+loop-industry-pattern/nested-3.yml                             ERROR                            0.54        0.34  apollon017
+loop-industry-pattern/ofuf_1.yml                               ERROR                            0.44        0.26  apollon021
+loop-industry-pattern/ofuf_2.yml                               ERROR                            0.44        0.27  apollon068
+loop-industry-pattern/ofuf_3.yml                               ERROR                            0.42        0.26  apollon017
+loop-industry-pattern/ofuf_4.yml                               ERROR                            0.45        0.26  apollon074
+loop-industry-pattern/ofuf_5.yml                               ERROR                            0.47        0.28  apollon050
+loops-crafted-1/Mono1_1-1.yml                                  unknown                         37.61       11.00  apollon121
+loops-crafted-1/Mono1_1-2.yml                                  unknown                         32.62       11.02  apollon143
+loops-crafted-1/Mono3_1.yml                                    unknown                         36.74       12.79  apollon123
+loops-crafted-1/Mono4_1.yml                                    unknown                         29.74       11.25  apollon144
+loops-crafted-1/Mono5_1.yml                                    unknown                         35.86       10.99  apollon064
+loops-crafted-1/Mono6_1.yml                                    unknown                         37.69       11.09  apollon155
+loops-crafted-1/discover_list.yml                              ERROR                            0.46        0.27  apollon018
+loops-crafted-1/iftelse.yml                                    true                             7.05        2.31  apollon031
+loops-crafted-1/in-de20.yml                                    true                             5.40        2.00  apollon077
+loops-crafted-1/in-de31.yml                                    true                             5.87        2.11  apollon024
+loops-crafted-1/in-de32.yml                                    true                             5.99        2.16  apollon158
+loops-crafted-1/in-de41.yml                                    true                            12.67        3.60  apollon133
+loops-crafted-1/in-de42.yml                                    true                            16.87        5.22  apollon077
+loops-crafted-1/in-de51.yml                                    true                            23.31        6.76  apollon136
+loops-crafted-1/in-de52.yml                                    unknown                         34.90       12.41  apollon156
+loops-crafted-1/in-de61.yml                                    unknown                         37.44       11.62  apollon086
+loops-crafted-1/in-de62.yml                                    unknown                         36.37       12.95  apollon090
+loops-crafted-1/loopv1.yml                                     unknown                         42.24       11.04  apollon081
+loops-crafted-1/loopv2.yml                                     unknown                         31.16       12.07  apollon149
+loops-crafted-1/loopv3.yml                                     ERROR                            0.54        0.34  apollon063
+loops-crafted-1/mono-crafted_1.yml                             unknown                         31.18       11.24  apollon100
+loops-crafted-1/mono-crafted_10.yml                            unknown                         33.88       12.89  apollon073
+loops-crafted-1/mono-crafted_11.yml                            unknown                         34.96       11.00  apollon039
+loops-crafted-1/mono-crafted_12.yml                            unknown                         36.99       12.74  apollon011
+loops-crafted-1/mono-crafted_13.yml                            unknown                         36.91       11.07  apollon139
+loops-crafted-1/mono-crafted_14.yml                            unknown                         33.02       12.08  apollon111
+loops-crafted-1/mono-crafted_3.yml                             unknown                         32.43       12.72  apollon131
+loops-crafted-1/mono-crafted_6.yml                             true                            37.07       10.52  apollon127
+loops-crafted-1/mono-crafted_7.yml                             unknown                         34.45       12.80  apollon116
+loops-crafted-1/mono-crafted_8.yml                             unknown                         32.18       12.13  apollon075
+loops-crafted-1/mono-crafted_9.yml                             unknown                         30.54       11.07  apollon124
+loops-crafted-1/nested3-1.yml                                  true                             9.10        2.79  apollon080
+loops-crafted-1/nested3-2.yml                                  unknown                         39.73       11.04  apollon037
+loops-crafted-1/nested5-1.yml                                  true                             7.46        2.43  apollon001
+loops-crafted-1/nested5-2.yml                                  unknown                         39.18       11.06  apollon154
+loops-crafted-1/nested_delay_nd.yml                            ERROR                            0.57        0.35  apollon148
+loops-crafted-1/nested_delay_notd2.yml                         ERROR                            0.58        0.36  apollon032
+loops-crafted-1/net_reset.yml                                  ERROR                            0.45        0.27  apollon073
+loops-crafted-1/sum_by_3.yml                                   ERROR                            0.55        0.34  apollon106
+loops-crafted-1/sum_natnum.yml                                 ERROR                            0.56        0.33  apollon164
+loops-crafted-1/sumt2.yml                                      true                             7.30        2.35  apollon014
+loops-crafted-1/sumt3.yml                                      true                            11.65        3.25  apollon029
+loops-crafted-1/sumt4.yml                                      true                            41.25       10.58  apollon059
+loops-crafted-1/sumt5.yml                                      true                            16.52        4.42  apollon053
+loops-crafted-1/sumt6.yml                                      unknown                         41.18       11.09  apollon072
+loops-crafted-1/sumt7.yml                                      true                            12.67        3.58  apollon027
+loops-crafted-1/sumt8.yml                                      true                            14.71        3.97  apollon053
+loops-crafted-1/sumt9.yml                                      true                            16.90        4.54  apollon019
+loops-crafted-1/theatreSquare.yml                              unknown                         40.00       12.57  apollon099
+loops-crafted-1/vnew1.yml                                      true                             5.47        2.04  apollon067
+loops-crafted-1/vnew2.yml                                      ERROR                            0.56        0.34  apollon122
+loops-crafted-1/watermelon.yml                                 unknown                         37.23       11.14  apollon082
+loop-invariants/bin-suffix-5.yml                               ERROR                            0.52        0.33  apollon014
+loop-invariants/const.yml                                      true                             3.28        1.51  apollon041
+loop-invariants/eq1.yml                                        true                             4.97        1.91  apollon104
+loop-invariants/eq2.yml                                        true                             3.44        1.64  apollon133
+loop-invariants/even.yml                                       unknown                         35.09       11.03  apollon119
+loop-invariants/linear-inequality-inv-a.yml                    unknown                         38.41       12.34  apollon025
+loop-invariants/linear-inequality-inv-b.yml                    unknown                         37.60       12.33  apollon049
+loop-invariants/mod4.yml                                       unknown                         38.17       11.23  apollon009
+loop-invariants/odd.yml                                        unknown                         37.09       11.12  apollon094
+loop-simple/deep-nested.yml                                    unknown                         39.10       11.02  apollon097
+loop-simple/nested_1.yml                                       true                             3.37        1.64  apollon148
+loop-simple/nested_1b.yml                                      false                            4.09        1.76  apollon117
+loop-simple/nested_2.yml                                       true                             7.49        2.48  apollon112
+loop-simple/nested_3.yml                                       true                            29.06        8.34  apollon043
+loop-simple/nested_4.yml                                       true                            34.56        9.05  apollon071
+loop-simple/nested_5.yml                                       true                            40.50       10.88  apollon109
+loop-simple/nested_6.yml                                       unknown                         43.07       11.63  apollon076
+verifythis/duplets.yml                                         ERROR                            0.62        0.39  apollon017
+verifythis/elimination_max.yml                                 ERROR                            0.58        0.35  apollon109
+verifythis/lcp.yml                                             ERROR                            0.56        0.35  apollon118
+verifythis/prefixsum_iter.yml                                  ERROR                            0.58        0.36  apollon040
+verifythis/tree_del_iter.yml                                   ERROR                            0.65        0.38  apollon163
+verifythis/tree_del_iter_incorrect.yml                         ERROR                            0.57        0.34  apollon123
+nla-digbench/bresenham.yml                                     unknown                         48.44       12.13  apollon046
+nla-digbench/cohencu.yml                                       unknown                         30.89       11.13  apollon078
+nla-digbench/cohendiv.yml                                      unknown                         44.36       11.04  apollon115
+nla-digbench/dijkstra.yml                                      unknown                         31.08       11.24  apollon162
+nla-digbench/divbin.yml                                        ERROR                           15.81        4.36  apollon071
+nla-digbench/divbin2.yml                                       unknown                         44.11       11.01  apollon148
+nla-digbench/egcd.yml                                          unknown                         44.75       11.08  apollon102
+nla-digbench/egcd2.yml                                         unknown                         43.08       11.07  apollon052
+nla-digbench/egcd3.yml                                         unknown                         44.41       11.09  apollon010
+nla-digbench/fermat1.yml                                       ERROR                            0.50        0.31  apollon093
+nla-digbench/fermat2.yml                                       ERROR                            0.51        0.31  apollon069
+nla-digbench/freire1.yml                                       ERROR                            0.50        0.31  apollon042
+nla-digbench/freire2.yml                                       ERROR                            0.51        0.32  apollon091
+nla-digbench/geo1.yml                                          ERROR                           34.44        8.89  apollon083
+nla-digbench/geo2.yml                                          unknown                         43.63       11.03  apollon130
+nla-digbench/geo3.yml                                          unknown                         34.42       11.03  apollon026
+nla-digbench/hard.yml                                          unknown                         51.71       13.05  apollon137
+nla-digbench/hard2.yml                                         true                            20.10        5.38  apollon055
+nla-digbench/knuth.yml                                         ERROR                            0.56        0.34  apollon057
+nla-digbench/lcm1.yml                                          unknown                         44.83       11.04  apollon056
+nla-digbench/lcm2.yml                                          unknown                         51.48       12.88  apollon065
+nla-digbench/mannadiv.yml                                      true                            41.89       10.86  apollon160
+nla-digbench/prod4br.yml                                       ERROR                           29.94        7.71  apollon004
+nla-digbench/prodbin.yml                                       ERROR                            0.49        0.30  apollon133
+nla-digbench/ps2.yml                                           unknown                         25.20       11.03  apollon002
+nla-digbench/ps3.yml                                           unknown                         35.83       11.07  apollon068
+nla-digbench/ps4.yml                                           unknown                         42.70       11.05  apollon096
+nla-digbench/ps5.yml                                           unknown                         40.36       11.10  apollon060
+nla-digbench/ps6.yml                                           unknown                         37.75       11.04  apollon044
+nla-digbench/sqrt1.yml                                         unknown                         40.09       11.06  apollon061
+----------------------------------------------------------------------------------------------------------------------------
+Run set 1                                                      done                             None       43.29           -
+
+Statistics:            296 Files
+  correct:             106
+    correct true:       87
+    correct false:      19
+  incorrect:             0
+    incorrect true:      0
+    incorrect false:     0
+  unknown:             190
+  Score:               193 (max: 523)
