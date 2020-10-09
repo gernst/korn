@@ -21,7 +21,7 @@ object Main {
   var model = false
   var unbounded = false
   var write = false
-  var timeout = 10
+  var timeout = 900 // SV-COMP default
   var prove: Seq[String] = Seq()
 
   var files = mutable.Buffer[String]()

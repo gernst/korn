@@ -8,6 +8,7 @@
 
   <option name="-q"/>
   <option name="-s0"/>
+  <option name="-t">900</option>
   <option name="-z3"/>
 
 <rundefinition name="sv-comp20_prop-reachsafety">
