@@ -22,9 +22,14 @@ KORN_FLAGS ?=
 ARCHIVES = archives-2021/2021
 KORN_DIST = run korn.jar z3 eld eld.jar LICENSE LICENSE.z3 LICENSE.Eldarica
 
-all: $(KORN_JAR) $(KORN_ASSEMBLY) $(KORN_SH)
+all: $(KORN_JAR) $(KORN_ASSEMBLY) $(KORN_SH) plots
 
 examples: $(KORN_SMT)
+
+plots: quantile.gp.pdf
+
+quantile.gp.pdf: $(CSV) quantile.gp
+	gnuplot quantile.gp
 
 parser: $(KORN_JAVA)
 
@@ -73,6 +78,8 @@ $(KORN_SH): $(KORN_LAUNCHER)
 	@echo $@
 	$(KORN_SH) $(KORN_FLAGS) $< > $@
 
+BZ2         = $(wildcard test/results/*.results.sv-comp20_prop-reachsafety.ReachSafety-Loops.xml.bz2)
+CSV         = $(BZ2:.results.sv-comp20_prop-reachsafety.ReachSafety-Loops.xml.bz2=.csv)
 QUANTILE_GENERATOR = ~/tools/benchexec/contrib/plots/quantile-generator.py
 
 test/results/%.csv: test/results/%.results.sv-comp20_prop-reachsafety.ReachSafety-Loops.xml.bz2
