@@ -28,9 +28,6 @@ examples: $(KORN_SMT)
 
 plots: quantile.gp.pdf
 
-quantile.gp.pdf: $(CSV) quantile.gp
-	gnuplot quantile.gp
-
 parser: $(KORN_JAVA)
 
 archives-2021: $(ARCHIVES)/korn.zip
@@ -78,9 +75,14 @@ $(KORN_SH): $(KORN_LAUNCHER)
 	@echo $@
 	$(KORN_SH) $(KORN_FLAGS) $< > $@
 
-BZ2         = $(wildcard test/results/*.results.sv-comp20_prop-reachsafety.ReachSafety-Loops.xml.bz2)
-CSV         = $(BZ2:.results.sv-comp20_prop-reachsafety.ReachSafety-Loops.xml.bz2=.csv)
+RESULTS     = test/2020-10-10.results
+BZ2         = $(wildcard $(RESULTS)/*.results.sv-comp20_prop-reachsafety.xml.bz2)
+CSV         = $(BZ2:.results.sv-comp20_prop-reachsafety.xml.bz2=.csv)
 QUANTILE_GENERATOR = ~/tools/benchexec/contrib/plots/quantile-generator.py
 
-test/results/%.csv: test/results/%.results.sv-comp20_prop-reachsafety.ReachSafety-Loops.xml.bz2
-	$(QUANTILE_GENERATOR) $< > $@
+$(RESULTS)/%.csv: $(RESULTS)/%.results.sv-comp20_prop-reachsafety.xml.bz2
+	$(QUANTILE_GENERATOR) --correct $< > $@
+
+quantile.gp.pdf: $(CSV) quantile.gp
+	gnuplot quantile.gp
+

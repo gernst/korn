@@ -7,14 +7,12 @@
 
 # Gnuplot definition for a quantile plot
 
-set term pdfcairo font "cmr12,14"
-
 # set axis labels
 set xlabel 'n-th fastest correct result'
 set ylabel "CPU time (s)" offset 2
 
 # set value range
-set xrange [0:300]
+set xrange [0:250]
 set yrange [0.1:1000]
 
 # use logscale
@@ -25,27 +23,27 @@ set key left top Left reverse
 #set key bottom right
 
 set output "quantile.gp.pdf"
-set terminal pdf
+set terminal pdf font "cmr12,14"
 
 set style data linespoints
 
 # plot with data points from prepared CSV files (more lines can be added here)
 plot \
-     "test/results/loops-eld-invariants-900.2020-10-09_13-46-17.csv" \
+     "test/2020-10-10.results/eld-invariants-900.2020-10-10_15-36-15.csv" \
         using 1:5 title "Eldarica (invariants)" \
-        with linespoints lw 1.5 lt rgb "red" pointinterval -90 ps 0.5, \
-     "test/results/loops-eld-summaries-only-900.2020-10-09_13-46-18.csv" \
+        with linespoints lw 1.5 lt rgb "red" pointinterval -213 ps 0.5, \
+     "test/2020-10-10.results/eld-summaries-only-900.2020-10-10_15-36-16.csv" \
         using 1:5 title "Eldarica (summaries)" \
-        with linespoints lw 1.5 lt rgb "blue" pointinterval -90 ps 0.5, \
-     "test/results/loops-eld-summaries-900.2020-10-09_13-46-18.csv" \
+        with linespoints lw 1.5 lt rgb "blue" pointinterval -205 ps 0.5, \
+     "test/2020-10-10.results/eld-summaries-900.2020-10-10_15-36-15.csv" \
         using 1:5 title "Eldarica (both)" \
-        with linespoints lw 1.5 lt rgb "black" pointinterval -90 ps 0.5, \
-     "test/results/loops-z3-invariants-900.2020-10-09_13-46-19.csv" \
+        with linespoints lw 1.5 lt rgb "black" pointinterval -200 ps 0.5, \
+     "test/2020-10-10.results/z3-invariants-900.2020-10-10_15-36-17.csv" \
         using 1:5 title "Z3 (invariants)" \
-        with linespoints lw 1.5 lt rgb "red" pointinterval -90 ps 0.5, \
-     "test/results/loops-z3-summaries-only-900.2020-10-09_13-46-17.csv" \
+        with linespoints lw 1.5 lt rgb "red" pointinterval -226 ps 0.5, \
+     "test/2020-10-10.results/z3-summaries-only-900.2020-10-10_15-36-18.csv" \
         using 1:5 title "Z3 (summaries)" \
-        with linespoints lw 1.5 lt rgb "blue" pointinterval -45 ps 0.5, \
-     "test/results/loops-z3-summaries-900.2020-10-09_13-46-15.csv" \
+        with linespoints lw 1.5 lt rgb "blue" pointinterval -190 ps 0.5, \
+     "test/2020-10-10.results/z3-summaries-900.2020-10-10_15-36-18.csv" \
         using 1:5 title "Z3 (both)" \
-        with linespoints lw 1.5 lt rgb "black" pointinterval -45 ps 0.5
+        with linespoints lw 1.5 lt rgb "black" pointinterval -194 ps 0.5
