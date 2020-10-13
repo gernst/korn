@@ -117,6 +117,10 @@ Notable supported features
 but beware that if your task requires a recursive model as summary for e.g. a recursive function,
 then the solver will not be able to infer it (timeout, or `unsat` even if the program is correct)
 
+If you want to hack the code, VS Code with [Scala Metals](docs/build-tools/bloop.html)
+should work out of the box. Simply open the folder in VS Code and follow the
+suggestion to install the Scala Metals extension.
+
 ## Evaluation
 
 See the files in `xml` for [benchmark
