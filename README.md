@@ -93,10 +93,11 @@ which handles local statements.
 The translation is parameterized by the different classes in
 `korn/src/Horn.scala`, differing e.g. in the use of invariants vs summaries,
 and consequentially possibly using relational predicates to summarise join-points.
+See object `Config` on how these are assembled into a stategy.
 
 The implementation currently suffers from a few limitations:.
 Arrays are treated as value types without bounds, and there is no model of the
-  heap currently, which is unsound but sufficient as a work-around in some cases
+heap currently, which is unsound but sufficient as a work-around in some cases.
 
 Other unsupported features of C (not exhaustive):
 
