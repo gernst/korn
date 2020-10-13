@@ -116,3 +116,11 @@ Notable supported features
 
 but beware that if your task requires a recursive model as summary for e.g. a recursive function,
 then the solver will not be able to infer it (timeout, or `unsat` even if the program is correct)
+
+## Evaluation
+
+See the files in `xml` for [benchmark
+definitions](https://github.com/sosy-lab/benchexec).
+For the paper, the we used `xml/<solver>-*-900.xml`.
+
+Instructions for repeatability fill follow.
