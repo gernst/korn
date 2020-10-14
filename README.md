@@ -132,4 +132,6 @@ See the files in `xml` for [benchmark
 definitions](https://github.com/sosy-lab/benchexec).
 For the paper, the we used `xml/<solver>-*-900.xml`.
 
+`ReachSafety-Korn.set` contains a list of all supported benchmarks.
+
 Instructions for repeatability will follow.
