@@ -13,9 +13,14 @@ The theory, examples, and an evaluation with
 is described in Gidon Ernst: *A Complete Approach to Loop Verification with Invariants and Summaries*
 [Preprint on arXiv](https://arxiv.org/abs/2010.05812).
 
+File `Summaries.thy` contains an [Isabelle 2020](https://isabelle.in.tum.de/index.html) theory
+that mechanizes the main definitions and proofs.
+The file annotates each definition and result with a reference the paper (see Sec 3 and 4).
+To validate, simply open the file, scroll down, and place the cursor at the very end.
+
 ## Compilation
 
-You need Java~11. Simply type
+You need Java 11. Simply type
 
     make
 
