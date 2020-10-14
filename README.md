@@ -132,4 +132,4 @@ See the files in `xml` for [benchmark
 definitions](https://github.com/sosy-lab/benchexec).
 For the paper, the we used `xml/<solver>-*-900.xml`.
 
-Instructions for repeatability fill follow.
+Instructions for repeatability will follow.
