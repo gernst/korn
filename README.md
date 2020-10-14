@@ -10,7 +10,7 @@ which are a fundamental and principled technique, complementary to invariants.
 
 The theory, examples, and an evaluation with
 [standard benchmarks](https://github.com/sosy-lab/sv-benchmarks)
-is described in Gidon Ernst: *A Complete Approach to Loop Verification with Invariants and Summaries*
+is described in Gidon Ernst: *A Complete Approach to Loop Verification with Invariants and Summaries*,
 [Preprint on arXiv](https://arxiv.org/abs/2010.05812).
 
 File `Summaries.thy` contains an [Isabelle 2020](https://isabelle.in.tum.de/index.html) theory
