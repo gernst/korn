@@ -114,7 +114,7 @@ proof -
     by auto
 qed
 
-(* Definition: Loop Summary *)
+(* Definition 4: Loop Summary *)
 inductive summary :: "'a cond \<Rightarrow> 'a body \<Rightarrow> 'a rel \<Rightarrow> bool" where
 summaryI[intro!]:
 "\<lbrakk>\<And> s.       \<lbrakk>\<not> t s\<rbrakk> \<Longrightarrow> R s s;
@@ -221,7 +221,7 @@ proof (rule invariant_correctI)
     moreover assume "t s" "B s (Some (Break s'))"
     ultimately show "Q s'"
       using assms(1) by blast
-  qed
+qed
 
 (* Proposition 2: Lifting of Postconditions to Summaries *)
 proposition lift_post:
@@ -236,5 +236,47 @@ corollary coincidence:
     \<longleftrightarrow> (\<exists> J R.  invariant_safe P J t B
                \<and> summary_correct P t B R Q)"
   using lift_summary lift_post by (metis (mono_tags, lifting))
+
+
+(* Soundness of a "stronger" formulation that includes invariants in the conditions for summaries,
+   all in one large set of proof obligations,  note the additional assumption I s for the backwards propagation conditions. *)
+inductive combined :: "'a cond \<Rightarrow> 'a cond \<Rightarrow> 'a cond \<Rightarrow> 'a body \<Rightarrow> 'a rel \<Rightarrow> 'a cond \<Rightarrow> bool" where
+combinedI[intro!]:
+"\<lbrakk>\<And> s0.      \<lbrakk>P s0\<rbrakk> \<Longrightarrow> I s0;
+  \<And> s s'.    \<lbrakk>I s; t s; B s (Some (Ok    s'))\<rbrakk> \<Longrightarrow> I s';
+ 
+  \<And> s.       \<lbrakk>I s; t s; B s None\<rbrakk> \<Longrightarrow> False;
+  
+  \<And> s.       \<lbrakk>I s; \<not> t s\<rbrakk> \<Longrightarrow> R s s;
+  \<And> s s'.    \<lbrakk>I s; t s; B s (Some (Break s'))\<rbrakk> \<Longrightarrow> R s s';
+  \<And> s s' sn. \<lbrakk>I s; t s; R s' sn; B s (Some (Ok s'))\<rbrakk> \<Longrightarrow> R s sn;
+
+  \<And> s0 sn.   \<lbrakk>P s0; R s0 sn\<rbrakk> \<Longrightarrow> Q sn\<rbrakk>
+  \<Longrightarrow> combined P I t B R Q"
+
+inductive_cases combinedE[elim!]: "combined P I t B R Q"
+
+(* Soundness of the combined approach, direct proof *)
+theorem combined_sound:
+  assumes "combined P I t B R Q"
+  shows   "hoare P (while t B) Q"
+proof (rule hoareI)
+  fix s r
+  assume P: "P s"
+  with assms have I: "I s"
+    by blast
+  assume "while t B s r"
+  then obtain s' where "r = Some s'" "R s s'"
+    using I assms by induction blast+
+  then show "\<exists>s'. r = Some s' \<and> Q s'"
+    using P assms by blast
+qed
+
+(* Proposition 3: Coincidence of the Combined Approach *)
+lemma
+  "combined P I t B R Q
+    \<longleftrightarrow> invariant_safe P I t B \<and>
+        summary_correct P t B (\<lambda> s sn. I s \<longrightarrow> R s sn) Q"
+  by blast
 
 end
