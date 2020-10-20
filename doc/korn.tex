@@ -7,6 +7,7 @@
 \usepackage{stmaryrd}
 \usepackage{mathtools}
 \usepackage{tabto}
+\usepackage{comment}
 \usepackage{xspace}
 
 \usepackage{hyperref}
@@ -22,8 +23,8 @@
 \newcommand{\False}{\mathit{false}}
 \newcommand{\True}{\mathit{true}}
 
-\author{Gidon Ernst}
-\title{\Korn - Software Verification \\ with Invariants and Summaries}
+\author{Gidon Ernst\thanks{Jury Member}}
+\title{\Korn---Software Verification \\ with Invariants and Summaries}
 \institute{LMU Munich \\ \mailto{gidon.ernst@lmu.de}}
 
 \begin{document}
@@ -31,15 +32,15 @@
 \maketitle
 
 \begin{abstract}
-    \Korn is a software verification tool that translates
-    C~programs into systems of Horn clauses
-    and uses off-the-shelf backends to solve these.
-    In contrast to prior approaches, loops are encoded using
-    not just invariants but also summaries.
-    Invariants characterize a partial result computed by a loop so far.
-    Summaries in contrast capture the complete computation in relation to some intermediate state.
-\end{abstract}
+    \Korn is a software verifier that infers correctness certificates automatically using state-of-the-art Horn-clause solvers, such as Z3 and Eldarica.
+    The novel aspect is that it uses not only invariants but also summaries, which are a fundamental and principled technique, complementary to invariants~\cite{hehner1999refinement,hehner2005specified,tuerk2010local}.
+    More details about the approach can be found in~\cite{ernst:arxiv2020:summaries}.
+    The tool is available at \url{https://github.com/gernst/korn}
 
+\end{abstract}
+    \keywords{Software Verification \and Horn clauses \and Loop Specifications}
+
+\begin{comment}
 \section{Verification Approach}
 \label{sec:approach}
 1
@@ -120,6 +121,7 @@ The source code is available via \url{https://github.com/gernst/korn} under the 
 
 Gregor Alexandru~\cite{alexandru2019} and Johannes Blau have contributed
 key insights to the methodology outlined in \cref{sec:approach}.
+\end{comment}
 
 \bibliographystyle{splncs04}
 \bibliography{korn.bib}
