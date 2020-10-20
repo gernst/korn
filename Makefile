@@ -75,9 +75,15 @@ $(KORN_SH): $(KORN_LAUNCHER)
 	@echo $@
 	$(KORN_SH) $(KORN_FLAGS) $< > $@
 
-RESULTS     = test/2020-10-10.results
-BZ2         = $(wildcard $(RESULTS)/*.results.sv-comp20_prop-reachsafety.xml.bz2)
-CSV         = $(BZ2:.results.sv-comp20_prop-reachsafety.xml.bz2=.csv)
+RESULTS  = test/2020-10-10.results
+SVCOMP20 = svcomp20/results-verified
+
+BZ2     = $(wildcard $(RESULTS)/*.results.sv-comp20_prop-reachsafety.xml.bz2)
+CSV     = $(BZ2:.results.sv-comp20_prop-reachsafety.xml.bz2=.csv) \
+          $(SVCOMP20)/cpa-seq.filtered.csv \
+		  $(SVCOMP20)/uautomizer.filtered.csv \
+		  $(SVCOMP20)/veriabs.filtered.csv
+
 QUANTILE_GENERATOR = ~/tools/benchexec/contrib/plots/quantile-generator.py
 
 $(RESULTS)/%.csv: $(RESULTS)/%.results.sv-comp20_prop-reachsafety.xml.bz2
@@ -86,4 +92,26 @@ $(RESULTS)/%.csv: $(RESULTS)/%.results.sv-comp20_prop-reachsafety.xml.bz2
 quantile.gp.pdf: $(CSV) quantile.gp
 	gnuplot quantile.gp
 
+%.filtered.csv: %.csv
+	./filter.py ReachSafety-Korn.nodirs.set $< > $@
 
+$(SVCOMP20)/cpa-seq.csv: \
+	$(SVCOMP20)/cpa-seq.2019-11-29_1400.results.sv-comp20_prop-reachsafety.ReachSafety-Arrays.xml.bz2 \
+	$(SVCOMP20)/cpa-seq.2019-11-29_1400.results.sv-comp20_prop-reachsafety.ReachSafety-ControlFlow.xml.bz2 \
+	$(SVCOMP20)/cpa-seq.2019-11-29_1400.results.sv-comp20_prop-reachsafety.ReachSafety-Loops.xml.bz2 \
+	$(SVCOMP20)/cpa-seq.2019-11-29_1400.results.sv-comp20_prop-reachsafety.ReachSafety-Recursive.xml.bz2
+	$(QUANTILE_GENERATOR) --correct $^ > $@
+
+$(SVCOMP20)/uautomizer.csv: \
+	$(SVCOMP20)/uautomizer.2019-12-07_1005.results.sv-comp20_prop-reachsafety.ReachSafety-Arrays.xml.bz2 \
+	$(SVCOMP20)/uautomizer.2019-12-07_1005.results.sv-comp20_prop-reachsafety.ReachSafety-ControlFlow.xml.bz2 \
+	$(SVCOMP20)/uautomizer.2019-12-07_1005.results.sv-comp20_prop-reachsafety.ReachSafety-Loops.xml.bz2 \
+	$(SVCOMP20)/uautomizer.2019-12-07_1005.results.sv-comp20_prop-reachsafety.ReachSafety-Recursive.xml.bz2
+	$(QUANTILE_GENERATOR) --correct $^ > $@
+
+$(SVCOMP20)/veriabs.csv: \
+	$(SVCOMP20)/veriabs.2019-12-07_1015.results.sv-comp20_prop-reachsafety.ReachSafety-Arrays.xml.bz2 \
+	$(SVCOMP20)/veriabs.2019-12-07_1015.results.sv-comp20_prop-reachsafety.ReachSafety-ControlFlow.xml.bz2 \
+	$(SVCOMP20)/veriabs.2019-12-07_1015.results.sv-comp20_prop-reachsafety.ReachSafety-Loops.xml.bz2 \
+	$(SVCOMP20)/veriabs.2019-12-07_1015.results.sv-comp20_prop-reachsafety.ReachSafety-Recursive.xml.bz2
+	$(QUANTILE_GENERATOR) --correct $^ > $@

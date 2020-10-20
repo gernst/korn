@@ -12,7 +12,7 @@ set xlabel 'n-th fastest correct result'
 set ylabel "CPU time (s)" offset 2
 
 # set value range
-set xrange [0:250]
+set xrange [-10:410]
 set yrange [0.1:1000]
 
 # use logscale
@@ -23,12 +23,21 @@ set key left top Left reverse
 #set key bottom right
 
 set output "quantile.gp.pdf"
-set terminal pdf font "cmr12,14"
+set terminal pdf font "cmr10,12"
 
 set style data linespoints
 
 # plot with data points from prepared CSV files (more lines can be added here)
 plot \
+     "svcomp20/results-verified/cpa-seq.filtered.csv" \
+        using 1:4 title "CPA-seq" \
+        with linespoints lw 1.5 dt "-" lt rgb "black" pointinterval -500 ps 0.5, \
+     "svcomp20/results-verified/uautomizer.filtered.csv" \
+        using 1:4 title "UAutomizer" \
+        with linespoints lw 2.5 dt "." lt rgb "black" pointinterval -190 ps 0.5, \
+     "svcomp20/results-verified/veriabs.filtered.csv" \
+        using 1:4 title "VeriAbs" \
+        with linespoints lw 1.5 lt rgb "#999999" pointinterval -300 ps 0.5, \
      "test/2020-10-10.results/eld-invariants-900.2020-10-10_15-36-15.csv" \
         using 1:5 title "Eldarica (invariants)" \
         with linespoints lw 1.5 lt rgb "red" pointinterval -213 ps 0.5, \
