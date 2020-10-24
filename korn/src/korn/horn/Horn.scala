@@ -8,7 +8,7 @@ object Config {
   def apply(which: String): Config = {
     which match {
       case "default" =>
-        Config(Branch.default, Loop.default)
+        Config(Branch.relational, Loop.default)
       case "summaries" =>
         Config(Branch.relational, Loop.summaries(only = false))
       case "summaries-only" =>

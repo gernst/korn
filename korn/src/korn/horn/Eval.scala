@@ -308,26 +308,17 @@ class Eval(unit: Unit) {
           val (_arg2, st3) = rval(arg2, st0, st2)
           (binop(op, _arg1, _arg2), st3)
 
-        /* case Question(test, left, right) =>
-        val _test_st = rval_test(test, st1)
+        case Question(test, arg1, arg2) =>
+          val (_test, st2) = rval_test(test, st0, st1)
+          val (_arg1, sty) = rval(arg1, st0, st2 and _test)
+          val (_arg2, stn) = rval(arg2, st0, st2 and !_test)
 
-        val _true =
-          val
-            (_test, st2) = _test_st;
-            st2_true = st2 and _test;
-            (_left, st3) = rval(left, st2_true)
-          )
-            yield (_left, st3)
-
-        val _false =
-          val
-            (_test, st2) = _test_st;
-            st2_false = st2 and !_test;
-            (_right, st3) = rval(right, st2_false)
-          )
-            yield (_right, st3)
-
-        _true ++ _false */
+          if (false && st2.store == sty.store && st2.store == stn.store) {
+            (_test ? (_arg1, _arg2), st2)
+          } else {
+            val st3 = branch.join(st0, sty, "ite left", stn, "ite right", proc)
+            (_test ? (_arg1, _arg2), st3)
+          }
 
         case stdlib.exit() =>
           (null, st1 and False)

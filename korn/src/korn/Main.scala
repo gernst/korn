@@ -197,8 +197,10 @@ object Main {
     import korn.smt.sexpr
     out.println(sexpr("set-logic", "HORN"))
 
-    if (model)
+    if (model) {
       out.println(sexpr("set-option", ":produce-models", "true"))
+      out.println(sexpr("set-option", ":produce-unsat-cores", "true"))
+    }
 
     out.println()
 
@@ -241,8 +243,10 @@ object Main {
 
     out.println(sexpr("check-sat"))
 
-    if (model)
+    if (model) {
       out.println(sexpr("get-model"))
+      out.println(sexpr("get-unsat-core"))
+    }
 
     out.flush()
   }
