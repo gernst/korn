@@ -5,11 +5,12 @@ case object Sat extends Status
 case object Unsat extends Status
 case object Unknown extends Status
 
-case class Model(defs: Map[String, (List[(Var, Sort)], Pure)])
+case class Def(args: List[Param], body: Pure)
+case class Model(defs: Map[String, Def])
 
-object Model extends (List[(String, (List[(Var, Sort)], Pure))] => Model) {
-  def apply(args: List[(String, (List[(Var, Sort)], Pure))]): Model = {
-    Model(args.toMap)
+object Model extends (List[(String, Def)] => Model) {
+  def apply(defs: List[(String, Def)]): Model = {
+    Model(defs.toMap)
   }
 }
 

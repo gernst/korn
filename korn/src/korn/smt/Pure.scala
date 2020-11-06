@@ -183,3 +183,8 @@ object Var extends (String => Var) {
     Var(name, None)
   }
 }
+
+case class Param(x: Var, sort: Sort) {
+  def rename(re: Map[Var, Var]) = Param(x rename re, sort)
+  override def toString =  sexpr(x, sort)
+}

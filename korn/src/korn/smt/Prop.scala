@@ -82,22 +82,22 @@ object Prop {
 
   case class truth(arg: Pure) extends Prop {
     def free = arg.free
-    def rename(re: Map[Var, Var]) = truth(arg rename re)
-    def subst(su: Map[Var, Pure]) = truth(arg subst su)
+    def rename(re: Map[Var, Var]) = Prop.truth(arg rename re)
+    def subst(su: Map[Var, Pure]) = Prop.truth(arg subst su)
     override def toString = sexpr("not", sexpr("=", arg, 0))
   }
 
   case class eqn(left: Pure, right: Pure) extends Prop {
     def free = left.free ++ right.free
-    def rename(re: Map[Var, Var]) = eqn(left rename re, right rename re)
-    def subst(su: Map[Var, Pure]) = eqn(left subst su, right subst su)
+    def rename(re: Map[Var, Var]) = Prop.eqn(left rename re, right rename re)
+    def subst(su: Map[Var, Pure]) = Prop.eqn(left subst su, right subst su)
     override def toString = sexpr("=", left, right)
   }
 
   case class app(pred: Pred, args: List[Pure]) extends Prop {
     def free = Set(args flatMap (_.free): _*)
-    def rename(re: Map[Var, Var]) = app(pred, args map (_ rename re))
-    def subst(su: Map[Var, Pure]) = app(pred, args map (_ subst su))
+    def rename(re: Map[Var, Var]) = Prop.app(pred, args map (_ rename re))
+    def subst(su: Map[Var, Pure]) = Prop.app(pred, args map (_ subst su))
 
     override def toString = {
       if (args.isEmpty) pred.toString
@@ -107,8 +107,9 @@ object Prop {
 
   case class not(arg: Prop) extends Prop {
     def free = arg.free
-    def rename(re: Map[Var, Var]) = ???
-    def subst(su: Map[Var, Pure]) = ???
+    def rename(re: Map[Var, Var]) = Prop.not(arg rename re)
+    def subst(su: Map[Var, Pure]) = Prop.not(arg subst su)
+
     override def toString = {
       arg match {
         case truth(arg) => sexpr("=", arg, 0)
@@ -119,32 +120,53 @@ object Prop {
 
   case class and(arg1: Prop, arg2: Prop) extends Prop {
     def free = arg1.free ++ arg2.free
-    def rename(re: Map[Var, Var]) = ???
-    def subst(su: Map[Var, Pure]) = ???
+    def rename(re: Map[Var, Var]) = Prop.and(arg1 rename re, arg2 rename re)
+    def subst(su: Map[Var, Pure]) = Prop.and(arg1 subst su, arg2 subst su)
     override def toString = sexpr("and", arg1, arg2)
   }
 
   case class or(arg1: Prop, arg2: Prop) extends Prop {
     def free = arg1.free ++ arg2.free
-    def rename(re: Map[Var, Var]) = ???
-    def subst(su: Map[Var, Pure]) = ???
+    def rename(re: Map[Var, Var]) = Prop.or(arg1 rename re, arg2 rename re)
+    def subst(su: Map[Var, Pure]) = Prop.or(arg1 subst su, arg2 subst su)
     override def toString = sexpr("or", arg1, arg2)
   }
 
   case class imp(arg1: Prop, arg2: Prop) extends Prop {
     def free = arg1.free ++ arg2.free
-    def rename(re: Map[Var, Var]) = ???
-    def subst(su: Map[Var, Pure]) = ???
+    def rename(re: Map[Var, Var]) = Prop.imp(arg1 rename re, arg2 rename re)
+    def subst(su: Map[Var, Pure]) = Prop.imp(arg1 subst su, arg2 subst su)
     override def toString = sexpr("=>", arg1, arg2)
   }
 
   case class eqv(arg1: Prop, arg2: Prop) extends Prop {
     def free = arg1.free ++ arg2.free
-    def rename(re: Map[Var, Var]) = ???
-    def subst(su: Map[Var, Pure]) = ???
+    def rename(re: Map[Var, Var]) = Prop.eqv(arg1 rename re, arg2 rename re)
+    def subst(su: Map[Var, Pure]) = Prop.eqv(arg1 subst su, arg2 subst su)
     override def toString = sexpr("=", arg1, arg2)
   }
 
+  case class bind(quant: Quant, params: List[Param], body: Prop) extends Prop with Pure.bind[Prop] {
+    def bound = Set(params map (_.x): _*)
+    def free = body.free -- bound
+    def rename(a: Map[Var, Var], re: Map[Var, Var]) = Prop.bind(quant, params map (_ rename a), body rename re)
+    def subst(a: Map[Var, Var], su: Map[Var, Pure]) = Prop.bind(quant, params map (_ rename a), body subst su)
+    override def toString = sexpr(quant, sexpr(params), body)
+  }
+}
+
+sealed trait Quant {
+  def apply(params: List[Param], body: Prop) = {
+    Prop.bind(this, params, body)
+  }
+}
+
+case object All extends Quant {
+  override def toString = "forall"
+}
+
+case object Ex extends Quant {
+  override def toString = "exists"
 }
 
 case object True extends Prop {
