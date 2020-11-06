@@ -1,12 +1,44 @@
-package korn
+package korn.horn
 
 import korn.c._
 import korn.smt._
 
-sealed trait Val
+sealed trait Val {
+  def unary_-(): Val = ???
+  
+  def +(that: Val): Val = ???
+  def -(that: Val): Val = ???
+  def *(that: Val): Val = ???
+  def /(that: Val): Val = ???
+  def %(that: Val): Val = ???
+
+  def ===(that: Val): Prop = ???
+  def !==(that: Val): Prop = ???
+
+  def <(that: Val): Prop = ???
+  def <=(that: Val): Prop = ???
+  def >(that: Val): Prop = ???
+  def >=(that: Val): Prop = ???
+
+  def select(key: Val): Val = ???
+  def store(key: Val, arg: Val): Val = ???
+
+  def prop: Prop = ???
+}
+
 class Ptr extends Val
 
 object Val {
+  def to(arg: Val): Pure = ???
+  def to(args: List[Val]): List[Pure] = ???
+  def from(pure: Pure): Val = ???
+  def from(pures: List[Pure]): List[Val] = pures map Val.from
+
+  case class question(prop: Prop, left: Val, right: Val) extends Val
+  case class bool(arg: Prop) extends Val
+  case class truth(arg: Val) extends Val
+
+  case class unbounded(pure: Pure) extends Val
   case class signed(pure: Pure, bytes: Int) extends Val
   case class unsigned(pure: Pure, bytes: Int) extends Val
 

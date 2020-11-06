@@ -14,7 +14,7 @@ class Sig(unit: Unit) {
     val sig = names zip sorts
 
     def havoc: Store = {
-      val vars = fresh(sig)
+      val vars = Val.from(fresh(sig))
       Map(names zip vars: _*)
     }
 
@@ -80,7 +80,8 @@ class Sig(unit: Unit) {
   def fresh(name: String, typ: Sort): Var = {
     var x = Var(name, Some(Pure.next))
     typing += (x.toString -> typ)
-    x
+    // x
+    ???
   }
 
   def fresh(pairs: Iterable[(String, Sort)]): List[Var] = {

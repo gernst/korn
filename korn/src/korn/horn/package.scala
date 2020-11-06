@@ -5,7 +5,7 @@ package object horn {
   import korn.smt._
 
   type Typing = Map[String, Sort]
-  type Store = Map[String, Pure]
+  type Store = Map[String, Val]
 
   val known = Set(
     "main",

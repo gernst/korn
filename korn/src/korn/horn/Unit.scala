@@ -20,7 +20,7 @@ class Unit(stmts: List[Stmt]) {
   var pointers = false
 
   /** numeric constants defined by enums */
-  val consts = mutable.Map[String, Pure]()
+  val consts = mutable.Map[String, Val]()
 
   /** collected predicates and clauses */
   val pres = mutable.Map[String, Pred]()

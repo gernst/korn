@@ -7,24 +7,22 @@ class Eval(unit: Unit) {
   import unit._
   import unit.sig._
 
-  def bool(prop: Prop) = {
-    prop match {
+  def bool(arg: Prop): Val = {
+    ???
+    /* prop match {
       case _ => Pure.bool(prop)
-    }
+    } */
   }
 
-  def truth(pure: Pure) = {
-    pure match {
+  def truth(arg: Val): Prop = {
+    ???
+    /* pure match {
       case Pure.bool(prop) => prop
       case _               => Prop.truth(pure)
-    }
+    } */
   }
 
-  def index(arg1: Pure, arg2: Pure) = {
-    arg1 select arg2
-  }
-
-  def preop(op: String, arg: Pure): Pure = {
+  def preop(op: String, arg: Val): Val = {
     op match {
       case "+" => arg
       case "-" => -arg
@@ -32,7 +30,7 @@ class Eval(unit: Unit) {
     }
   }
 
-  def binop(op: String, arg1: Pure, arg2: Pure): Pure = {
+  def binop(op: String, arg1: Val, arg2: Val): Val = {
     op match {
       case "+"  => arg1 + arg2
       case "-"  => arg1 - arg2
@@ -48,28 +46,28 @@ class Eval(unit: Unit) {
     }
   }
 
-  def nondet_int(name: String, typ: Type, st1: State): (Pure, State) = {
+  def nondet_int(name: String, typ: Type, st1: State): (Val, State) = {
     val bound = Pure.one << (Type.sizeof(typ) * 8 - 1)
     val min = -bound
     val max = bound - 1
     nondet_int(name, min, max, st1)
   }
 
-  def nondet_uint(name: String, typ: Type, st1: State): (Pure, State) = {
+  def nondet_uint(name: String, typ: Type, st1: State): (Val, State) = {
     val bound = Pure.one << (Type.sizeof(typ) * 8)
     val min = Pure.zero
     val max = bound - 1
     nondet_int(name, min, max, st1)
   }
 
-  def nondet_int(name: String, min: Pure, max: Pure, st1: State): (Pure, State) = {
+  def nondet_int(name: String, min: Pure, max: Pure, st1: State): (Val, State) = {
     var x = fresh("$" + name, Sort.int)
     if (korn.Main.unbounded) {
-      (x, st1)
+      (Val.from(x), st1)
     } else {
       val bounds = (min <= x) and (x <= max)
       val st2 = st1 and bounds
-      (x, st2)
+      (Val.from(x), st2)
     }
   }
 
@@ -77,7 +75,7 @@ class Eval(unit: Unit) {
     truth(value(expr, st))
   }
 
-  def value(expr: Expr, st: State): Pure = {
+  def value(expr: Expr, st: State): Val = {
     expr match {
       case Id(name) if st contains name =>
         st(name)
@@ -85,14 +83,14 @@ class Eval(unit: Unit) {
       case Id(name) if consts contains name =>
         consts(name)
 
-      case Lit(value: Char) =>
+      /* case Lit(value: Char) =>
         Pure.const(value)
 
       case Lit(value: Int) =>
         Pure.const(value)
 
       case Lit(value: Long) =>
-        Pure.const(value)
+        Pure.const(value) */
 
       case Lit(value) =>
         korn.error("unknown constant: " + value + " of type " + value.getClass())
@@ -130,7 +128,7 @@ class Eval(unit: Unit) {
         val _test = value_test(test, st)
         val _left = value(left, st)
         val _right = value(right, st)
-        _test ? (_left, _right)
+        Val.question(_test, _left, _right)
 
       case _ =>
         korn.error("cannot evaluate: " + expr)
@@ -140,7 +138,7 @@ class Eval(unit: Unit) {
   class scoped(proc: Proc) {
     import proc._
 
-    def assign(lhs: Expr, rhs: Expr, st0: State, st1: State): (Pure, Pure, State) = {
+    def assign(lhs: Expr, rhs: Expr, st0: State, st1: State): (Val, Val, State) = {
       lhs match {
         case Id(name) if st1 contains name =>
           val _old = st1(name)
@@ -196,7 +194,7 @@ class Eval(unit: Unit) {
       (truth(_res), st2)
     }
 
-    def rvals(exprs: List[Expr], st0: State, st1: State): (List[Pure], State) = {
+    def rvals(exprs: List[Expr], st0: State, st1: State): (List[Val], State) = {
       exprs match {
         case Nil =>
           (Nil, st1)
@@ -208,7 +206,7 @@ class Eval(unit: Unit) {
       }
     }
 
-    def rval(expr: Expr, st0: State, st1: State): (Pure, State) = {
+    def rval(expr: Expr, st0: State, st1: State): (Val, State) = {
       expr match {
         case BinOp(",", fst, snd) =>
           val (_fst, st2) = rval(fst, st0, st1)
@@ -234,7 +232,7 @@ class Eval(unit: Unit) {
         case Index(arg1, arg2) =>
           val (_arg1, st2) = rval(arg1, st0, st1)
           val (_arg2, st3) = rval(arg2, st0, st2)
-          (index(_arg1, _arg2), st3)
+          (_arg1 select _arg2, st3)
 
         /* case PreOp("&", Arrow(ptr, field)) =>
         for ((_ptr, st2) = rval(ptr, st1))
@@ -314,10 +312,10 @@ class Eval(unit: Unit) {
           val (_arg2, stn) = rval(arg2, st0, st2 and !_test)
 
           if (false && st2.store == sty.store && st2.store == stn.store) {
-            (_test ? (_arg1, _arg2), st2)
+            (Val.question(_test, _arg1, _arg2), st2)
           } else {
             val st3 = branch.join(st0, sty, "ite left", stn, "ite right", proc)
-            (_test ? (_arg1, _arg2), st3)
+            (Val.question(_test, _arg1, _arg2), st3)
           }
 
         case stdlib.exit() =>
@@ -353,7 +351,7 @@ class Eval(unit: Unit) {
           var x = fresh("$bool", Sort.int)
           val bounds = (x === Pure.zero) or (x === Pure.one)
           val st2 = st1 and bounds
-          (x, st2)
+          (Val.from(x), st2)
 
         // signed integers
         case __VERIFIER.nondet_char() =>
@@ -422,18 +420,18 @@ class Eval(unit: Unit) {
           val (_ret, _out, st3) = sort match {
             case Some(sort) =>
               var x = fresh("$result", sort)
-              (x, List(x), st2)
+              (x, List(x: Pure), st2)
             case None =>
               (null, Nil, st2)
           }
 
           // XXX: need to return the modifed heap
-          val _pre = pre(_in)
-          val _call = post(_in ++ _out)
+          val _pre = pre(Val.to(_in))
+          val _call = post(Val.to(_in ++ _out))
 
           clause(st3, _pre, name + " precondition")
 
-          (_ret, st3 and _call)
+          (Val.from(_ret), st3 and _call)
 
         case Cast(typ, expr) =>
           rval(expr, st0, st1)

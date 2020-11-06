@@ -10,7 +10,11 @@ object Context {
   val empty = Context(Nil, Nil)
 }
 
-case class State(path: List[Prop], store: Store) extends (String => Pure) {
+case class State(path: List[Prop], store: Store) extends (String => Val) {
+  def and(that: Val): State = {
+    ???
+  }
+
   def and(that: Prop): State = {
     that match {
       case Prop.and(phi, psi) =>
@@ -30,8 +34,8 @@ case class State(path: List[Prop], store: Store) extends (String => Pure) {
   def contains(name: String) = store contains name
   def apply(name: String) = store(name)
   def apply(names: List[String]) = names map store
-  def +(that: (String, Pure)) = copy(store = store + that)
-  def ++(that: Iterable[(String, Pure)]) = copy(store = store ++ that)
+  def +(that: (String, Val)) = copy(store = store + that)
+  def ++(that: Iterable[(String, Val)]) = copy(store = store ++ that)
 }
 
 case class Hyp(inv: Pred, sum: Pred, si0: State, sin: State, siy: State, dont: Set[String])
