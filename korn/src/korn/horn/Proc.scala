@@ -34,7 +34,7 @@ class Proc(
 
     for ((name, sort) <- internal.sig) {
       env += (name -> sort)
-      st0 += (name -> vr(name, sort))
+      st0 += (name -> Val.from(vr(name, sort)))
     }
 
     state ++ st0
@@ -119,7 +119,7 @@ class Proc(
       case Return(Some(res)) =>
         val st2 = loop.return_(st0, st1, ctx.hyps, this)
         val (_res, st3) = rval(res, st0, st2)
-        contract.leave(st3, _res, this)
+        contract.leave(st3, Val.to(_res), this)
         unreach(st3)
 
       case Break =>

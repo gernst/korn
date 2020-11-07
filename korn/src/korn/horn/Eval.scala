@@ -427,7 +427,7 @@ class Eval(unit: Unit) {
 
           // XXX: need to return the modifed heap
           val _pre = pre(Val.to(_in))
-          val _call = post(Val.to(_in ++ _out))
+          val _call = post(Val.to(_in) ++ _out)
 
           clause(st3, _pre, name + " precondition")
 

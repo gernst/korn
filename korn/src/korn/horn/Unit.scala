@@ -52,7 +52,7 @@ class Unit(stmts: List[Stmt]) {
 
   def enum(cases: List[String]) = {
     for ((name, index) <- cases.zipWithIndex)
-      consts += name -> Pure.const(index)
+      consts += name -> Val.const(index)
   }
 
   def run() {
@@ -94,12 +94,12 @@ class Unit(stmts: List[Stmt]) {
         globals ++= List(formal)
         vars += name -> typ
         var x = fresh(name, resolve(typ))
-        state += (name -> x)
+        state += (name -> Val.from(x))
       case VarDef(formal @ Formal(typ, name), Some(init)) =>
         globals ++= List(formal)
         vars += name -> typ
         var x = fresh(name, resolve(typ))
-        state += (name -> x)
+        state += (name -> Val.from(x))
         val y = value(init, state)
         state += name -> y
       case FunDecl(ret, name, types) =>

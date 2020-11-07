@@ -29,12 +29,14 @@ sealed trait Val {
 class Ptr extends Val
 
 object Val {
+  def const(int: Int): Val = ???
+  
   def to(arg: Val): Pure = ???
   def to(args: List[Val]): List[Pure] = ???
   def from(pure: Pure): Val = ???
   def from(pures: List[Pure]): List[Val] = pures map Val.from
 
-  case class question(prop: Prop, left: Val, right: Val) extends Val
+  case class question(test: Prop, left: Val, right: Val) extends Val
   case class bool(arg: Prop) extends Val
   case class truth(arg: Val) extends Val
 

@@ -31,15 +31,18 @@ class Sig(unit: Unit) {
     }
 
     def apply(pred: Pred, st0: State): Prop = {
-      pred(st0(names))
+      // pred(st0(names))
+      ???
     }
 
     def apply(pred: Pred, res: Pure, st0: State): Prop = {
-      pred(st0(names) ++ List(res))
+      // pred(st0(names) ++ List(res))
+      ???
     }
 
     def apply(pred: Pred, st0: State, st1: State): Prop = {
-      pred(st0(names) ++ st1(names))
+      // pred(st0(names) ++ st1(names))
+      ???
     }
   }
 
