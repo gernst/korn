@@ -10,14 +10,14 @@ object Context {
   val empty = Context(Nil, Nil)
 }
 
-case class State(path: List[Prop], store: Store) extends (String => Val) {
+case class State(path: List[Pure], store: Store) extends (String => Val) {
   def and(that: Val): State = {
     ???
   }
 
-  def and(that: Prop): State = {
+  def and(that: Pure): State = {
     that match {
-      case Prop.and(phi, psi) =>
+      case Pure.and(phi, psi) =>
         this and psi and phi
       case _ =>
         copy(path = that :: path)
@@ -26,7 +26,7 @@ case class State(path: List[Prop], store: Store) extends (String => Val) {
 
   def maybePrune(pred: Pred, keep: Boolean) = {
     copy(path = path filter {
-      case Prop.app(`pred`, _) => keep
+      case Pure.app(`pred`, _) => keep
       case _                   => true
     })
   }

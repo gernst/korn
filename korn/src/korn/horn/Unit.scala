@@ -38,7 +38,7 @@ class Unit(stmts: List[Stmt]) {
   object sig extends Sig(this)
   object eval extends Eval(this)
 
-  def clause(st: State, phi: Prop, reason: String) {
+  def clause(st: State, phi: Pure, reason: String) {
     val f = (st.path contains False)
     val t = (st.path contains phi) || (phi == True)
 
@@ -46,7 +46,7 @@ class Unit(stmts: List[Stmt]) {
       clauses += Clause(st.path, phi, reason)
   }
 
-  def goal(st: State, phi: Prop, reason: String) {
+  def goal(st: State, phi: Pure, reason: String) {
     clause(st and !phi, False, reason)
   }
 

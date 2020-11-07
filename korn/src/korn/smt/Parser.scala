@@ -13,7 +13,6 @@ class Parseable[+A](p: Parser[A]) {
 
 object Parser {
   var funs: Map[String, Fun] = Map()
-  var preds: Map[String, Pred] = Map()
 
   implicit val whitespace: Whitespace = {
     new Whitespace("(\\s|(\\s*;.*(\\n|$)))*")
@@ -45,15 +44,10 @@ object Parser {
       funs(name)
   }
 
-  val pred = name collect {
-    case name if preds contains name =>
-      preds(name)
-  }
+  val pure: Parser[Pure] = P(t | f | const | id | num | parens(open))
+  val pures = pure.*
 
-  val pure: Parser[Pure] = P(const | id | num | parens(ite_ | let_ | select_ | store_ | app_))
-  val prop: Parser[Prop] = P(t | f | parens(not_ | and_ | or_ | imp_ | eqv_ | papp_))
-
-  val props = prop.*
+  val open = P(not_ | and_ | or_ | imp_ |ite_ | let_ | select_ | store_ | bind_ | app_)
 
   val id = P(Var(name | op))
   val pair = P(parens(id ~ pure))
@@ -61,7 +55,7 @@ object Parser {
   val formal = P(parens(Param(id ~ sort)))
   val formals = formal.*
   val num = P(Pure.const(bigint))
-  val ite_ = P(Pure.ite("ite" ~ prop ~ pure ~ pure))
+  val ite_ = P(Pure.ite("ite" ~ pure ~ pure ~ pure))
   val let_ = P(Pure.let("let" ~ parens(pair.+) ~ pure))
   val select_ = P(Pure.select("select" ~ pure ~ pure))
   val store_ = P(Pure.store("store" ~ pure ~ pure ~ pure))
@@ -69,16 +63,15 @@ object Parser {
 
   val t = P(True("true"))
   val f = P(True("false"))
-  val not_ = P(Prop.not("not" ~ prop))
-  val and_ = P(Prop.ands("and" ~ props))
-  val or_ = P(Prop.ors("or" ~ props))
-  val imp_ = P(Prop.imp("=>" ~ prop ~ prop))
-  val eqv_ = P(Prop.eqv("=" ~ prop ~ prop))
-  val papp_ = P(Prop.app(pred ~ pure.+))
+  val eqn = P(Pure.eqn("=" ~ pure ~ pure))
+  val not_ = P(Pure.not("not" ~ pure))
+  val and_ = P(Pure.ands("and" ~ pures))
+  val or_ = P(Pure.ors("or" ~ pures))
+  val imp_ = P(Pure.imp("=>" ~ pure ~ pure))
   val forall = All("forall")
   val exists = Ex("exists")
   val quant = P(forall | exists)
-  val bind_ = P(Prop.bind(quant ~ parens(formals) ~ prop))
+  val bind_ = P(Bind(quant ~ parens(formals) ~ pure))
 
   val def_ = Def(parens(formals) ~ pure)
   val fundef = P(parens("define-fun" ~ name ~ def_))

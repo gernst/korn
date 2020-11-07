@@ -210,9 +210,10 @@ object Main {
     }
 
     for (pred <- unit.preds) {
-      val korn.smt.Pred(name, args) = pred
-      val defn = sexpr("declare-fun", name, sexpr(args), "Bool")
-      out.println(defn)
+      // val korn.smt.Pred(name, args) = pred
+      // val defn = sexpr("declare-fun", name, sexpr(args), "Bool")
+      // out.println(defn)
+      ???
     }
     out.println()
 

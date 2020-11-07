@@ -12,18 +12,18 @@ sealed trait Val {
   def /(that: Val): Val = ???
   def %(that: Val): Val = ???
 
-  def ===(that: Val): Prop = ???
-  def !==(that: Val): Prop = ???
+  def ===(that: Val): Pure = ???
+  def !==(that: Val): Pure = ???
 
-  def <(that: Val): Prop = ???
-  def <=(that: Val): Prop = ???
-  def >(that: Val): Prop = ???
-  def >=(that: Val): Prop = ???
+  def <(that: Val): Pure = ???
+  def <=(that: Val): Pure = ???
+  def >(that: Val): Pure = ???
+  def >=(that: Val): Pure = ???
 
   def select(key: Val): Val = ???
   def store(key: Val, arg: Val): Val = ???
 
-  def prop: Prop = ???
+  def prop: Pure = ???
 }
 
 class Ptr extends Val
@@ -36,8 +36,8 @@ object Val {
   def from(pure: Pure): Val = ???
   def from(pures: List[Pure]): List[Val] = pures map Val.from
 
-  case class question(test: Prop, left: Val, right: Val) extends Val
-  case class bool(arg: Prop) extends Val
+  case class question(test: Pure, left: Val, right: Val) extends Val
+  case class bool(arg: Pure) extends Val
   case class truth(arg: Val) extends Val
 
   case class unbounded(pure: Pure) extends Val

@@ -3,6 +3,11 @@ package korn.horn
 import korn.c._
 import korn.smt._
 
+sealed trait Pred {
+  def name: String = ???
+  def apply(args: List[Pure]): Pure = ???
+}
+
 class Sig(unit: Unit) {
   import unit._
   import unit.sig._
@@ -30,17 +35,17 @@ class Sig(unit: Unit) {
       newPred(label, sorts ++ sorts)
     }
 
-    def apply(pred: Pred, st0: State): Prop = {
+    def apply(pred: Pred, st0: State): Pure = {
       // pred(st0(names))
       ???
     }
 
-    def apply(pred: Pred, res: Pure, st0: State): Prop = {
+    def apply(pred: Pred, res: Pure, st0: State): Pure = {
       // pred(st0(names) ++ List(res))
       ???
     }
 
-    def apply(pred: Pred, st0: State, st1: State): Prop = {
+    def apply(pred: Pred, st0: State, st1: State): Pure = {
       // pred(st0(names) ++ st1(names))
       ???
     }
@@ -64,9 +69,10 @@ class Sig(unit: Unit) {
   }
 
   def newPred(name: String, args: List[Sort]): Pred = {
-    val res = Pred(name, args)
+    /* val res = Pred(name, args)
     preds += res
-    res
+    res */
+    ???
   }
 
   def vr(name: String, typ: Sort): Var = {

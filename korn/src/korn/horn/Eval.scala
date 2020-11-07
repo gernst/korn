@@ -7,18 +7,18 @@ class Eval(unit: Unit) {
   import unit._
   import unit.sig._
 
-  def bool(arg: Prop): Val = {
+  def bool(arg: Pure): Val = {
     ???
-    /* prop match {
-      case _ => Pure.bool(prop)
+    /* Pure match {
+      case _ => Pure.bool(Pure)
     } */
   }
 
-  def truth(arg: Val): Prop = {
+  def truth(arg: Val): Pure = {
     ???
     /* pure match {
-      case Pure.bool(prop) => prop
-      case _               => Prop.truth(pure)
+      case Pure.bool(Pure) => Pure
+      case _               => Pure.truth(pure)
     } */
   }
 
@@ -189,7 +189,7 @@ class Eval(unit: Unit) {
       }
     }
 
-    def rval_test(expr: Expr, st0: State, st1: State): (Prop, State) = {
+    def rval_test(expr: Expr, st0: State, st1: State): (Pure, State) = {
       val (_res, st2) = rval(expr, st0, st1)
       (truth(_res), st2)
     }

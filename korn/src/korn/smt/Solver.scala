@@ -16,7 +16,6 @@ object Model extends (List[(String, Def)] => Model) {
 
 trait Solver {
     def declare(fun: Fun)
-    def declare(pred: Pred)
     def assert(bound: List[(String, Sort)], prems: List[Pure], head: Pure)
     def solve: Status
     def model: Option[Model]
