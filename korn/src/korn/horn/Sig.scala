@@ -4,8 +4,13 @@ import korn.c._
 import korn.smt._
 
 sealed trait Pred {
-  def name: String = ???
+  def name: String
   def apply(args: List[Pure]): Pure = ???
+}
+
+object Pred {
+  case class state(name: String) extends Pred
+  case class step(name: String) extends Pred
 }
 
 class Sig(unit: Unit) {
