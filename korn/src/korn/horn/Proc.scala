@@ -16,9 +16,6 @@ class Proc(
   import unit._
   import unit.sig._
 
-  /** types of code identifiers (params and locals) */
-  val env = mutable.Map[String, Sort]()
-
   val branch = config.branch
   val loop = config.loop
 
@@ -32,9 +29,9 @@ class Proc(
   def init() = {
     var st0: Store = Map()
 
-    for ((name, sort) <- internal.sig) {
-      env += (name -> sort)
-      st0 += (name -> Val.from(vr(name, sort)))
+    for ((name, typ) <- internal.sig) {
+      val (_, init) = nondet(name, typ)
+      st0 += (name -> init)
     }
 
     state ++ st0
@@ -48,23 +45,13 @@ class Proc(
     contract.leave(st2, None, this) // implicit return without value
   }
 
-  def now(pred: Pred, st1: State, reason: String) {
-    val prop = internal.apply(pred, st1)
+  def now(pred: Step, st0: State, st1: State, reason: String) {
+    val prop = pred(st0, st1)
     clause(st1, prop, reason)
   }
 
-  def now(pred: Pred, st0: State, st1: State, reason: String) {
-    val prop = internal.apply(pred, st0, st1)
-    clause(st1, prop, reason)
-  }
-
-  def from(pred: Pred, st1: State): State = {
-    val prop = internal.apply(pred, st1)
-    st1 and prop
-  }
-
-  def from(pred: Pred, st0: State, st1: State): State = {
-    val prop = internal.apply(pred, st0, st1)
+  def from(pred: Step, st0: State, st1: State): State = {
+    val prop = pred(st0, st1)
     st1 and prop
   }
 
@@ -107,24 +94,24 @@ class Proc(
         local(stmt, st0, st2, ctx)
 
       case Goto(label) =>
-        val st2 = loop.goto(label, st0, st1, ctx.hyps, this)
+        val st2 = loop.goto(label, st1, ctx.hyps, this)
         branch.goto(label, st0, st2, this)
         unreach(st2)
 
       case Return(None) =>
-        val st2 = loop.return_(st0, st1, ctx.hyps, this)
+        val st2 = loop.return_(st1, ctx.hyps, this)
         contract.leave(st2, None, this)
         unreach(st2)
 
       case Return(Some(res)) =>
-        val st2 = loop.return_(st0, st1, ctx.hyps, this)
+        val st2 = loop.return_(st1, ctx.hyps, this)
         val (_res, st3) = rval(res, st0, st2)
         contract.leave(st3, Some(_res), this)
         unreach(st3)
 
       case Break =>
         val hyp :: _ = ctx.hyps
-        loop.break(st0, st1, hyp, this)
+        loop.break(st1, hyp, this)
         unreach(st1)
 
       case If(test, left, right) =>
@@ -142,14 +129,14 @@ class Proc(
         val sin = si1 and !_test
         val siy = si1 and _test
 
-        val hyp = Hyp(inv, sum, si0, sin, siy, dont)
+        val hyp = Hyp(inv, sum, st1, si0, sin, siy, dont)
 
         loop.term(hyp, this)
 
-        val si3 = local(body, si0, siy, hyp :: ctx)
-        loop.iter(si3, hyp, this)
+        val si2 = local(body, si0, siy, hyp :: ctx)
+        loop.iter(si2, hyp, this)
 
-        loop.leave(st1, hyp, this)
+        loop.leave(hyp, this)
 
       case _ =>
         korn.error("cannot execute as local statement: " + stmt)

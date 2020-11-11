@@ -38,7 +38,7 @@ case class State(path: List[Pure], store: Store) extends (String => Val) {
   def ++(that: Iterable[(String, Val)]) = copy(store = store ++ that)
 }
 
-case class Hyp(inv: Pred, sum: Pred, si0: State, sin: State, siy: State, dont: Set[String])
+case class Hyp(inv: Step, sum: Step, st1: State, si0: State, sin: State, siy: State, dont: Set[String])
 
 case class Context(hyps: List[Hyp], switches: List[Pure]) {
   def ::(hyp: Hyp) = copy(hyps = hyp :: hyps)

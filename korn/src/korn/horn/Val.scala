@@ -5,7 +5,7 @@ import korn.smt._
 
 sealed trait Val {
   def unary_-(): Val = ???
-  
+
   def +(that: Val): Val = ???
   def -(that: Val): Val = ???
   def *(that: Val): Val = ???
@@ -29,22 +29,21 @@ sealed trait Val {
 class Ptr extends Val
 
 object Val {
-  def const(int: Int): Val = ???
-  
+  case object unit extends Val
+
   def to(arg: Val): Pure = ???
   def to(args: Option[Val]): Option[Pure] = ???
   def to(args: List[Val]): List[Pure] = ???
-  def from(pure: Pure): Val = ???
-  def from(args: Option[Pure]): Option[Val] = ???
-  def from(pures: List[Pure]): List[Val] = pures map Val.from
+  // def from(pure: Pure): Val = ???
+  // def from(args: Option[Pure]): Option[Val] = ???
+  // def from(pures: List[Pure]): List[Val] = pures map from
+
+  case class const(value: Any, typ: Type) extends Val
+  case class number(pure: Pure, typ: Type) extends Val
 
   case class question(test: Pure, left: Val, right: Val) extends Val
   case class bool(arg: Pure) extends Val
   case class truth(arg: Val) extends Val
-
-  case class unbounded(pure: Pure) extends Val
-  case class signed(pure: Pure, bytes: Int) extends Val
-  case class unsigned(pure: Pure, bytes: Int) extends Val
 
   case class array(content: Pure, length: Pure, elem: Type) extends Val
   case class struct(fields: Map[String, Val]) extends Val
@@ -62,7 +61,6 @@ object Val {
   case class Index(arr: Val, index: Val) extends Loc
   case class Member(base: Val, field: String) extends Loc
 
-  case class Var(name: String, sort: Sort) extends Val
   case class Const(value: Int, sort: Sort) extends Val
 
   case class App(fun: Fun, args: List[Val])

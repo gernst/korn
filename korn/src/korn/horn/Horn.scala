@@ -8,11 +8,11 @@ object Config {
   def apply(which: String): Config = {
     which match {
       case "default" =>
-        Config(Branch.relational, Loop.default)
+        Config(Branch.relational, Loop.invariants(rel = false))
       case "summaries" =>
-        Config(Branch.relational, Loop.summaries(only = false))
+        Config(Branch.relational, Loop.summaries(rel = false, only = false, strong = false))
       case "summaries-only" =>
-        Config(Branch.relational, Loop.summaries(only = true))
+        Config(Branch.relational, Loop.summaries(rel = false, only = true, strong = false))
     }
   }
 }
@@ -29,14 +29,14 @@ sealed trait Branch {
 }
 
 sealed trait Loop {
-  def enter(st0: State, st1: State, proc: Proc): (Pred, Pred, State)
+  def enter(st0: State, st1: State, proc: Proc): (Step, Step, State)
   def term(hyp: Hyp, proc: Proc)
-  def iter(si2: State, hyp: Hyp, proc: Proc)
-  def leave(st1: State, hyp: Hyp, proc: Proc): State
+  def iter(si1: State, hyp: Hyp, proc: Proc)
+  def leave(hyp: Hyp, proc: Proc): State
 
-  def break(st0: State, st1: State, hyp: Hyp, proc: Proc)
-  def return_(st0: State, st1: State, hyps: List[Hyp], proc: Proc): State
-  def goto(label: String, st0: State, st1: State, hyps: List[Hyp], proc: Proc): State
+  def break(si1: State, hyp: Hyp, proc: Proc)
+  def return_(si1: State, hyps: List[Hyp], proc: Proc): State
+  def goto(label: String, si1: State, hyps: List[Hyp], proc: Proc): State
 }
 
 object Contract {
@@ -53,13 +53,13 @@ object Contract {
   }
 
   object default extends Contract {
-    def enter(st0: State, proc: Proc): State = {
+    def enter(st: State, proc: Proc): State = {
       import proc._
       import proc.unit._
 
       val pre = pres(name)
-      val prop = external.apply(pre, st0)
-      st0 and prop
+      val prop = pre(st, external.names)
+      st and prop
     }
 
     def leave(st: State, res: Option[Val], proc: Proc) {
@@ -67,7 +67,7 @@ object Contract {
       import proc.unit._
 
       val post = posts(name)
-      val prop = post(st, external.names, Val.to(res))
+      val prop = post(st, external.names, res)
       clause(st, prop, "post " + name)
     }
   }
@@ -82,33 +82,10 @@ object Branch {
     def newLabel(prefix: String, label: String) = "$" + prefix + "_" + label
   }
 
-  object default extends Branch {
-    def join(st0: State, st1: State, reason1: String, st2: State, reason2: String, proc: Proc): State = {
-      import proc._
-      val pred = internal.here($if newLabel name)
-      now(pred, st1, reason1)
-      now(pred, st2, reason2)
-      from(pred, internal.arbitrary)
-    }
-
-    def label(label: String, st0: State, st1: State, proc: Proc): State = {
-      import proc._
-      val pred = internal.here($label.newLabel(name, label))
-      now(pred, st1, "label " + label)
-      from(pred, internal.arbitrary)
-    }
-
-    def goto(label: String, st0: State, st1: State, proc: Proc) {
-      import proc._
-      val pred = internal.here($label.newLabel(name, label))
-      now(pred, st1, "goto " + label)
-    }
-  }
-
   object relational extends Branch {
     def join(st0: State, st1: State, reason1: String, st2: State, reason2: String, proc: Proc): State = {
       import proc._
-      val pred = internal.rel($if newLabel name)
+      val pred = internal.step($if newLabel name)
       now(pred, st0, st1, reason1)
       now(pred, st0, st2, reason2)
       from(pred, st0, internal.arbitrary)
@@ -116,14 +93,14 @@ object Branch {
 
     def label(label: String, st0: State, st1: State, proc: Proc): State = {
       import proc._
-      val pred = internal.rel($label.newLabel(name, label))
+      val pred = internal.step($label.newLabel(name, label))
       now(pred, st0, st1, "label " + label)
       from(pred, st0, internal.arbitrary)
     }
 
     def goto(label: String, st0: State, st1: State, proc: Proc) {
       import proc._
-      val pred = internal.rel($label.newLabel(name, label))
+      val pred = internal.step($label.newLabel(name, label))
       // Note: using st0 here bridges the correct origin
       //       wrt. labels for non-local forward control-flow inside a loop,
       //       alternatively fix the origin here as st2
@@ -134,14 +111,6 @@ object Branch {
 }
 
 object Loop {
-  def apply(config: String) = {
-    config match {
-      // case "default" => default
-      // case "relational" => relational
-      case "summaries" => summaries
-    }
-  }
-
   object $inv extends korn.Counter {
     def newLabel(prefix: String) = "$" + prefix + "_inv" + next
   }
@@ -151,101 +120,104 @@ object Loop {
   }
 
   /** non-relational invariants and loop final states */
-  object default extends Loop {
-    def enter(st0: State, st1: State, proc: Proc): (Pred, Pred, State) = {
+  case class invariants(rel: Boolean) extends Loop {
+    def enter(st0: State, st1: State, proc: Proc): (Step, Step, State) = {
       import proc._
-      val inv = internal.here($inv newLabel name)
-      val sum = internal.here($sum newLabel name)
-      now(inv, st1, "loop entry " + inv)
-      val si = from(inv, internal.arbitrary)
-      (inv, sum, si)
-    }
-
-    def term(hyp: Hyp, proc: Proc) {
-      import proc._
-      val Hyp(inv, sum, si0, sin, _, _) = hyp
-      now(sum, sin, "loop term " + sum)
-    }
-
-    def iter(si2: State, hyp: Hyp, proc: Proc) {
-      import proc._
-      val Hyp(inv, sum, _, _, _, _) = hyp
-      now(inv, si2, "forwards " + inv)
-    }
-
-    def leave(st1: State, hyp: Hyp, proc: Proc): State = {
-      import proc._
-      val Hyp(inv, sum, _, _, _, _) = hyp
-      from(sum, internal.arbitrary)
-    }
-
-    def break(st0: State, st1: State, hyp: Hyp, proc: Proc) {
-      import proc._
-      val Hyp(inv, sum, _, _, _, _) = hyp
-      now(sum, st1, "break " + sum)
-    }
-
-    def return_(st0: State, st1: State, hyps: List[Hyp], proc: Proc): State = {
-      st1
-    }
-
-    def goto(label: String, st0: State, st1: State, hyps: List[Hyp], proc: Proc): State = {
-      st1
-    }
-  }
-
-  /** non-relational invariants and relational loop summaries */
-  case class summaries(only: Boolean, strong: Boolean = false) extends Loop {
-    def enter(st0: State, st1: State, proc: Proc): (Pred, Pred, State) = {
-      import proc._
-      val inv = internal.here($inv newLabel name)
-      val sum = internal.rel($sum newLabel name)
-      now(inv, st1, "loop entry " + inv)
-      val si0 = from(inv, internal.arbitrary)
+      val inv =
+        if (rel) internal.state($inv newLabel name)
+        else internal.step($inv newLabel name)
+      val sum = internal.step($sum newLabel name)
+      now(inv, st1, st1, "loop entry " + inv)
+      val si0 = from(inv, st1, internal.arbitrary)
       (inv, sum, si0)
     }
 
     def term(hyp: Hyp, proc: Proc) {
       import proc._
-      val Hyp(inv, sum, _, sin, _, _) = hyp
+      val Hyp(inv, sum, st1, si0, sin, siy, dont) = hyp
+      now(sum, st1, sin, "loop term " + sum)
+    }
 
+    def iter(si1: State, hyp: Hyp, proc: Proc) {
+      import proc._
+      val Hyp(inv, sum, st1, si0, sin, siy, dont) = hyp
+      now(inv, st1, si1, "forwards " + inv)
+    }
+
+    def leave(hyp: Hyp, proc: Proc): State = {
+      import proc._
+      val Hyp(inv, sum, st1, si0, sin, siy, dont) = hyp
+      from(sum, st1, internal.arbitrary)
+    }
+
+    def break(si1: State, hyp: Hyp, proc: Proc) {
+      import proc._
+      val Hyp(inv, sum, st1, si0, sin, siy, dont) = hyp
+      now(sum, st1, si1, "break " + sum)
+    }
+
+    def return_(si1: State, hyps: List[Hyp], proc: Proc): State = {
+      si1
+    }
+
+    def goto(label: String, si1: State, hyps: List[Hyp], proc: Proc): State = {
+      si1
+    }
+  }
+
+  /** non-relational invariants and relational loop summaries */
+  case class summaries(rel: Boolean, only: Boolean, strong: Boolean = false) extends Loop {
+    def enter(st0: State, st1: State, proc: Proc): (Step, Step, State) = {
+      import proc._
+      val inv =
+        if (rel) internal.state($inv newLabel name)
+        else internal.step($inv newLabel name)
+      val sum = internal.step($sum newLabel name)
+      now(inv, st1, st1, "loop entry " + inv)
+      val si0 = from(inv, st1, internal.arbitrary)
+      (inv, sum, si0)
+    }
+
+    def term(hyp: Hyp, proc: Proc) {
+      import proc._
+      val Hyp(inv, sum, st1, si0, sin, siy, dont) = hyp
       val st = sin.maybePrune(inv, keep = !only)
       now(sum, st, st, "loop term " + sum)
     }
 
-    def iter(si2: State, hyp: Hyp, proc: Proc) {
+    def iter(si1: State, hyp: Hyp, proc: Proc) {
       import proc._
       import proc.unit._
-      val Hyp(inv, sum, _, _, sty, _) = hyp
-      now(inv, si2, "forwards " + inv)
+      val Hyp(inv, sum, st1, si0, sin, siy, dont) = hyp
+      now(inv, si0, si1, "forwards " + inv)
 
-      val st = si2.maybePrune(inv, keep = !only)
-      val stn = internal.arbitrary
-      val prem = internal.apply(sum, si2, stn)
-      val concl = internal.apply(sum, sty, stn)
+      val st = si1.maybePrune(inv, keep = !only)
+      val stz = internal.arbitrary
+      val prem = internal.apply(sum, si1, stz)
+      val concl = internal.apply(sum, siy, stz)
       clause(st and prem, concl, "backwards " + sum)
     }
 
-    def leave(st1: State, hyp: Hyp, proc: Proc): State = {
+    def leave(hyp: Hyp, proc: Proc): State = {
       import proc._
-      val Hyp(inv, sum, _, _, _, _) = hyp
+      val Hyp(inv, sum, st1, si0, sin, siy, dont) = hyp
       from(sum, st1, st1 ++ internal.havoc)
     }
 
-    def break(st0: State, st1: State, hyp: Hyp, proc: Proc) {
+    def break(si1: State, hyp: Hyp, proc: Proc) {
       import proc._
-      val Hyp(inv, sum, _, _, siy, _) = hyp
+      val Hyp(inv, sum, st1, si0, sin, siy, dont) = hyp
       now(sum, siy, st1, "break " + sum)
     }
 
-    def return_(st0: State, st1: State, hyps: List[Hyp], proc: Proc): State = {
+    def return_(si1: State, hyps: List[Hyp], proc: Proc): State = {
       if (strong) {
         import proc._
-        var st2 = st1
+        var st2 = si1
 
         //* collect all inductive hypotheses */
         for (hyp <- hyps) {
-          val Hyp(inv, sum, si0, _, siy, _) = hyp
+          val Hyp(inv, sum, st1, si0, sin, siy, dont) = hyp
           now(sum, siy, st2, "return " + sum)
           val concl = internal.apply(sum, si0, st2)
           st2 = st2 and concl
@@ -253,20 +225,20 @@ object Loop {
 
         st2
       } else {
-        st1
+        si1
       }
     }
 
-    def goto(label: String, st0: State, st1: State, hyps: List[Hyp], proc: Proc): State = {
+    def goto(label: String, si1: State, hyps: List[Hyp], proc: Proc): State = {
       if (strong) {
         import proc._
         import scala.util.control.Breaks
-        var st2 = st1
+        var st2 = si1
 
         Breaks.breakable {
           //* collect all inductive hypotheses of loops that are left */
           for (hyp <- hyps) {
-            val Hyp(inv, sum, si0, _, siy, dont) = hyp
+            val Hyp(inv, sum, st1, si0, sin, siy, dont) = hyp
             if (dont contains label)
               Breaks.break
 
@@ -277,7 +249,7 @@ object Loop {
         }
         st2
       } else {
-        st1
+        si1
       }
     }
   }

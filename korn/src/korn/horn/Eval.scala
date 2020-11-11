@@ -46,29 +46,10 @@ class Eval(unit: Unit) {
     }
   }
 
-  def nondet_int(name: String, typ: Type, st1: State): (Val, State) = {
-    val bound = Pure.one << (Type.sizeof(typ) * 8 - 1)
-    val min = -bound
-    val max = bound - 1
-    nondet_int(name, min, max, st1)
-  }
-
-  def nondet_uint(name: String, typ: Type, st1: State): (Val, State) = {
-    val bound = Pure.one << (Type.sizeof(typ) * 8)
-    val min = Pure.zero
-    val max = bound - 1
-    nondet_int(name, min, max, st1)
-  }
-
-  def nondet_int(name: String, min: Pure, max: Pure, st1: State): (Val, State) = {
-    var x = fresh("$" + name, Sort.int)
-    if (korn.Main.unbounded) {
-      (Val.from(x), st1)
-    } else {
-      val bounds = (min <= x) and (x <= max)
-      val st2 = st1 and bounds
-      (Val.from(x), st2)
-    }
+  def nondet_bounded(name: String, typ: Type, st: State): (Val, State) = {
+    val (x, v) = nondet(name, typ)
+    val b = bounds(x, typ)
+    (v, st and b)
   }
 
   def value_test(expr: Expr, st: State) = {
@@ -319,94 +300,91 @@ class Eval(unit: Unit) {
           }
 
         case stdlib.exit() =>
-          (null, st1 and False)
+          (Val.unit, st1 and False)
 
         case stdlib.abort() =>
           // clause(st1, False, "abort")
-          (null, st1 and False)
+          (Val.unit, st1 and False)
 
         case stdlib.assert(phi) =>
           val (_phi, st2) = rval_test(phi, st0, st1)
           goal(st2, _phi, "assert " + _phi)
-          (null, st2)
+          (Val.unit, st2)
 
         case stdlib.assume(phi) =>
           val (_phi, st2) = rval_test(phi, st0, st1)
           val st3 = st2 and _phi
-          (null, st3)
+          (Val.unit, st3)
 
         case __VERIFIER.assume(cond) =>
           val (_cond, st2) = rval_test(cond, st0, st1)
-          (null, st2 and _cond)
+          (Val.unit, st2 and _cond)
 
         case __VERIFIER.error() =>
           clause(st1, False, "error")
-          (null, st1)
+          (Val.unit, st1)
 
         case __VERIFIER.reach_error() =>
           clause(st1, False, "error")
-          (null, st1)
+          (Val.unit, st1)
 
         case __VERIFIER.nondet_bool() =>
-          var x = fresh("$bool", Sort.int)
-          val bounds = (x === Pure.zero) or (x === Pure.one)
-          val st2 = st1 and bounds
-          (Val.from(x), st2)
+          nondet_bounded("bool", Type._Bool, st1)
 
         // signed integers
         case __VERIFIER.nondet_char() =>
-          nondet_int("char", Signed._char, st1)
+          nondet_bounded("char", Signed._char, st1)
 
         case __VERIFIER.nondet_short() =>
-          nondet_int("short", Signed._short, st1)
+          nondet_bounded("short", Signed._short, st1)
 
         case __VERIFIER.nondet_int() =>
-          nondet_int("int", Signed._int, st1)
+          nondet_bounded("int", Signed._int, st1)
 
         case __VERIFIER.nondet_long() =>
-          nondet_int("long", Signed._long, st1)
+          nondet_bounded("long", Signed._long, st1)
 
         case __VERIFIER.nondet_longlong() =>
-          nondet_int("longlong", Signed._long_long, st1)
+          nondet_bounded("longlong", Signed._long_long, st1)
 
         // unsigned integers
         case __VERIFIER.nondet_uchar() =>
-          nondet_uint("uchar", Unsigned._char, st1)
+          nondet_bounded("uchar", Unsigned._char, st1)
 
         case __VERIFIER.nondet_ushort() =>
-          nondet_uint("ushort", Unsigned._short, st1)
+          nondet_bounded("ushort", Unsigned._short, st1)
 
         case __VERIFIER.nondet_uint() =>
-          nondet_uint("uint", Unsigned._int, st1)
+          nondet_bounded("uint", Unsigned._int, st1)
 
         case __VERIFIER.nondet_ulong() =>
-          nondet_uint("ulong", Unsigned._long, st1)
+          nondet_bounded("ulong", Unsigned._long, st1)
 
         case __VERIFIER.nondet_ulonglong() =>
-          nondet_uint("ulonglong", Unsigned._long_long, st1)
+          nondet_bounded("ulonglong", Unsigned._long_long, st1)
 
         // nonstandard
         case __VERIFIER.nondet_unsigned_char() =>
-          nondet_uint("uchar", Unsigned._char, st1)
+          nondet_bounded("uchar", Unsigned._char, st1)
 
         case __VERIFIER.nondet_unsigned() =>
-          nondet_uint("int", Signed._int, st1)
+          nondet_bounded("int", Signed._int, st1)
 
         case __VERIFIER.nondet_unsigned_int() =>
-          nondet_uint("int", Unsigned._int, st1)
+          nondet_bounded("int", Unsigned._int, st1)
 
         case __VERIFIER.nondet_unsigned_long() =>
-          nondet_uint("ulong", Unsigned._long, st1)
+          nondet_bounded("ulong", Unsigned._long, st1)
 
         // explicit size
         case __VERIFIER.nondet_u8() =>
-          nondet_uint("uchar", Unsigned._char, st1)
+          nondet_bounded("uchar", Unsigned._char, st1)
 
         case __VERIFIER.nondet_u16() =>
-          nondet_uint("ushort", Unsigned._short, st1)
+          nondet_bounded("ushort", Unsigned._short, st1)
 
         case __VERIFIER.nondet_u32() =>
-          nondet_uint("uint", Unsigned._int, st1)
+          nondet_bounded("uint", Unsigned._int, st1)
 
         case expr @ FunCall(name, args) =>
           korn.avoid(name startsWith "__VERIFIER_nondet", "unsupported function: " + name)
@@ -417,12 +395,12 @@ class Eval(unit: Unit) {
 
           val (_in, st2) = rvals(args, st0, st1)
 
-          val (_ret, _out, st3) = post.ret match {
-            case Some(sort) =>
-              var x = fresh("$result", sort)
-              (x, Some(x: Pure), st2)
-            case None =>
-              (null, None, st2)
+          val (_ret, _out, st3) = ret match {
+            case Type._void =>
+              (Val.unit, None, st2)
+            case _ =>
+              var (_, x) = nondet("$result", ret)
+              (x, Some(x), st2)
           }
 
           // XXX: need to return the modifed heap
@@ -431,7 +409,7 @@ class Eval(unit: Unit) {
 
           clause(st3, _pre, name + " precondition")
 
-          (Val.from(_ret), st3 and _call)
+          (_ret, st3 and _call)
 
         case Cast(typ, expr) =>
           rval(expr, st0, st1)

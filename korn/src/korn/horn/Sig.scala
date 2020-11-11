@@ -13,17 +13,21 @@ sealed trait Step extends Pred {
 }
 
 case class Pre(fun: Fun) extends Pred {
+  def apply(st: State, names: List[String]): Pure = {
+    apply(st(names))
+  }
+
   def apply(args: List[Val]) = {
     Pure.app(fun, Val.to(args))
   }
 }
 
 case class Post(fun: Fun, ret: Option[Sort]) extends Pred {
-  def apply(st: State, names: List[String], res: Option[Pure]): Pure = {
+  def apply(st: State, names: List[String], res: Option[Val]): Pure = {
     apply(st(names), res)
   }
 
-  def apply(args: List[Val], res: Option[Pure]): Pure = {
+  def apply(args: List[Val], res: Option[Val]): Pure = {
     (ret, res) match {
       case (None, None) =>
         Pure.app(fun, Val.to(args))
@@ -33,13 +37,12 @@ case class Post(fun: Fun, ret: Option[Sort]) extends Pred {
         // discard return, warning only in gcc
         Pure.app(fun, Val.to(args))
       case (Some(sort), Some(res)) =>
-        Pure.app(fun, Val.to(args) ++ List(res))
+        Pure.app(fun, Val.to(args ++ List(res)))
     }
   }
 }
 
 object Pred {
-
   case class state(fun: Fun, names: List[String]) extends Step {
     def apply(st0: State, st1: State) = {
       Pure.app(fun, Val.to(st1(names)))
@@ -61,10 +64,10 @@ class Sig(unit: Unit) {
     val names = formals map (_.name)
     val types = formals map (_.typ)
     val sorts = types map (resolve(_))
-    val sig = names zip sorts
+    val sig = names zip types
 
     def havoc: Store = {
-      val vars = Val.from(fresh(sig))
+      val vars = ??? // Val.from(fresh(sig))
       Map(names zip vars: _*)
     }
 
@@ -72,23 +75,18 @@ class Sig(unit: Unit) {
       State(Nil, havoc)
     }
 
-    def here(label: String): Pred = {
+    def state(label: String): Step = {
       val fun = Fun(label, sorts, Sort.bool)
       val pred = Pred.state(fun, names)
       preds += pred
       pred
     }
 
-    def rel(label: String): Pred = {
+    def step(label: String): Step = {
       val fun = Fun(label, sorts ++ sorts, Sort.bool)
-      val pred = Pred.state(fun, names ++ names)
+      val pred = Pred.step(fun, names ++ names)
       preds += pred
       pred
-    }
-
-    def apply(pred: Pred, st0: State): Pure = {
-      // pred(st0(names))
-      ???
     }
 
     def apply(pred: Pred, res: Pure, st0: State): Pure = {
@@ -119,11 +117,45 @@ class Sig(unit: Unit) {
     }
   }
 
-  def newPred(name: String, args: List[Sort]): Pred = {
-    /* val res = Pred(name, args)
-    preds += res
-    res */
-    ???
+  def bounds(pure: Pure, typ: Type): Pure = {
+    typ match {
+      case Type._Bool =>
+        (pure === Pure.zero) or (pure === Pure.one)
+
+      case Signed(name, bytes) =>
+        val bound = Pure.one << (bytes * 8 - 1)
+        val min = -bound
+        val max = bound - 1
+        (min <= pure) and (pure <= max)
+
+      case Unsigned(name, bytes) =>
+        val bound = Pure.one << (bytes * 8)
+        val min = Pure.zero
+        val max = bound - 1
+        (min <= pure) and (pure <= max)
+
+      case _ =>
+        korn.error("unsupported type: " + typ)
+    }
+  }
+
+  def nondet(name: String, typ: Type): (Pure, Val) = {
+    typ match {
+      case Type._Bool =>
+        var x = fresh("$" + name, Sort.int)
+        x -> Val.number(x, typ)
+
+      case Signed(name, bytes) =>
+        var x = fresh("$" + name, Sort.int)
+        x -> Val.number(x, typ)
+
+      case Unsigned(name, bytes) =>
+        var x = fresh("$" + name, Sort.int)
+        x -> Val.number(x, typ)
+
+      case _ =>
+        korn.error("unsupported type: " + typ)
+    }
   }
 
   def vr(name: String, typ: Sort): Var = {
@@ -140,8 +172,7 @@ class Sig(unit: Unit) {
   def fresh(name: String, typ: Sort): Var = {
     var x = Var(name, Some(Pure.next))
     typing += (x.toString -> typ)
-    // x
-    ???
+    x
   }
 
   def fresh(pairs: Iterable[(String, Sort)]): List[Var] = {
