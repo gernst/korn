@@ -113,7 +113,7 @@ object Val {
   def store(base: Val, index: Val, value: Val): Val = {
     (base, index) match {
       case (array(base, typ), number(index)) =>
-        Val.from(base.store(index, Val.to(value)), typ)
+        array(base.store(index, Val.to(value)), typ)
     }
   }
 

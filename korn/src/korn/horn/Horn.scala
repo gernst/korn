@@ -18,8 +18,8 @@ object Config {
 }
 
 sealed trait Contract {
-  def enter(st: State, proc: Proc): State
-  def leave(st: State, res: Option[Val], proc: Proc)
+  def enter(st0: State, proc: Proc): State
+  def leave(st0: State, st1: State, res: Option[Val], proc: Proc)
 }
 
 sealed trait Branch {
@@ -48,27 +48,34 @@ object Contract {
   }
 
   object main extends Contract {
-    def enter(st: State, proc: Proc): State = { st }
-    def leave(st: State, res: Option[Val], proc: Proc) {}
+    def enter(st0: State, proc: Proc): State = {
+      import proc._
+      st0 ++ internal.havoc
+    }
+
+    def leave(st0: State, st1: State, res: Option[Val], proc: Proc) {
+      //
+    }
   }
 
   object default extends Contract {
-    def enter(st: State, proc: Proc): State = {
+    def enter(st0: State, proc: Proc): State = {
       import proc._
       import proc.unit._
 
+      val st1 = st0 ++ toplevel.havoc ++ internal.havoc
       val pre = pres(name)
-      val prop = pre(st, external.names)
-      st and prop
+      val prop = pre.eval(st1, toplevel.names, external.names)
+      st1 and prop
     }
 
-    def leave(st: State, res: Option[Val], proc: Proc) {
+    def leave(st0: State, st1: State, res: Option[Val], proc: Proc) {
       import proc._
       import proc.unit._
 
       val post = posts(name)
-      val prop = post(st, external.names, res)
-      clause(st, prop, "post " + name)
+      val prop = post.eval(st0, st1, toplevel.names, external.names, res)
+      clause(st1, prop, "post " + name)
     }
   }
 }

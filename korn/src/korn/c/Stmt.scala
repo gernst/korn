@@ -165,6 +165,39 @@ object Stmt {
     }
   }
 
+  def uses(expr: Expr): Set[String] = {
+    expr match {
+      case Id(name)                    => Set(name)
+      case _: Lit                      => Set()
+      case PreOp(_, arg)               => uses(arg)
+      case PostOp(_, arg)              => uses(arg)
+      case BinOp(_, arg1, arg2)        => uses(arg1) ++ uses(arg2)
+      case Index(arg1, arg2)           => uses(arg1) ++ uses(arg2)
+      case Question(test, left, right) => uses(test) ++ uses(left) ++ uses(right)
+      case Cast(typ, expr)             => uses(expr)
+      case SizeOfExpr(expr)            => Set() // compile time
+      case SizeOfType(typ)             => Set()
+      case Arrow(expr, field)          => uses(expr)
+      case Dot(expr, field)            => uses(expr)
+      case FunCall(name, args)         => Set() ++ (args flatMap uses)
+      case Init(values)                => Set() ++ (values flatMap { case (_, expr) => uses(expr) })
+    }
+  }
+
+  def uses(stmt: Stmt): Set[String] = {
+    stmt match {
+      case Block(stmts)                => ???
+      case Group(stmts)                => Set(stmts flatMap uses: _*)
+      case Atomic(Some(expr))          => uses(expr)
+      case Assume(id, Some(init), typ) => uses(init)
+      case Return(Some(expr))          => uses(expr)
+      case Label(label, stmt)          => Set(label) ++ uses(stmt)
+      case If(test, left, right)       => uses(test) ++ uses(left) ++ uses(right)
+      case While(test, body)           => uses(test) ++ uses(body)
+      case _                           => Set()
+    }
+  }
+
   def labels(stmt: Stmt): Set[String] = {
     stmt match {
       case Block(stmts)          => ???
@@ -181,9 +214,7 @@ object Stmt {
     (formals, stmt_)
   }
 
-  def norm(
-      stmts: List[Stmt],
-      re0: Map[String, String]): (List[Formal], List[Stmt], Map[String, String]) =
+  def norm(stmts: List[Stmt], re0: Map[String, String]): (List[Formal], List[Stmt], Map[String, String]) =
     stmts match {
       case Nil =>
         (Nil, Nil, re0)
@@ -322,8 +353,7 @@ case class While(test: Expr, body: Stmt) extends Stmt
 
 case class DoWhile(body: Stmt, test: Expr) extends Stmt
 
-case class For(vars: List[VarDef], init: List[Expr], test: List[Expr], inc: List[Expr], body: Stmt)
-    extends Stmt {
+case class For(vars: List[VarDef], init: List[Expr], test: List[Expr], inc: List[Expr], body: Stmt) extends Stmt {
 
   def this(init: Array[Expr], test: Array[Expr], inc: Array[Expr], body: Stmt) = {
     this(Nil, init.toList, test.toList, inc.toList, body)

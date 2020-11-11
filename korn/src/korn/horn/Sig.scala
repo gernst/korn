@@ -13,18 +13,26 @@ sealed trait Step extends Pred {
 }
 
 case class Pre(fun: Fun) extends Pred {
-  def apply(st: State, names: List[String]): Pure = {
-    apply(st(names))
+  def eval(st: State, globals: List[String], names: List[String]): Pure = {
+    apply(st(globals ++ names))
   }
 
-  def apply(args: List[Val]) = {
+  def apply(st: State, globals: List[String], args: List[Val]): Pure = {
+    apply(st(globals) ++ args)
+  }
+
+  def apply(args: List[Val]): Pure = {
     Pure.app(fun, Val.to(args))
   }
 }
 
 case class Post(fun: Fun, ret: Option[Sort]) extends Pred {
-  def apply(st: State, names: List[String], res: Option[Val]): Pure = {
-    apply(st(names), res)
+  def eval(st0: State, st1: State, globals: List[String], names: List[String], res: Option[Val]): Pure = {
+    apply(st0(globals) ++ st0(names) ++ st1(globals), res)
+  }
+
+  def apply(st0: State, st1: State, globals: List[String], args: List[Val], res: Option[Val]): Pure = {
+    apply(st0(globals) ++ args ++ st1(globals), res)
   }
 
   def apply(args: List[Val], res: Option[Val]): Pure = {
@@ -172,16 +180,17 @@ class Sig(unit: Unit) {
     val pre = "$" + name + "_pre"
     val post = name
 
+    val _globals = resolve(globals map (_.typ))
     val _args = resolve(args)
     val _ret = resolve(ret)
 
     if (!known(name)) {
       if (_ret != null) {
-        pres += (name -> Pre(Fun(pre, _args, Sort.bool)))
-        posts += (name -> Post(Fun(post, _args ++ List(_ret), Sort.bool), Some(_ret)))
+        pres += (name -> Pre(Fun(pre, _globals ++ _args, Sort.bool)))
+        posts += (name -> Post(Fun(post, _globals ++ _args ++ _globals ++ List(_ret), Sort.bool), Some(_ret)))
       } else {
-        pres += (name -> Pre(Fun(pre, _args, Sort.bool)))
-        posts += (name -> Post(Fun(post, _args, Sort.bool), None))
+        pres += (name -> Pre(Fun(pre, _globals ++ _args, Sort.bool)))
+        posts += (name -> Post(Fun(post, _globals ++ _args ++ _globals, Sort.bool), None))
       }
     }
   }

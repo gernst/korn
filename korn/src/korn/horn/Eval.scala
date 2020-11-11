@@ -87,6 +87,9 @@ class Eval(unit: Unit) {
           val (_rhs, st2) = rval(rhs, st0, st1)
           (_old, _rhs, st2 + (name -> _rhs))
 
+        case Id(name) =>
+          korn.error("no such variable: " + name + " in " + st1)
+
         case Index(Id(name), idx) if st1 contains name =>
           val _old = st1(name)
           val (_rhs, st2) = rval(rhs, st0, st1)
@@ -356,19 +359,22 @@ class Eval(unit: Unit) {
 
           val (_in, st2) = rvals(args, st0, st1)
 
-          val (_ret, _out, st3) = ret match {
+          val (_ret, _out) = ret match {
             case Type._void =>
-              (Val.unit, None, st2)
+              (Val.unit, None)
             case _ =>
               var (_, x) = nondet("$result", ret)
-              (x, Some(x), st2)
+              (x, Some(x))
           }
 
-          // XXX: need to return the modifed heap
-          val _pre = pre(_in)
-          val _call = post(_in, _out)
+          val st3 = st2 ++ toplevel.havoc
 
-          clause(st3, _pre, name + " precondition")
+          // XXX: need to return the modifed heap
+          println(toplevel.names)
+          val _pre = pre(st2, toplevel.names, _in)
+          val _call = post(st2, st3, toplevel.names, _in, _out)
+
+          clause(st2, _pre, name + " precondition")
 
           (_ret, st3 and _call)
 

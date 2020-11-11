@@ -20,29 +20,23 @@ class Proc(
   val loop = config.loop
 
   /** collect identifiers in scope and their types */
+  val used = Stmt.uses(body)
+  val extra = globals filter { used contains _.name }
+  object toplevel extends Scope(extra)
   object external extends Scope(params)
-  object internal extends Scope(params ++ locals)
+  object internal extends Scope(extra ++ params ++ locals)
 
   object eval extends unit.eval.scoped(this)
   import eval._
 
-  def init() = {
-    var st0: Store = Map()
-
-    for ((name, typ) <- internal.sig) {
-      val (_, init) = nondet(name, typ)
-      st0 += (name -> init)
-    }
-
-    state ++ st0
-  }
-
   def run() {
-    val st0 = init()
+    val st0 = state
+    println(st0)
     val st1 = contract.enter(st0, this)
-    val ctx = Context.empty
-    val st2 = local(body, st0, st1, ctx)
-    contract.leave(st2, None, this) // implicit return without value
+    println(st1)
+    val ctx = Context.init(st1)
+    val st2 = local(body, st1, st1, ctx)
+    contract.leave(st1, st2, None, this) // implicit return without value
   }
 
   def now(pred: Step, st0: State, st1: State, reason: String) {
@@ -103,13 +97,13 @@ class Proc(
 
       case Return(None) =>
         val st2 = loop.return_(st1, ctx.hyps, this)
-        contract.leave(st2, None, this)
+        contract.leave(ctx.entry, st2, None, this)
         unreach(st2)
 
       case Return(Some(res)) =>
         val st2 = loop.return_(st1, ctx.hyps, this)
         val (_res, st3) = rval(res, st0, st2)
-        contract.leave(st3, Some(_res), this)
+        contract.leave(ctx.entry, st3, Some(_res), this)
         unreach(st3)
 
       case Break =>
