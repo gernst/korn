@@ -3,53 +3,124 @@ package korn.horn
 import korn.c._
 import korn.smt._
 
-sealed trait Val {
-  def unary_-(): Val = ???
+sealed trait Val {}
 
-  def +(that: Val): Val = ???
-  def -(that: Val): Val = ???
-  def *(that: Val): Val = ???
-  def /(that: Val): Val = ???
-  def %(that: Val): Val = ???
-
-  def ===(that: Val): Pure = ???
-  def !==(that: Val): Pure = ???
-
-  def <(that: Val): Pure = ???
-  def <=(that: Val): Pure = ???
-  def >(that: Val): Pure = ???
-  def >=(that: Val): Pure = ???
-
-  def select(key: Val): Val = ???
-  def store(key: Val, arg: Val): Val = ???
-
-  def prop: Pure = ???
-}
-
-class Ptr extends Val
+// class Ptr(val typ: Type) extends Val
 
 object Val {
-  case object unit extends Val
+  case object unit extends Val {
+    def typ = Type._void
+  }
 
-  def to(arg: Val): Pure = ???
-  def to(args: Option[Val]): Option[Pure] = ???
-  def to(args: List[Val]): List[Pure] = ???
-  // def from(pure: Pure): Val = ???
-  // def from(args: Option[Pure]): Option[Val] = ???
-  // def from(pures: List[Pure]): List[Val] = pures map from
+  def to(arg: Option[Val]): Option[Pure] = arg map to
+  def to(args: List[Val]): List[Pure] = args map to
 
-  case class const(value: Any, typ: Type) extends Val
-  case class number(pure: Pure, typ: Type) extends Val
+  def to(arg: Val): Pure = {
+    arg match {
+      case number(pure) =>
+        pure
+      case array(pure, _) =>
+        pure
+      case bool(arg: Pure) =>
+        Pure.ite(arg, Pure.one, Pure.zero)
+      case question(test, left, right) =>
+        Pure.ite(test, to(left), to(right))
+    }
+  }
 
-  case class question(test: Pure, left: Val, right: Val) extends Val
-  case class bool(arg: Pure) extends Val
-  case class truth(arg: Val) extends Val
+  def from(pure: Pure, typ: Type): Val = {
+    typ match {
+      case Type._Bool =>
+        bool(pure)
+      case _: Unsigned | _: Signed =>
+        number(pure)
+      case ArrayType(elem, dim) =>
+        array(pure, elem)
+    }
+  }
 
-  case class array(content: Pure, length: Pure, elem: Type) extends Val
-  case class struct(fields: Map[String, Val]) extends Val
+  case class number(pure: Pure) extends Val
+  case class array(pure: Pure, elem: Type) extends Val
+  // case class array(content: Pure, length: Pure, elem: Type) extends Val
+
+  case class bool(arg: Pure) extends Val {
+    def typ = Type._Bool
+  }
+
+  case class question(test: Pure, left: Val, right: Val) extends Val {}
+
+  def truth(arg: Val): Pure = {
+    arg match {
+      case Val.number(arg) =>
+        arg !== Pure.zero
+      case Val.bool(arg) =>
+        arg
+    }
+  }
+
+  def preop(op: String, arg: Val): Val = {
+    (op, arg) match {
+      case ("+", Val.number(arg)) =>
+        (Val.number(arg))
+      case ("-", Val.number(arg)) =>
+        (Val.number(-arg))
+      case ("!", _) =>
+        bool(!truth(arg))
+    }
+  }
+
+  def relop(op: String, arg1: Val, arg2: Val): Pure = {
+    (op, arg1, arg2) match {
+      case ("==", Val.number(arg1), Val.number(arg2)) =>
+        arg1 === arg2
+      case ("!=", Val.number(arg1), Val.number(arg2)) =>
+        arg1 !== arg2
+      case ("<=", Val.number(arg1), Val.number(arg2)) =>
+        arg1 <= arg2
+      case ("<", Val.number(arg1), Val.number(arg2)) =>
+        arg1 < arg2
+      case (">", Val.number(arg1), Val.number(arg2)) =>
+        arg1 > arg2
+      case (">=", Val.number(arg1), Val.number(arg2)) =>
+        arg1 >= arg2
+    }
+  }
+
+  def binop(op: String, arg1: Val, arg2: Val): Val = {
+    (op, arg1, arg2) match {
+      case ("+", Val.number(arg1), Val.number(arg2)) =>
+        Val.number(arg1 + arg2)
+      case ("-", Val.number(arg1), Val.number(arg2)) =>
+        Val.number(arg1 - arg2)
+      case ("*", Val.number(arg1), Val.number(arg2)) =>
+        Val.number(arg1 * arg2)
+      case ("/", Val.number(arg1), Val.number(arg2)) =>
+        Val.number(arg1 / arg2)
+      case ("%", Val.number(arg1), Val.number(arg2)) =>
+        Val.number(arg1 % arg2)
+      case _ =>
+        bool(relop(op, arg1, arg2))
+    }
+  }
+
+  def select(base: Val, index: Val): Val = {
+    (base, index) match {
+      case (array(base, typ), number(index)) =>
+        Val.from(base select index, typ)
+    }
+  }
+
+  def store(base: Val, index: Val, value: Val): Val = {
+    (base, index) match {
+      case (array(base, typ), number(index)) =>
+        Val.from(base.store(index, Val.to(value)), typ)
+    }
+  }
+
+  /* case class struct(fields: Map[String, Val]) extends Val
 
   case class index(base: Ptr, index: Pure) extends Val
-  case class member(base: Ptr, field: String) extends Val
+  case class member(base: Ptr, field: String) extends Val */
 
   /* case class Struct() extends Sort
 

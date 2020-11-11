@@ -124,7 +124,7 @@ object Loop {
     def enter(st0: State, st1: State, proc: Proc): (Step, Step, State) = {
       import proc._
       val inv =
-        if (rel) internal.state($inv newLabel name)
+        if (!rel) internal.state($inv newLabel name)
         else internal.step($inv newLabel name)
       val sum = internal.step($sum newLabel name)
       now(inv, st1, st1, "loop entry " + inv)
@@ -170,7 +170,7 @@ object Loop {
     def enter(st0: State, st1: State, proc: Proc): (Step, Step, State) = {
       import proc._
       val inv =
-        if (rel) internal.state($inv newLabel name)
+        if (!rel) internal.state($inv newLabel name)
         else internal.step($inv newLabel name)
       val sum = internal.step($sum newLabel name)
       now(inv, st1, st1, "loop entry " + inv)
@@ -193,8 +193,8 @@ object Loop {
 
       val st = si1.maybePrune(inv, keep = !only)
       val stz = internal.arbitrary
-      val prem = internal.apply(sum, si1, stz)
-      val concl = internal.apply(sum, siy, stz)
+      val prem = sum(si1, stz)
+      val concl = sum(siy, stz)
       clause(st and prem, concl, "backwards " + sum)
     }
 
@@ -219,7 +219,7 @@ object Loop {
         for (hyp <- hyps) {
           val Hyp(inv, sum, st1, si0, sin, siy, dont) = hyp
           now(sum, siy, st2, "return " + sum)
-          val concl = internal.apply(sum, si0, st2)
+          val concl = sum(si0, st2)
           st2 = st2 and concl
         }
 
@@ -243,7 +243,7 @@ object Loop {
               Breaks.break
 
             now(sum, siy, st2, "return " + sum)
-            val concl = internal.apply(sum, si0, st2)
+            val concl = sum(si0, st2)
             st2 = st2 and concl
           }
         }

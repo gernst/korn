@@ -161,7 +161,8 @@ IS = (u|U|l|L)*
 "__inline"      { }
 "__restrict"    { }
 "__extension__" { }
-"__attribute__" {WS}+ "((" .* "))" { }
+
+"__attribute__" {WS}* "((" .* "))" { }
 
 // has weird stuff in its definition
 "void reach_error()" .* {NL} { }

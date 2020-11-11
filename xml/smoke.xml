@@ -7,7 +7,6 @@
   <resultfiles>**.graphml</resultfiles>
 
   <option name="-q"/>
-  <option name="-s0"/>
   <option name="-t">60</option>
   <option name="-eld"/>
 

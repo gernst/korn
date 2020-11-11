@@ -254,17 +254,11 @@ object Stmt {
         val stmt_ = Block(List(Group(vars), Atomic(init_), loop_))
         norm(stmt_, re0)
 
-      case VarDef(Formal(typ, name), None) =>
-        val name_ = Id.fresh(name)
-        val formal_ = Formal(typ, name_)
-        (List(formal_), Atomic.none, re0 + (name -> name_))
-
-      case VarDef(Formal(typ, name), Some(init)) =>
+      case VarDef(Formal(typ, name), init) =>
         val name_ = Id.fresh(name)
         val id_ = Id(name_)
         val formal_ = Formal(typ, name_)
-        val init_ = init rename re0
-        // (List(formal_), id_ := init_, re0 + (name -> name_))
+        val init_ = init map (_ rename re0)
         (List(formal_), Assume(id_, init_, typ), re0 + (name -> name_))
 
       case _ =>
@@ -310,7 +304,7 @@ case object Continue extends Stmt {
   def self = this
 }
 
-case class Assume(id: Id, expr: Expr, typ: Type) extends Stmt
+case class Assume(id: Id, init: Option[Expr], typ: Type) extends Stmt
 
 case class Return(expr: Option[Expr]) extends Stmt {
   def this(expr: Expr) = this(Some(expr))

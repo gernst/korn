@@ -10,6 +10,7 @@ import java.io.PrintStream
 import java.io.InputStream
 import java.io.OutputStream
 import java.io.FileOutputStream
+import korn.smt.Fun
 
 object Main {
   val version = "0.1"
@@ -204,11 +205,10 @@ object Main {
       out.println()
     }
 
-    for (pred <- unit.preds) {
-      // val korn.smt.Pred(name, args) = pred
-      // val defn = sexpr("declare-fun", name, sexpr(args), "Bool")
-      // out.println(defn)
-      ???
+    for (pred <- unit.preds ++ unit.pres.values ++ unit.posts.values) {
+      val Fun(name, args, _) = pred.fun
+      val defn = sexpr("declare-fun", name, sexpr(args), "Bool")
+      out.println(defn)
     }
     out.println()
 

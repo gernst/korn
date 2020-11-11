@@ -11,10 +11,6 @@ object Context {
 }
 
 case class State(path: List[Pure], store: Store) extends (String => Val) {
-  def and(that: Val): State = {
-    ???
-  }
-
   def and(that: Pure): State = {
     that match {
       case Pure.and(phi, psi) =>

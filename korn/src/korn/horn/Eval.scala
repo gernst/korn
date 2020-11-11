@@ -7,53 +7,14 @@ class Eval(unit: Unit) {
   import unit._
   import unit.sig._
 
-  def bool(arg: Pure): Val = {
-    ???
-    /* Pure match {
-      case _ => Pure.bool(Pure)
-    } */
-  }
-
-  def truth(arg: Val): Pure = {
-    ???
-    /* pure match {
-      case Pure.bool(Pure) => Pure
-      case _               => Pure.truth(pure)
-    } */
-  }
-
-  def preop(op: String, arg: Val): Val = {
-    op match {
-      case "+" => arg
-      case "-" => -arg
-      case "!" => bool(!truth(arg))
-    }
-  }
-
-  def binop(op: String, arg1: Val, arg2: Val): Val = {
-    op match {
-      case "+"  => arg1 + arg2
-      case "-"  => arg1 - arg2
-      case "*"  => arg1 * arg2
-      case "/"  => arg1 / arg2
-      case "%"  => arg1 % arg2
-      case "==" => bool(arg1 === arg2)
-      case "!=" => bool(arg1 !== arg2)
-      case "<"  => bool(arg1 < arg2)
-      case "<=" => bool(arg1 <= arg2)
-      case ">"  => bool(arg1 > arg2)
-      case ">=" => bool(arg1 >= arg2)
-    }
-  }
-
   def nondet_bounded(name: String, typ: Type, st: State): (Val, State) = {
-    val (x, v) = nondet(name, typ)
+    val (x, v) = nondet("$" + name, typ)
     val b = bounds(x, typ)
     (v, st and b)
   }
 
   def value_test(expr: Expr, st: State) = {
-    truth(value(expr, st))
+    Val.truth(value(expr, st))
   }
 
   def value(expr: Expr, st: State): Val = {
@@ -64,14 +25,14 @@ class Eval(unit: Unit) {
       case Id(name) if consts contains name =>
         consts(name)
 
-      /* case Lit(value: Char) =>
-        Pure.const(value)
+      case Lit(value: Char) =>
+        Val.number(Pure.const(value))
 
       case Lit(value: Int) =>
-        Pure.const(value)
+        Val.number(Pure.const(value))
 
       case Lit(value: Long) =>
-        Pure.const(value) */
+        Val.number(Pure.const(value))
 
       case Lit(value) =>
         korn.error("unknown constant: " + value + " of type " + value.getClass())
@@ -90,7 +51,7 @@ class Eval(unit: Unit) {
       case Index(base, index) =>
         val _base = value(base, st)
         val _index = value(index, st)
-        _base select _index
+        Val.select(_base, _index)
 
       case PreOp("&", Index(base, index)) =>
         val expr = BinOp("+", base, index)
@@ -98,12 +59,12 @@ class Eval(unit: Unit) {
 
       case PreOp(op, arg) =>
         val _arg = value(arg, st)
-        preop(op, _arg)
+        Val.preop(op, _arg)
 
       case BinOp(op, arg1, arg2) =>
         val _arg1 = value(arg1, st)
         val _arg2 = value(arg2, st)
-        binop(op, _arg1, _arg2)
+        Val.binop(op, _arg1, _arg2)
 
       case Question(test, left, right) =>
         val _test = value_test(test, st)
@@ -130,8 +91,8 @@ class Eval(unit: Unit) {
           val _old = st1(name)
           val (_rhs, st2) = rval(rhs, st0, st1)
           val (_idx, st3) = rval(idx, st0, st2)
-          val _new = _old.store(_idx, _rhs)
-          (_old select _idx, _rhs, st3 + (name -> _new))
+          val _new = Val.store(_old, _idx, _rhs)
+          (Val.select(_old, _idx), _rhs, st3 + (name -> _new))
 
         // XXX: hacky way to support 2-dimensional arrays
         case Index(Index(Id(name), idx1), idx2) if st1 contains name =>
@@ -139,10 +100,10 @@ class Eval(unit: Unit) {
           val (_rhs, st2) = rval(rhs, st0, st1)
           val (_idx1, st3) = rval(idx1, st0, st2)
           val (_idx2, st4) = rval(idx2, st0, st3)
-          val _old1 = _old0 select _idx1
-          val _old2 = _old1 select _idx2
-          val _new1 = _old1.store(_idx2, _rhs)
-          val _new0 = _old0.store(_idx1, _new1)
+          val _old1 = Val.select(_old0, _idx1)
+          val _old2 = Val.select(_old1, _idx2)
+          val _new1 = Val.store(_old1, _idx2, _rhs)
+          val _new0 = Val.store(_old0, _idx1, _new1)
           (_old2, _rhs, st4 + (name -> _new0))
 
         /* case PreOp("*", ptr) =>
@@ -151,7 +112,7 @@ class Eval(unit: Unit) {
           (_ptr, st3) <- rval(ptr, st2)
         )
           yield {
-            // val (_sec, _old, st4) = st3 store (_ptr, _rhs)
+            // val (_sec, _old, st4) = st3 Val.store (_ptr, _rhs)
             // (_old, _rhs, st4)
             ???
           }
@@ -163,7 +124,7 @@ class Eval(unit: Unit) {
         )
           yield {
             // val _ptr_field = ctx arrow (_ptr, field)
-            // val (_sec, _old, st4) = st3 store (_ptr_field, _rhs)
+            // val (_sec, _old, st4) = st3 Val.store (_ptr_field, _rhs)
             // (_old, _rhs, st4)
             ???
           } */
@@ -172,7 +133,7 @@ class Eval(unit: Unit) {
 
     def rval_test(expr: Expr, st0: State, st1: State): (Pure, State) = {
       val (_res, st2) = rval(expr, st0, st1)
-      (truth(_res), st2)
+      (Val.truth(_res), st2)
     }
 
     def rvals(exprs: List[Expr], st0: State, st1: State): (List[Val], State) = {
@@ -213,7 +174,7 @@ class Eval(unit: Unit) {
         case Index(arg1, arg2) =>
           val (_arg1, st2) = rval(arg1, st0, st1)
           val (_arg2, st3) = rval(arg2, st0, st2)
-          (_arg1 select _arg2, st3)
+          (Val.select(_arg1, _arg2), st3)
 
         /* case PreOp("&", Arrow(ptr, field)) =>
         for ((_ptr, st2) = rval(ptr, st1))
@@ -258,34 +219,34 @@ class Eval(unit: Unit) {
         case BinOp("||", arg1, arg2) if !Expr.hasEffects(arg2) =>
           val (_arg1, st2) = rval_test(arg1, st0, st1)
           val (_arg2, st3) = rval_test(arg2, st0, st2)
-          (bool(_arg1 or _arg2), st3)
+          (Val.bool(_arg1 or _arg2), st3)
 
         case BinOp("&&", arg1, arg2) if !Expr.hasEffects(arg2) =>
           val (_arg1, st2) = rval_test(arg1, st0, st1)
           val (_arg2, st3) = rval_test(arg2, st0, st2)
-          (bool(_arg1 and _arg2), st3)
+          (Val.bool(_arg1 and _arg2), st3)
 
         // shortcut evaluation yields two states
         case BinOp("||", arg1, arg2) =>
           val (_arg1, st2) = rval_test(arg1, st0, st1)
           val (_arg2, st3) = rval_test(arg2, st0, st2 and !_arg1)
           val st4 = branch.join(st0, st2, "or left", st3, "or right", proc)
-          (bool(_arg1 or _arg2), st4)
+          (Val.bool(_arg1 or _arg2), st4)
 
         case BinOp("&&", arg1, arg2) =>
           val (_arg1, st2) = rval_test(arg1, st0, st1)
           val (_arg2, st3) = rval_test(arg2, st0, st2 and _arg1)
           val st4 = branch.join(st0, st2, "and left", st3, "and right", proc)
-          (bool(_arg1 and _arg2), st4)
+          (Val.bool(_arg1 and _arg2), st4)
 
         case PreOp(op, arg) =>
           val (_arg, st2) = rval(arg, st0, st1)
-          (preop(op, _arg), st2)
+          (Val.preop(op, _arg), st2)
 
         case BinOp(op, arg1, arg2) =>
           val (_arg1, st2) = rval(arg1, st0, st1)
           val (_arg2, st3) = rval(arg2, st0, st2)
-          (binop(op, _arg1, _arg2), st3)
+          (Val.binop(op, _arg1, _arg2), st3)
 
         case Question(test, arg1, arg2) =>
           val (_test, st2) = rval_test(test, st0, st1)

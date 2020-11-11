@@ -75,10 +75,13 @@ class Proc(
       case Group(stmts) =>
         local(stmts, st0, st1, ctx)
 
-      case Assume(Id(name), expr, typ) =>
+      case Assume(Id(name), None, typ) =>
+        st1
+
+      case Assume(Id(name), Some(expr), typ) =>
         val (_expr, st2) = rval(expr, st0, st1)
         val x = st2(name) // XXX: WEIRD
-        val eq = (x === _expr)
+        val eq = Val.relop("==", x, _expr)
         val st3 = st2 and eq
         st3
 

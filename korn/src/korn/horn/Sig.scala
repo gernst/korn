@@ -67,8 +67,11 @@ class Sig(unit: Unit) {
     val sig = names zip types
 
     def havoc: Store = {
-      val vars = ??? // Val.from(fresh(sig))
-      Map(names zip vars: _*)
+      val xs = for ((name, typ) <- sig) yield {
+        val (_, v) = nondet(name, typ)
+        name -> v
+      }
+      Map(xs: _*)
     }
 
     def arbitrary = {
@@ -84,19 +87,9 @@ class Sig(unit: Unit) {
 
     def step(label: String): Step = {
       val fun = Fun(label, sorts ++ sorts, Sort.bool)
-      val pred = Pred.step(fun, names ++ names)
+      val pred = Pred.step(fun, names)
       preds += pred
       pred
-    }
-
-    def apply(pred: Pred, res: Pure, st0: State): Pure = {
-      // pred(st0(names) ++ List(res))
-      ???
-    }
-
-    def apply(pred: Pred, st0: State, st1: State): Pure = {
-      // pred(st0(names) ++ st1(names))
-      ???
     }
   }
 
@@ -111,7 +104,7 @@ class Sig(unit: Unit) {
       case _: Signed             => Sort.int
       case _: Unsigned           => Sort.int
       case PtrType(elem)         => pointers = true; Sort.pointer(resolve(elem))
-      case ArrayType(typ, dim)   => Sort.array(Sort.int, resolve(typ))
+      case ArrayType(elem, dim)  => Sort.array(Sort.int, resolve(elem))
       case TypedefName("size_t") => Sort.int
       case _                     => korn.error("cannot resolve: " + typ)
     }
@@ -142,36 +135,29 @@ class Sig(unit: Unit) {
   def nondet(name: String, typ: Type): (Pure, Val) = {
     typ match {
       case Type._Bool =>
-        var x = fresh("$" + name, Sort.int)
-        x -> Val.number(x, typ)
+        val x = fresh(name, Sort.int)
+        x -> Val.number(x)
 
-      case Signed(name, bytes) =>
-        var x = fresh("$" + name, Sort.int)
-        x -> Val.number(x, typ)
+      case Signed(_, bytes) =>
+        val x = fresh(name, Sort.int)
+        x -> Val.number(x)
 
-      case Unsigned(name, bytes) =>
-        var x = fresh("$" + name, Sort.int)
-        x -> Val.number(x, typ)
+      case Unsigned(_, bytes) =>
+        val x = fresh(name, Sort.int)
+        x -> Val.number(x)
+
+      case ArrayType(elem, dim) =>
+        val x = fresh(name, Sort.array(Sort.int, resolve(elem)))
+        x -> Val.array(x, elem)
 
       case _ =>
         korn.error("unsupported type: " + typ)
     }
   }
 
-  def vr(name: String, typ: Sort): Var = {
-    var x = Var(name)
-    typing += (x.toString -> typ)
-    x
-  }
-
-  def vrs(pairs: Iterable[(String, Sort)]): List[Var] = {
-    val vars = pairs map { case (name, typ) => vr(name, typ) }
-    vars.toList
-  }
-
-  def fresh(name: String, typ: Sort): Var = {
+  def fresh(name: String, sort: Sort): Var = {
     var x = Var(name, Some(Pure.next))
-    typing += (x.toString -> typ)
+    typing += (x.toString -> sort)
     x
   }
 
