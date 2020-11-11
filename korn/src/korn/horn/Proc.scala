@@ -45,7 +45,7 @@ class Proc(
     val st1 = contract.enter(st0, this)
     val ctx = Context.empty
     val st2 = local(body, st0, st1, ctx)
-    contract.leave(st2, this) // implicit return without value
+    contract.leave(st2, None, this) // implicit return without value
   }
 
   def now(pred: Pred, st1: State, reason: String) {
@@ -113,13 +113,13 @@ class Proc(
 
       case Return(None) =>
         val st2 = loop.return_(st0, st1, ctx.hyps, this)
-        contract.leave(st2, this)
+        contract.leave(st2, None, this)
         unreach(st2)
 
       case Return(Some(res)) =>
         val st2 = loop.return_(st0, st1, ctx.hyps, this)
         val (_res, st3) = rval(res, st0, st2)
-        contract.leave(st3, Val.to(_res), this)
+        contract.leave(st3, Some(_res), this)
         unreach(st3)
 
       case Break =>

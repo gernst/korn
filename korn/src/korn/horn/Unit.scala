@@ -23,8 +23,8 @@ class Unit(stmts: List[Stmt]) {
   val consts = mutable.Map[String, Val]()
 
   /** collected predicates and clauses */
-  val pres = mutable.Map[String, Pred]()
-  val posts = mutable.Map[String, (Pred, Option[Sort])]()
+  val pres = mutable.Map[String, Pre]()
+  val posts = mutable.Map[String, Post]()
 
   var preds = mutable.Set[Pred]()
   val clauses = mutable.Buffer[Clause]()

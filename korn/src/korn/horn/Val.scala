@@ -32,8 +32,10 @@ object Val {
   def const(int: Int): Val = ???
   
   def to(arg: Val): Pure = ???
+  def to(args: Option[Val]): Option[Pure] = ???
   def to(args: List[Val]): List[Pure] = ???
   def from(pure: Pure): Val = ???
+  def from(args: Option[Pure]): Option[Val] = ???
   def from(pures: List[Pure]): List[Val] = pures map Val.from
 
   case class question(test: Pure, left: Val, right: Val) extends Val

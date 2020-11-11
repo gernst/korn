@@ -149,7 +149,7 @@ class Eval(unit: Unit) {
           val _old = st1(name)
           val (_rhs, st2) = rval(rhs, st0, st1)
           val (_idx, st3) = rval(idx, st0, st2)
-          val _new = _old store (_idx, _rhs)
+          val _new = _old.store(_idx, _rhs)
           (_old select _idx, _rhs, st3 + (name -> _new))
 
         // XXX: hacky way to support 2-dimensional arrays
@@ -160,8 +160,8 @@ class Eval(unit: Unit) {
           val (_idx2, st4) = rval(idx2, st0, st3)
           val _old1 = _old0 select _idx1
           val _old2 = _old1 select _idx2
-          val _new1 = _old1 store (_idx2, _rhs)
-          val _new0 = _old0 store (_idx1, _new1)
+          val _new1 = _old1.store(_idx2, _rhs)
+          val _new0 = _old0.store(_idx1, _new1)
           (_old2, _rhs, st4 + (name -> _new0))
 
         /* case PreOp("*", ptr) =>
@@ -412,22 +412,22 @@ class Eval(unit: Unit) {
           korn.avoid(name startsWith "__VERIFIER_nondet", "unsupported function: " + name)
 
           val pre = pres(name)
-          val (post, sort) = posts(name)
+          val post = posts(name)
           val (ret, _) = funs(name)
 
           val (_in, st2) = rvals(args, st0, st1)
 
-          val (_ret, _out, st3) = sort match {
+          val (_ret, _out, st3) = post.ret match {
             case Some(sort) =>
               var x = fresh("$result", sort)
-              (x, List(x: Pure), st2)
+              (x, Some(x: Pure), st2)
             case None =>
-              (null, Nil, st2)
+              (null, None, st2)
           }
 
           // XXX: need to return the modifed heap
-          val _pre = pre(Val.to(_in))
-          val _call = post(Val.to(_in) ++ _out)
+          val _pre = pre(_in)
+          val _call = post(_in, _out)
 
           clause(st3, _pre, name + " precondition")
 

@@ -19,8 +19,7 @@ object Config {
 
 sealed trait Contract {
   def enter(st: State, proc: Proc): State
-  def leave(st: State, proc: Proc)
-  def leave(st: State, res: Pure, proc: Proc)
+  def leave(st: State, res: Option[Val], proc: Proc)
 }
 
 sealed trait Branch {
@@ -50,8 +49,7 @@ object Contract {
 
   object main extends Contract {
     def enter(st: State, proc: Proc): State = { st }
-    def leave(st: State, proc: Proc) {}
-    def leave(st: State, res: Pure, proc: Proc) {}
+    def leave(st: State, res: Option[Val], proc: Proc) {}
   }
 
   object default extends Contract {
@@ -64,35 +62,12 @@ object Contract {
       st0 and prop
     }
 
-    def leave(st: State, proc: Proc) {
+    def leave(st: State, res: Option[Val], proc: Proc) {
       import proc._
       import proc.unit._
 
-      val (post, ret) = posts(name)
-
-      val prop = if (ret.isEmpty) {
-        external.apply(post, st)
-      } else {
-        // implicitly return 0
-        external.apply(post, Pure.zero, st)
-      }
-
-      clause(st, prop, "post " + name)
-    }
-
-    def leave(st: State, res: Pure, proc: Proc) {
-      import proc._
-      import proc.unit._
-
-      val (post, ret) = posts(name)
-
-      val prop = if (ret.isEmpty) {
-        // discard return, warning only in gcc
-        external.apply(post, st)
-      } else {
-        external.apply(post, res, st)
-      }
-
+      val post = posts(name)
+      val prop = post(st, external.names, Val.to(res))
       clause(st, prop, "post " + name)
     }
   }
@@ -118,14 +93,14 @@ object Branch {
 
     def label(label: String, st0: State, st1: State, proc: Proc): State = {
       import proc._
-      val pred = internal.here($label newLabel (name, label))
+      val pred = internal.here($label.newLabel(name, label))
       now(pred, st1, "label " + label)
       from(pred, internal.arbitrary)
     }
 
     def goto(label: String, st0: State, st1: State, proc: Proc) {
       import proc._
-      val pred = internal.here($label newLabel (name, label))
+      val pred = internal.here($label.newLabel(name, label))
       now(pred, st1, "goto " + label)
     }
   }
@@ -141,14 +116,14 @@ object Branch {
 
     def label(label: String, st0: State, st1: State, proc: Proc): State = {
       import proc._
-      val pred = internal.rel($label newLabel (name, label))
+      val pred = internal.rel($label.newLabel(name, label))
       now(pred, st0, st1, "label " + label)
       from(pred, st0, internal.arbitrary)
     }
 
     def goto(label: String, st0: State, st1: State, proc: Proc) {
       import proc._
-      val pred = internal.rel($label newLabel (name, label))
+      val pred = internal.rel($label.newLabel(name, label))
       // Note: using st0 here bridges the correct origin
       //       wrt. labels for non-local forward control-flow inside a loop,
       //       alternatively fix the origin here as st2
@@ -181,7 +156,7 @@ object Loop {
       import proc._
       val inv = internal.here($inv newLabel name)
       val sum = internal.here($sum newLabel name)
-      now(inv, st1, "loop entry " + inv.name)
+      now(inv, st1, "loop entry " + inv)
       val si = from(inv, internal.arbitrary)
       (inv, sum, si)
     }
@@ -189,13 +164,13 @@ object Loop {
     def term(hyp: Hyp, proc: Proc) {
       import proc._
       val Hyp(inv, sum, si0, sin, _, _) = hyp
-      now(sum, sin, "loop term " + sum.name)
+      now(sum, sin, "loop term " + sum)
     }
 
     def iter(si2: State, hyp: Hyp, proc: Proc) {
       import proc._
       val Hyp(inv, sum, _, _, _, _) = hyp
-      now(inv, si2, "forwards " + inv.name)
+      now(inv, si2, "forwards " + inv)
     }
 
     def leave(st1: State, hyp: Hyp, proc: Proc): State = {
@@ -207,7 +182,7 @@ object Loop {
     def break(st0: State, st1: State, hyp: Hyp, proc: Proc) {
       import proc._
       val Hyp(inv, sum, _, _, _, _) = hyp
-      now(sum, st1, "break " + sum.name)
+      now(sum, st1, "break " + sum)
     }
 
     def return_(st0: State, st1: State, hyps: List[Hyp], proc: Proc): State = {
@@ -225,7 +200,7 @@ object Loop {
       import proc._
       val inv = internal.here($inv newLabel name)
       val sum = internal.rel($sum newLabel name)
-      now(inv, st1, "loop entry " + inv.name)
+      now(inv, st1, "loop entry " + inv)
       val si0 = from(inv, internal.arbitrary)
       (inv, sum, si0)
     }
@@ -234,21 +209,21 @@ object Loop {
       import proc._
       val Hyp(inv, sum, _, sin, _, _) = hyp
 
-      val st = sin maybePrune (inv, keep = !only)
-      now(sum, st, st, "loop term " + sum.name)
+      val st = sin.maybePrune(inv, keep = !only)
+      now(sum, st, st, "loop term " + sum)
     }
 
     def iter(si2: State, hyp: Hyp, proc: Proc) {
       import proc._
       import proc.unit._
       val Hyp(inv, sum, _, _, sty, _) = hyp
-      now(inv, si2, "forwards " + inv.name)
+      now(inv, si2, "forwards " + inv)
 
-      val st = si2 maybePrune (inv, keep = !only)
+      val st = si2.maybePrune(inv, keep = !only)
       val stn = internal.arbitrary
       val prem = internal.apply(sum, si2, stn)
       val concl = internal.apply(sum, sty, stn)
-      clause(st and prem, concl, "backwards " + sum.name)
+      clause(st and prem, concl, "backwards " + sum)
     }
 
     def leave(st1: State, hyp: Hyp, proc: Proc): State = {
@@ -260,7 +235,7 @@ object Loop {
     def break(st0: State, st1: State, hyp: Hyp, proc: Proc) {
       import proc._
       val Hyp(inv, sum, _, _, siy, _) = hyp
-      now(sum, siy, st1, "break " + sum.name)
+      now(sum, siy, st1, "break " + sum)
     }
 
     def return_(st0: State, st1: State, hyps: List[Hyp], proc: Proc): State = {
@@ -271,7 +246,7 @@ object Loop {
         //* collect all inductive hypotheses */
         for (hyp <- hyps) {
           val Hyp(inv, sum, si0, _, siy, _) = hyp
-          now(sum, siy, st2, "return " + sum.name)
+          now(sum, siy, st2, "return " + sum)
           val concl = internal.apply(sum, si0, st2)
           st2 = st2 and concl
         }
@@ -295,7 +270,7 @@ object Loop {
             if (dont contains label)
               Breaks.break
 
-            now(sum, siy, st2, "return " + sum.name)
+            now(sum, siy, st2, "return " + sum)
             val concl = internal.apply(sum, si0, st2)
             st2 = st2 and concl
           }

@@ -4,13 +4,53 @@ import korn.c._
 import korn.smt._
 
 sealed trait Pred {
-  def name: String
-  def apply(args: List[Pure]): Pure = ???
+  def fun: Fun
+  override def toString = fun.name
+}
+
+sealed trait Step extends Pred {
+  def apply(st0: State, st1: State): Pure
+}
+
+case class Pre(fun: Fun) extends Pred {
+  def apply(args: List[Val]) = {
+    Pure.app(fun, Val.to(args))
+  }
+}
+
+case class Post(fun: Fun, ret: Option[Sort]) extends Pred {
+  def apply(st: State, names: List[String], res: Option[Pure]): Pure = {
+    apply(st(names), res)
+  }
+
+  def apply(args: List[Val], res: Option[Pure]): Pure = {
+    (ret, res) match {
+      case (None, None) =>
+        Pure.app(fun, Val.to(args))
+      case (Some(sort), None) =>
+        Pure.app(fun, Val.to(args) ++ List(Pure.zero))
+      case (None, Some(res)) =>
+        // discard return, warning only in gcc
+        Pure.app(fun, Val.to(args))
+      case (Some(sort), Some(res)) =>
+        Pure.app(fun, Val.to(args) ++ List(res))
+    }
+  }
 }
 
 object Pred {
-  case class state(name: String) extends Pred
-  case class step(name: String) extends Pred
+
+  case class state(fun: Fun, names: List[String]) extends Step {
+    def apply(st0: State, st1: State) = {
+      Pure.app(fun, Val.to(st1(names)))
+    }
+  }
+
+  case class step(fun: Fun, names: List[String]) extends Step {
+    def apply(st0: State, st1: State) = {
+      Pure.app(fun, Val.to(st0(names) ++ st1(names)))
+    }
+  }
 }
 
 class Sig(unit: Unit) {
@@ -33,11 +73,17 @@ class Sig(unit: Unit) {
     }
 
     def here(label: String): Pred = {
-      newPred(label, sorts)
+      val fun = Fun(label, sorts, Sort.bool)
+      val pred = Pred.state(fun, names)
+      preds += pred
+      pred
     }
 
     def rel(label: String): Pred = {
-      newPred(label, sorts ++ sorts)
+      val fun = Fun(label, sorts ++ sorts, Sort.bool)
+      val pred = Pred.state(fun, names ++ names)
+      preds += pred
+      pred
     }
 
     def apply(pred: Pred, st0: State): Pure = {
@@ -114,11 +160,11 @@ class Sig(unit: Unit) {
 
     if (!known(name)) {
       if (_ret != null) {
-        pres += (name -> newPred(pre, _args))
-        posts += (name -> (newPred(post, _args ++ List(_ret)), Some(_ret)))
+        pres += (name -> Pre(Fun(pre, _args, Sort.bool)))
+        posts += (name -> Post(Fun(post, _args ++ List(_ret), Sort.bool), Some(_ret)))
       } else {
-        pres += (name -> newPred(pre, _args))
-        posts += (name -> (newPred(post, _args), None))
+        pres += (name -> Pre(Fun(pre, _args, Sort.bool)))
+        posts += (name -> Post(Fun(post, _args, Sort.bool), None))
       }
     }
   }
