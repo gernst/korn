@@ -5,7 +5,7 @@ import java.io.File
 import java.io.Reader
 
 package object c {
-  var _bits = 32
+  var bits = 32
 
   def parse(path: String): List[Stmt] = {
     parse(new FileReader(path), path)

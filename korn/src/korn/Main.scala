@@ -10,7 +10,8 @@ import java.io.PrintStream
 import java.io.InputStream
 import java.io.OutputStream
 import java.io.FileOutputStream
-import korn.smt.Fun
+import java.io.InputStreamReader
+import java.io.BufferedReader
 
 object Main {
   val version = "0.1"
@@ -44,6 +45,21 @@ object Main {
   def cat(in: InputStream, out: OutputStream) {
     in.transferTo(out)
     out.flush()
+  }
+
+  def read(in: InputStream, out: PrintStream) {
+    val reader = new BufferedReader(new InputStreamReader(in))
+    val status = reader.readLine()
+    out.println(status)
+
+    status match {
+      case "sat" =>
+        val scanner = new korn.smt.Scanner(reader)
+        val parser = new korn.smt.Parser()
+        val res = parser.parse(scanner)
+        out.println(res)
+      case _ =>
+    }
   }
 
   @tailrec
@@ -100,11 +116,11 @@ object Main {
         configure(rest)
 
       case "-32" :: rest =>
-        c._bits = 32
+        c.bits = 32
         configure(rest)
 
       case "-64" :: rest =>
-        c._bits = 64
+        c.bits = 64
         configure(rest)
 
       case "--" :: rest =>
@@ -149,7 +165,7 @@ object Main {
               print(unit, dump(to))
               val (_, out, err) = pipe(prove ++ List(to): _*)
               if (!quiet) System.out.print(path + ":")
-              cat(out, System.out)
+              if (model) read(out, System.out) else cat(out, System.out)
               if (!quiet) cat(err, System.err)
             } else {
               val (in, out, err) = pipe(prove: _*)
@@ -157,7 +173,7 @@ object Main {
               in.println("(exit)")
               in.flush()
               if (!quiet) System.out.print(path + ":")
-              cat(out, System.out)
+              if (model) read(out, System.out) else cat(out, System.out)
               if (!quiet) cat(err, System.err)
               in.close()
             }
@@ -195,7 +211,7 @@ object Main {
 
     if (model) {
       out.println(sexpr("set-option", ":produce-models", "true"))
-      out.println(sexpr("set-option", ":produce-unsat-cores", "true"))
+      // out.println(sexpr("set-option", ":produce-unsat-cores", "true"))
     }
 
     out.println()
@@ -206,7 +222,7 @@ object Main {
     }
 
     for (pred <- unit.preds ++ unit.pres.values ++ unit.posts.values) {
-      val Fun(name, args, _) = pred.fun
+      val korn.smt.Fun(name, args, _) = pred.fun
       val defn = sexpr("declare-fun", name, sexpr(args), "Bool")
       out.println(defn)
     }
@@ -241,7 +257,7 @@ object Main {
 
     if (model) {
       out.println(sexpr("get-model"))
-      out.println(sexpr("get-unsat-core"))
+      // out.println(sexpr("get-unsat-core"))
     }
 
     out.flush()

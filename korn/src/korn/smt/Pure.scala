@@ -1,5 +1,78 @@
 package korn.smt
 
+object Parsing {
+  def boolSort = {
+    Sort.bool
+  }
+
+  def intSort = {
+    Sort.int
+  }
+
+  def arraySort(dom: Sort, ran: Sort) = {
+    Sort.array(dom, ran)
+  }
+
+  def pair[A,B](a: A, b: B) = {
+    (a, b)
+  }
+
+  def num(n: String) = {
+    Pure.const(BigInt(n))
+  }
+
+  def let(eqs: Array[(Var,Pure)], body: Pure) = {
+    Pure.let(eqs.toList, body)
+  }
+
+  def bind(quant: String, bound: Array[Param], body: Pure) = {
+    quant match {
+      case "exists" => Ex(bound.toList, body)
+      case "forall" => All(bound.toList, body)
+    }
+  }
+
+  def apply(n: String) = {
+    n match {
+      case "true"  => True
+      case "false" => True
+      case _       => Var(n)
+    }
+  }
+
+  def apply(n: String, args: Array[Pure]) = {
+    (n, args) match {
+      case ("=", Array(left, right)) => Pure.eqn(left, right)
+
+      case ("^", Array(arg1, arg2))   => arg1 ^ arg2
+      case ("*", Array(arg1, arg2))   => arg1 * arg2
+      case ("div", Array(arg1, arg2)) => arg1 / arg2
+      case ("mod", Array(arg1, arg2)) => arg1 % arg2
+
+      case ("-", Array(arg1)) => -arg1
+
+      case ("+", _) => args.reduceLeft(Pure.plus)
+      case ("-", _) => args.reduceLeft(Pure.minus)
+
+      case ("<=", Array(arg1, arg2)) => arg1 <= arg2
+      case ("<", Array(arg1, arg2))  => arg1 < arg2
+      case (">", Array(arg1, arg2))  => arg1 > arg2
+      case (">=", Array(arg1, arg2)) => arg1 <= arg2
+
+      case ("not", Array(arg1))      => !arg1
+      case ("=>", Array(arg1, arg2)) => arg1 ==> arg2
+
+      case ("and", _) => Pure.ands(args.toList)
+      case ("or", _)  => Pure.ors(args.toList)
+
+      case ("select", Array(arg1, arg2)) => Pure.select(arg1, arg2)
+      case ("store", Array(arg1, arg2, arg3)) => Pure.store(arg1, arg2, arg3)
+
+      case _ => korn.error("unknown function: " + n)
+    }
+  }
+}
+
 sealed trait Sort {}
 
 case class Clause(path: List[Pure], head: Pure, reason: String) {

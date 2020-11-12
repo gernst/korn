@@ -31,9 +31,7 @@ class Proc(
 
   def run() {
     val st0 = state
-    println(st0)
     val st1 = contract.enter(st0, this)
-    println(st1)
     val ctx = Context.init(st1)
     val st2 = local(body, st1, st1, ctx)
     contract.leave(st1, st2, None, this) // implicit return without value

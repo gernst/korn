@@ -49,7 +49,7 @@ object Signed {
   val _char = Signed("char", 1)
   val _short = Signed("short", 2)
   val _int = Signed("int", 4)
-  val _long = Signed("long", _bits / 8)
+  val _long = Signed("long", bits / 8)
   val _long_long = Signed("long long", 8)
 }
 
@@ -57,7 +57,7 @@ object Unsigned {
   val _char = Unsigned("char", 1)
   val _short = Unsigned("short", 2)
   val _int = Unsigned("int", 4)
-  val _long = Unsigned("long", _bits / 8)
+  val _long = Unsigned("long", bits / 8)
   val _long_long = Unsigned("long long", 8)
 }
 

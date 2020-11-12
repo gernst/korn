@@ -370,7 +370,6 @@ class Eval(unit: Unit) {
           val st3 = st2 ++ toplevel.havoc
 
           // XXX: need to return the modifed heap
-          println(toplevel.names)
           val _pre = pre(st2, toplevel.names, _in)
           val _call = post(st2, st3, toplevel.names, _in, _out)
 
