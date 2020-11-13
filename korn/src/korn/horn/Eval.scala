@@ -8,7 +8,7 @@ class Eval(unit: Unit) {
   import unit.sig._
 
   def nondet_bounded(name: String, typ: Type, st: State): (Val, State) = {
-    val (x, v) = nondet("$" + name, typ)
+    val (x, _, v) = nondet("$" + name, typ)
     val b = bounds(x, typ)
     (v, st and b)
   }
@@ -363,7 +363,7 @@ class Eval(unit: Unit) {
             case Type._void =>
               (Val.unit, None)
             case _ =>
-              var (_, x) = nondet("$result", ret)
+              var (_, _, x) = nondet("$result", ret)
               (x, Some(x))
           }
 
@@ -373,7 +373,7 @@ class Eval(unit: Unit) {
           val _pre = pre(st2, toplevel.names, _in)
           val _call = post(st2, st3, toplevel.names, _in, _out)
 
-          clause(st2, _pre, name + " precondition")
+          clause(st2, _pre, "pre " + name)
 
           (_ret, st3 and _call)
 

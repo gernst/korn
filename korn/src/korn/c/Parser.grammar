@@ -5,7 +5,16 @@
 
 %embed {:
     Set<String> types;
-    Symbol s(Object x) { return new Symbol(x); }
+
+    Symbol s(Object x) {
+        return new Symbol(x);
+    }
+    
+    Symbol s(Symbol h, Stmt x) {
+        int a = h.getStart();
+        x.here(h.getLine(a), h.getColumn(a));
+        return new Symbol(x);
+    }
 :};
 
 %terminals VOID, BOOL, CHAR, INT, SHORT, INT, LONG, LONG_LONG, SIGNED, UNSIGNED, FLOAT, DOUBLE, LONG_DOUBLE, LONG_UNSIGNED;
@@ -190,12 +199,13 @@ stmt
     | SWITCH LPAREN expr.e RPAREN stmt.b                {: return s(new Switch(e, b));  :}
     | IF LPAREN expr.a RPAREN stmt.b                    {: return s(new If(a, b));      :}
     | IF LPAREN expr.a RPAREN stmt.b ELSE stmt.c        {: return s(new If(a, b, c));   :}
-    | WHILE LPAREN expr.a RPAREN stmt.b                 {: return s(new While(a, b));   :}
-    | DO stmt.b WHILE LPAREN expr.a RPAREN SEMICOLON    {: return s(new DoWhile(b, a)); :}
-    | FOR LPAREN exprs_.a SEMICOLON exprs_.b SEMICOLON exprs_.c RPAREN stmt.p
-                                                        {: return s(new For(a, b, c, p)); :}
-    | FOR LPAREN type.t vars.vs SEMICOLON exprs_.b SEMICOLON exprs_.c RPAREN stmt.p
-                                                        {: return s(new For(Parsing.vars(t, vs), b, c, p)); :}
+
+    | WHILE.w LPAREN expr.a RPAREN stmt.b               {: return s(w, new While(a, b));     :}
+    | DO.w stmt.b WHILE LPAREN expr.a RPAREN SEMICOLON  {: return s(w, new DoWhile(b, a));   :}
+    | FOR.w LPAREN exprs_.a SEMICOLON exprs_.b SEMICOLON exprs_.c RPAREN stmt.p
+                                                        {: return s(w, new For(a, b, c, p)); :}
+    | FOR.w LPAREN type.t vars.vs SEMICOLON exprs_.b SEMICOLON exprs_.c RPAREN stmt.p
+                                                        {: return s(w, new For(Parsing.vars(t, vs), b, c, p)); :}
     ;
 
 expr

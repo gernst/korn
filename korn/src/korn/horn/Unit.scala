@@ -4,6 +4,7 @@ import scala.collection.mutable
 
 import korn.c._
 import korn.smt._
+import korn.Loc
 
 class Unit(stmts: List[Stmt]) {
 
@@ -28,6 +29,8 @@ class Unit(stmts: List[Stmt]) {
 
   var preds = mutable.Set[Pred]()
   val clauses = mutable.Buffer[Clause]()
+
+  var witness = mutable.Map[String, (Proc, Loc, Step, String)]()
 
   /** types of additional logical variables */
   var typing = mutable.Map[String, Sort]()
@@ -93,12 +96,12 @@ class Unit(stmts: List[Stmt]) {
       case VarDef(formal @ Formal(typ, name), None) =>
         globals ++= List(formal)
         vars += name -> typ
-        var (_, x) = nondet(name, typ)
+        var (_, _, x) = nondet(name, typ)
         state += (name -> x)
       case VarDef(formal @ Formal(typ, name), Some(init)) =>
         globals ++= List(formal)
         vars += name -> typ
-        var (_, x) = nondet(name, typ)
+        var (_, _, x) = nondet(name, typ)
         state += (name -> x)
         val y = value(init, state)
         state += name -> y

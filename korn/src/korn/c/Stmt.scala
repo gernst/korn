@@ -125,7 +125,14 @@ object Parsing {
   }
 }
 
-sealed trait Stmt
+sealed trait Stmt {
+  var loc: Option[korn.Loc] =  None
+
+  def here(line: Int, column: Int) = {
+    loc = Some(korn.Loc(line, column))
+    this
+  }
+}
 
 object Stmt {
   def modifies(expr: Expr): Set[String] = {
@@ -269,12 +276,16 @@ object Stmt {
       case While(test, body) =>
         val test_ = test rename re0
         val (formals, body_, re1) = norm(body, re0)
-        (formals, While(test_, body_), re1)
+        val loop_ = While(test_, body_)
+        loop_.loc = stmt.loc
+        (formals, loop_, re1)
 
       case DoWhile(body, test) =>
         val test_ = test rename re0
         val (formals, body_, re1) = norm(body, re0)
-        (formals, DoWhile(body_, test_), re1)
+        val loop_ = DoWhile(body_, test_)
+        loop_.loc = stmt.loc
+        (formals, loop_, re1)
 
       case For(vars, init, test, inc, body) =>
         val init_ = Expr.comma(init)
@@ -282,6 +293,7 @@ object Stmt {
         val inc_ = Expr.comma(inc)
         val body_ = Block(List(body, Atomic(inc_)))
         val loop_ = While(test_, body_)
+        loop_.loc = stmt.loc
         val stmt_ = Block(List(Group(vars), Atomic(init_), loop_))
         norm(stmt_, re0)
 

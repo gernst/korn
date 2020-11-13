@@ -133,7 +133,9 @@ object Loop {
       val inv =
         if (!rel) internal.state($inv newLabel name)
         else internal.step($inv newLabel name)
-      val sum = internal.step($sum newLabel name)
+      val sum =
+        if (!rel) internal.state($sum newLabel name)
+        else internal.step($sum newLabel name)
       now(inv, st1, st1, "loop entry " + inv)
       val si0 = from(inv, st1, internal.arbitrary)
       (inv, sum, si0)

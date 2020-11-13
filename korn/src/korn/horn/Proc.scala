@@ -125,6 +125,9 @@ class Proc(
         val siy = si1 and _test
 
         val hyp = Hyp(inv, sum, st1, si0, sin, siy, dont)
+        val loc = korn.unpack(stmt.loc, "no location for while loop")
+        witness += inv.name -> (this, loc, inv, "invariant")
+        witness += sum.name -> (this, loc, sum, "summary")
 
         loop.term(hyp, this)
 

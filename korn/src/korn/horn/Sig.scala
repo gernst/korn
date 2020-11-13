@@ -5,10 +5,12 @@ import korn.smt._
 
 sealed trait Pred {
   def fun: Fun
-  override def toString = fun.name
+  def name = fun.name
+  override def toString = name
 }
 
 sealed trait Step extends Pred {
+  def names: List[String]
   def apply(st0: State, st1: State): Pure
 }
 
@@ -76,7 +78,7 @@ class Sig(unit: Unit) {
 
     def havoc: Store = {
       val xs = for ((name, typ) <- sig) yield {
-        val (_, v) = nondet(name, typ)
+        val (_, _, v) = nondet(name, typ)
         name -> v
       }
       Map(xs: _*)
@@ -140,23 +142,27 @@ class Sig(unit: Unit) {
     }
   }
 
-  def nondet(name: String, typ: Type): (Pure, Val) = {
+  def nondet(name: String, typ: Type): (Var, Sort, Val) = {
     typ match {
       case Type._Bool =>
+        val s = Sort.int
         val x = fresh(name, Sort.int)
-        x -> Val.number(x)
+        (x, s, Val.number(x))
 
       case Signed(_, bytes) =>
+        val s = Sort.int
         val x = fresh(name, Sort.int)
-        x -> Val.number(x)
+        (x, s, Val.number(x))
 
       case Unsigned(_, bytes) =>
-        val x = fresh(name, Sort.int)
-        x -> Val.number(x)
+        val s = Sort.int
+        val x = fresh(name, s)
+        (x, s, Val.number(x))
 
       case ArrayType(elem, dim) =>
-        val x = fresh(name, Sort.array(Sort.int, resolve(elem)))
-        x -> Val.array(x, elem)
+        val s = Sort.array(Sort.int, resolve(elem))
+        val x = fresh(name, s)
+        (x, s, Val.array(x, elem))
 
       case _ =>
         korn.error("unsupported type: " + typ)
@@ -172,6 +178,10 @@ class Sig(unit: Unit) {
   def fresh(pairs: Iterable[(String, Sort)]): List[Var] = {
     val vars = pairs map { case (name, typ) => fresh(name, typ) }
     vars.toList
+  }
+
+  object $nondet extends korn.Counter {
+    def newLabel(typ: String) = "$nondet_" + typ
   }
 
   def declare(name: String, ret: Type, args: List[Type]) {

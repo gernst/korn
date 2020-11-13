@@ -13,7 +13,7 @@ object Parsing {
     Sort.array(dom, ran)
   }
 
-  def pair[A,B](a: A, b: B) = {
+  def pair[A, B](a: A, b: B) = {
     (a, b)
   }
 
@@ -21,7 +21,7 @@ object Parsing {
     Pure.const(BigInt(n))
   }
 
-  def let(eqs: Array[(Var,Pure)], body: Pure) = {
+  def let(eqs: Array[(Var, Pure)], body: Pure) = {
     Pure.let(eqs.toList, body)
   }
 
@@ -65,7 +65,7 @@ object Parsing {
       case ("and", _) => Pure.ands(args.toList)
       case ("or", _)  => Pure.ors(args.toList)
 
-      case ("select", Array(arg1, arg2)) => Pure.select(arg1, arg2)
+      case ("select", Array(arg1, arg2))      => Pure.select(arg1, arg2)
       case ("store", Array(arg1, arg2, arg3)) => Pure.store(arg1, arg2, arg3)
 
       case _ => korn.error("unknown function: " + n)
@@ -210,10 +210,22 @@ object Pure extends korn.Counter with Alpha[Pure, Var] {
   }
 
   // Parsing only
-  case class let(eqs: List[(Var, Pure)], body: Pure) extends Pure {
-    def free = ???
-    def rename(re: Map[Var, Var]) = ???
-    def subst(su: Map[Var, Pure]) = ???
+  case class let(eqs: List[(Var, Pure)], body: Pure) extends Pure with Pure.bind[let] {
+    def free = (body.free -- bound) ++ (eqs.flatMap(_._2.free))
+    def bound = Set(eqs.map(_._1): _*)
+
+    def rename(a: Map[Var, Var], re: Map[Var, Var]) = {
+      val _eqs = eqs map { case (x, e) => (x rename a, e rename re) }
+      val _body = body rename re
+      let(_eqs, _body)
+    }
+
+    def subst(a: Map[Var, Var], su: Map[Var, Pure]) = {
+      val _eqs = eqs map { case (x, e) => (x rename a, e subst su) }
+      val _body = body subst su
+      let(_eqs, _body)
+    }
+
     override def toString = {
       val ps = eqs map { case (x, a) => sexpr(x, a) }
       sexpr("let", sexpr(ps), body)

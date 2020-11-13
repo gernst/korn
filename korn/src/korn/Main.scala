@@ -47,7 +47,7 @@ object Main {
     out.flush()
   }
 
-  def read(in: InputStream, out: PrintStream) {
+  def read(in: InputStream, out: PrintStream, unit: horn.Unit) {
     val reader = new BufferedReader(new InputStreamReader(in))
     val status = reader.readLine()
     out.println(status)
@@ -57,7 +57,7 @@ object Main {
         val scanner = new korn.smt.Scanner(reader)
         val parser = new korn.smt.Parser()
         val res = parser.parse(scanner)
-        out.println(res)
+        Witness.dump(res.asInstanceOf[korn.smt.Model], unit)
       case _ =>
     }
   }
@@ -165,7 +165,7 @@ object Main {
               print(unit, dump(to))
               val (_, out, err) = pipe(prove ++ List(to): _*)
               if (!quiet) System.out.print(path + ":")
-              if (model) read(out, System.out) else cat(out, System.out)
+              if (model) read(out, System.out, unit) else cat(out, System.out)
               if (!quiet) cat(err, System.err)
             } else {
               val (in, out, err) = pipe(prove: _*)
@@ -173,7 +173,7 @@ object Main {
               in.println("(exit)")
               in.flush()
               if (!quiet) System.out.print(path + ":")
-              if (model) read(out, System.out) else cat(out, System.out)
+              if (model) read(out, System.out, unit) else cat(out, System.out)
               if (!quiet) cat(err, System.err)
               in.close()
             }
