@@ -13,6 +13,10 @@ object Parsing {
     Sort.array(dom, ran)
   }
 
+  def pointerSort(elem: Sort) = {
+    Sort.pointer(elem)
+  }
+
   def pair[A, B](a: A, b: B) = {
     (a, b)
   }
@@ -67,6 +71,8 @@ object Parsing {
 
       case ("select", Array(arg1, arg2))      => Pure.select(arg1, arg2)
       case ("store", Array(arg1, arg2, arg3)) => Pure.store(arg1, arg2, arg3)
+
+      case ("ite", Array(arg1, arg2, arg3)) => Pure.ite(arg1, arg2, arg3)
 
       case _ => korn.error("unknown function: " + n)
     }

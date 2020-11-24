@@ -6,11 +6,11 @@
 :};
 
 
-%terminals LP, RP;
-%terminals ID;
+%terminals LP, RP, BANG;
+%terminals ID, KW;
 %terminals NUM;
 
-%terminals INT, BOOL, ARRAY;
+%terminals INT, BOOL, ARRAY, POINTER;
 
 %terminals MODEL, DEFINE_FUN;
 %terminals LET, EXISTS, FORALL;
@@ -58,6 +58,8 @@ pair
 sort
     = INT  {: return s(Parsing.intSort());  :}
     | BOOL {: return s(Parsing.boolSort()); :}
+    | LP POINTER sort.e RP
+          {: return s(Parsing.pointerSort(e));  :}
     | LP ARRAY sort.d sort.r RP
            {: return s(Parsing.arraySort(d,r)); :}
     ;
@@ -66,9 +68,13 @@ var
   = ID.n  {: return s(Var.apply(n)); :}
   ;
 
+attr  = KW.k expr.e;
+attrs = attr*;
+
 expr
   = NUM.n {: return s(Parsing.num(n));   :}
   | ID.n  {: return s(Parsing.apply(n)); :}
+  | LP BANG expr.e attrs RP
   | LP ID.n exprs.es RP
           {: return s(Parsing.apply(n, es)); :}
   | LP LET LP pairs.ps RP expr.b RP

@@ -3,101 +3,87 @@ package korn.horn
 import korn.c._
 import korn.smt._
 
-sealed trait Val {}
+case class Val(pure: Pure, typ: Type)
 
 // class Ptr(val typ: Type) extends Val
 
 object Val {
-  case object unit extends Val {
-    def typ = Type._void
-  }
+  val unit = Val(null, Type._void)
 
-  def to(arg: Option[Val]): Option[Pure] = arg map to
-  def to(args: List[Val]): List[Pure] = args map to
-
-  def to(arg: Val): Pure = {
-    arg match {
-      case number(pure) =>
-        pure
-      case array(pure, _) =>
-        pure
-      case bool(arg: Pure) =>
-        Pure.ite(arg, Pure.one, Pure.zero)
-      case question(test, left, right) =>
-        Pure.ite(test, to(left), to(right))
-    }
-  }
-
-  def from(pure: Pure, typ: Type): Val = {
-    typ match {
-      case Type._Bool =>
-        bool(pure)
-      case _: Unsigned | _: Signed =>
-        number(pure)
-      case ArrayType(elem, dim) =>
-        array(pure, elem)
-    }
-  }
-
-  case class number(pure: Pure) extends Val
-  case class array(pure: Pure, elem: Type) extends Val
-  // case class array(content: Pure, length: Pure, elem: Type) extends Val
-
-  case class bool(arg: Pure) extends Val {
-    def typ = Type._Bool
-  }
-
-  case class question(test: Pure, left: Val, right: Val) extends Val {}
+  def to(v: Val) = v.pure
+  def to(v: Option[Val]) = v map (_.pure)
+  def to(v: List[Val]) = v map (_.pure)
 
   def truth(arg: Val): Pure = {
+    val Val(pure, typ) = arg
+
+    pure match {
+      case Pure.ite(test, Pure.one, Pure.zero) =>
+        test
+      case _ =>
+        pure !== Pure.zero
+    }
+  }
+
+  def bool(arg: Pure): Val = {
     arg match {
-      case Val.number(arg) =>
-        arg !== Pure.zero
-      case Val.bool(arg) =>
-        arg
+      case Pure.not(Pure.eqn(pure, Pure.zero)) =>
+        Val(pure, Type._Bool)
+      case _ =>
+        Val(Pure.ite(arg, Pure.one, Pure.zero), Type._Bool)
     }
   }
 
   def preop(op: String, arg: Val): Val = {
     (op, arg) match {
-      case ("+", Val.number(arg)) =>
-        (Val.number(arg))
-      case ("-", Val.number(arg)) =>
-        (Val.number(-arg))
+      case ("+", Val(arg, typ)) =>
+        Val(arg, typ)
+      case ("-", Val(arg, typ)) =>
+        Val(-arg, typ)
       case ("!", _) =>
         bool(!truth(arg))
+      case _ =>
+        korn.error("unknown unary operator: " + op)
     }
+  }
+
+  def question(test: Pure, arg1: Val, arg2: Val): Val = {
+    val Val(pure1, typ1) = arg1
+    val Val(pure2, typ2) = arg2
+    Val(Pure.ite(test, pure1, pure2), typ1 | typ2)
   }
 
   def relop(op: String, arg1: Val, arg2: Val): Pure = {
     (op, arg1, arg2) match {
-      case ("==", Val.number(arg1), Val.number(arg2)) =>
+      case ("==", Val(arg1, typ1), Val(arg2, typ2)) =>
         arg1 === arg2
-      case ("!=", Val.number(arg1), Val.number(arg2)) =>
+      case ("!=", Val(arg1, typ1), Val(arg2, typ2)) =>
         arg1 !== arg2
-      case ("<=", Val.number(arg1), Val.number(arg2)) =>
+      case ("<=", Val(arg1, typ1), Val(arg2, typ2)) =>
         arg1 <= arg2
-      case ("<", Val.number(arg1), Val.number(arg2)) =>
+      case ("<", Val(arg1, typ1), Val(arg2, typ2)) =>
         arg1 < arg2
-      case (">", Val.number(arg1), Val.number(arg2)) =>
+      case (">", Val(arg1, typ1), Val(arg2, typ2)) =>
         arg1 > arg2
-      case (">=", Val.number(arg1), Val.number(arg2)) =>
+      case (">=", Val(arg1, typ1), Val(arg2, typ2)) =>
         arg1 >= arg2
+      case _ =>
+        korn.error("unknown binary operator: " + op)
     }
   }
 
   def binop(op: String, arg1: Val, arg2: Val): Val = {
     (op, arg1, arg2) match {
-      case ("+", Val.number(arg1), Val.number(arg2)) =>
-        Val.number(arg1 + arg2)
-      case ("-", Val.number(arg1), Val.number(arg2)) =>
-        Val.number(arg1 - arg2)
-      case ("*", Val.number(arg1), Val.number(arg2)) =>
-        Val.number(arg1 * arg2)
-      case ("/", Val.number(arg1), Val.number(arg2)) =>
-        Val.number(arg1 / arg2)
-      case ("%", Val.number(arg1), Val.number(arg2)) =>
-        Val.number(arg1 % arg2)
+      case ("+", Val(arg1, typ1), Val(arg2, typ2)) =>
+        Val(arg1 + arg2, typ1 | typ2)
+      case ("-", Val(arg1, typ1), Val(arg2, typ2)) =>
+        Val(arg1 - arg2, typ1 | typ2)
+      case ("*", Val(arg1, typ1), Val(arg2, typ2)) =>
+        Val(arg1 * arg2, typ1 | typ2)
+      case ("/", Val(arg1, typ1), Val(arg2, typ2)) =>
+        Val(arg1 / arg2, typ1 | typ2)
+      case ("%", Val(arg1, typ1), Val(arg2, typ2)) =>
+        Val(arg1 % arg2, typ1 | typ2)
       case _ =>
         bool(relop(op, arg1, arg2))
     }
@@ -105,41 +91,20 @@ object Val {
 
   def select(base: Val, index: Val): Val = {
     (base, index) match {
-      case (array(base, typ), number(index)) =>
-        Val.from(base select index, typ)
+      case (Val(base, ArrayType(elem, dim)), Val(index, _)) =>
+        /// XXX: ensure that typ is cast to int?
+        Val(base select index, elem)
+      case _ =>
+        korn.error("invalid array lookup: " + base + " at " + index)
     }
   }
 
   def store(base: Val, index: Val, value: Val): Val = {
-    (base, index) match {
-      case (array(base, typ), number(index)) =>
-        array(base.store(index, Val.to(value)), typ)
+    (base, index, value) match {
+      case (Val(base, typ @ ArrayType(elem, dim)), Val(index, _), Val(value, _)) =>
+        Val(base store (index, value), typ)
+      case _ =>
+        korn.error("invalid array update: " + base + " at " + index)
     }
   }
-
-  /* case class struct(fields: Map[String, Val]) extends Val
-
-  case class index(base: Ptr, index: Pure) extends Val
-  case class member(base: Ptr, field: String) extends Val */
-
-  /* case class Struct() extends Sort
-
-  case class Arr(value: Val, length: Val) extends Val
-  case class Arr2(values: List[Val]) extends Val
-
-  sealed trait Loc extends Val
-  case class Ptr(index: Int, sort: Sort) extends Loc
-  case class Index(arr: Val, index: Val) extends Loc
-  case class Member(base: Val, field: String) extends Loc
-
-  case class Const(value: Int, sort: Sort) extends Val
-
-  case class App(fun: Fun, args: List[Val])
-
-  sealed trait Heap {
-    def from(that: Heap): Heap = ??? // subst that for emp and reduce, possibly introduce case splits
-  }
-  case object Emp extends Heap
-  case class Load(loc: Loc, heap: Heap) extends Heap
-  case class Store(loc: Loc, value: Val, heap: Heap) extends Heap */
 }

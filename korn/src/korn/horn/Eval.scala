@@ -26,13 +26,13 @@ class Eval(unit: Unit) {
         consts(name)
 
       case Lit(value: Char) =>
-        Val.number(Pure.const(value))
+        Val(Pure.const(value), Signed._char)
 
       case Lit(value: Int) =>
-        Val.number(Pure.const(value))
+        Val(Pure.const(value), Signed._int)
 
       case Lit(value: Long) =>
-        Val.number(Pure.const(value))
+        Val(Pure.const(value), Signed._long)
 
       case Lit(value) =>
         korn.error("unknown constant: " + value + " of type " + value.getClass())

@@ -55,7 +55,7 @@ class Unit(stmts: List[Stmt]) {
 
   def enum(cases: List[String]) = {
     for ((name, index) <- cases.zipWithIndex)
-      consts += name -> Val.number(Pure.const(index))
+      consts += name -> Val(Pure.const(index), Signed._int)
   }
 
   def run() {

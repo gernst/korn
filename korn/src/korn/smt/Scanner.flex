@@ -67,6 +67,7 @@ kw      = ":" {symbol}
 
 "("         { return newToken(Terminals.LP);   }
 ")"         { return newToken(Terminals.RP);   }
+"!"         { return newToken(Terminals.BANG); }
 
 // \" ~ \"     { return newToken(Terminals.STR, yytext(+1,-1)); }
 
@@ -89,6 +90,7 @@ kw      = ":" {symbol}
 "Int"       { return newToken(Terminals.INT);     }
 "Bool"      { return newToken(Terminals.BOOL);    }
 "Array"     { return newToken(Terminals.ARRAY);   }
+"Pointer"   { return newToken(Terminals.POINTER); }
 
 "define-fun"
     { return newToken(Terminals.DEFINE_FUN);   }
@@ -99,7 +101,7 @@ kw      = ":" {symbol}
 
 {symbol}    { return newToken(Terminals.ID, yytext());      }
 {quoted}    { return newToken(Terminals.ID, yytext(+1,-1)); }
-// {kw}        { return newToken(Terminals.KW, yytext(+1,0));  }
+{kw}        { return newToken(Terminals.KW, yytext(+1,0));  }
 
 [^]         { throw new RuntimeException("unexpected character '" + yytext() + "' at " + yyline + ":" + yycolumn); }
 

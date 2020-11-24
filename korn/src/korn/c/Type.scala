@@ -12,6 +12,49 @@ sealed trait Type {
     else
       bounds.foldLeft(this)(ArrayType)
   }
+
+  def |(that: Type): Type = {
+    (this, that) match {
+      // If both operands have the same type, then no further conversion is needed.
+      case _ if this == that =>
+        this
+
+      // Otherwise, if both operands have signed integer types or both have unsigned integer types,
+      // the operand with the type of lesser integer conversion rank
+      // is converted to the type of the operand with greater rank.
+      case (Signed(name1, bytes1), Signed(name2, bytes2)) =>
+        if (bytes1 >= bytes2) this else that
+      case (Unsigned(name1, bytes1), Unsigned(name2, bytes2)) =>
+        if (bytes1 >= bytes2) this else that
+
+      // Otherwise, if the operand that has unsigned integer type has rank
+      // greater or equal to the rank of the type of the other operand,
+      // then the operand with signed integer type is converted to the type
+      // of the operand with unsigned integer type.
+      case (Signed(name1, bytes1), Unsigned(name2, bytes2)) if bytes1 <= bytes2 =>
+        that
+      case (Unsigned(name1, bytes1), Signed(name2, bytes2)) if bytes1 >= bytes2 =>
+        this
+
+      // Otherwise, if the type of the operand with signed integer type can represent
+      // all of the values of the type of the operand with unsigned integer type,
+      /// then the operand with unsigned integer type is converted to the type of the operand with signed integer type.
+      case (Signed(name1, bytes1), Unsigned(name2, bytes2)) if bytes1 >= 2 * bytes2 =>
+        this
+      case (Unsigned(name1, bytes1), Signed(name2, bytes2)) if 2 * bytes1 <= bytes2 =>
+        that
+
+      // Otherwise, both operands are converted to the unsigned integer type
+      // corresponding to the type of the operand with signed integer type.
+      case (Signed(name1, bytes1), Unsigned(name2, bytes2)) =>
+        Unsigned(name1, bytes1)
+      case (Unsigned(name1, bytes1), Signed(name2, bytes2)) =>
+        Unsigned(name2, bytes2)
+
+      case _ =>
+        korn.error("incompatible types: " + this + " and " + that)
+    }
+  }
 }
 
 sealed trait CompoundType extends Type
@@ -43,6 +86,7 @@ object Type {
         korn.error("unknown size: " + typ)
     }
   }
+
 }
 
 object Signed {

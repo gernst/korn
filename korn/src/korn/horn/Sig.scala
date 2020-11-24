@@ -147,22 +147,22 @@ class Sig(unit: Unit) {
       case Type._Bool =>
         val s = Sort.int
         val x = fresh(name, Sort.int)
-        (x, s, Val.number(x))
+        (x, s, Val(x, typ))
 
       case Signed(_, bytes) =>
         val s = Sort.int
         val x = fresh(name, Sort.int)
-        (x, s, Val.number(x))
+        (x, s, Val(x, typ))
 
       case Unsigned(_, bytes) =>
         val s = Sort.int
         val x = fresh(name, s)
-        (x, s, Val.number(x))
+        (x, s, Val(x, typ))
 
       case ArrayType(elem, dim) =>
         val s = Sort.array(Sort.int, resolve(elem))
         val x = fresh(name, s)
-        (x, s, Val.array(x, elem))
+        (x, s, Val(x, typ))
 
       case _ =>
         korn.error("unsupported type: " + typ)
