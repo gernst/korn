@@ -1,12 +1,17 @@
 package korn
 
+import korn.c._
 import korn.smt._
 import korn.horn._
 import java.io.PrintStream
+import java.text.SimpleDateFormat
+import java.util.Date
 
 sealed trait Witness
 
 object Witness {
+  val N0 = "N0"
+
   def c(pure: Pure, env: Map[String, String]): String = {
     pure match {
       case x: Var =>
@@ -64,23 +69,50 @@ object Witness {
     }
   }
 
-  def dump(df: Def, unit: Unit, out: PrintStream) {
+  def hash(file: String) = {
+    import java.nio.file.Files
+    import java.nio.file.Paths
+    val md = java.security.MessageDigest.getInstance("SHA-256")
+    val hash = md.digest(Files.readAllBytes(Paths.get(file))).map("%02x".format(_)).mkString
+    hash
+  }
+
+  def dump(file: String, df: Def, unit: Unit, out: PrintStream) {
     val Def(name, args, ret, body) = df
 
-    if (unit.witness contains name) {
+    if ((name contains "inv") && (unit.witness contains name)) {
       val (proc, loc, pred, msg) = unit witness name
       val from = args map (_.x.toString)
       val to = pred.names
       val env = Map(from zip to: _*)
-      val res = c(body, env)
-      println(msg + " for " + proc.name + " at " + loc.line + ":" + loc.column)
-      println("  " + res)
+      val inv = c(body, env)
+
+      val nd = "N-" + loc.line + "-" + loc.column
+
+      out println graph.enter(N0, nd, loc)
+      out println graph.loop(nd, inv)
+      out println graph.leave(nd, N0)
+
+      // println(msg + " for " + proc.name + " at " + loc.line + ":" + loc.column)
+      // println("  " + inv)
     }
   }
 
-  def dump(model: Model, unit: Unit, out: PrintStream) {
+  def dump(file: String, model: Model, unit: Unit, out: PrintStream) {
+    out println header(file)
+
+    val df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
+    val time = df.format(new Date());
+    out println graph.header(file, time, hash(file), bits)
+
+    out println graph.entry(N0)
+
     for (df <- model.defs)
-      dump(df, unit, out)
+      dump(file, df, unit, out)
+
+    out println graph.footer
+
+    out println footer
   }
 
   // copied from https://github.com/sosy-lab/sv-witnesses/blob/master/multivar_true-unreach-call1.graphml
@@ -132,6 +164,7 @@ object Witness {
  <key attr.name="predecessor" attr.type="string" for="edge" id="predecessor"/>
  <key attr.name="successor" attr.type="string" for="edge" id="successor"/>
  <key attr.name="witness-type" attr.type="string" for="graph" id="witness-type"/>
+ <key attr.name="creationtime" attr.type="string" for="graph" id="creationtime"/>
 """
 
   val footer =
@@ -139,9 +172,10 @@ object Witness {
 """
 
   object graph {
-    def header(file: String, hash: String, bits: Int, typ: String = "correctness_witness") =
+    def header(file: String, time: String, hash: String, bits: Int, typ: String = "correctness_witness") =
       s""" <graph edgedefault="directed">
   <data key="witness-type">${typ}</data>
+  <data key="creationtime">${time}</data>
   <data key="sourcecodelang">C</data>
   <data key="producer">Korn ${Main.version}</data>
   <data key="specification">CHECK( init(main()), LTL(G ! call(reach_error())) )</data>
@@ -156,22 +190,36 @@ object Witness {
   </node>
 """
 
-    def invariant(id: String, inv: String, scope: String) =
+    def node(id: String) =
+      s"""  <node id="${id}"></node>
+"""
+
+    def loop(id: String, inv: String) =
+      s"""  <node id="${id}">
+   <data key="invariant">${inv}</data>
+  </node>
+"""
+    def loop(id: String, inv: String, scope: String) =
       s"""  <node id="${id}">
    <data key="invariant">${inv}</data>
    <data key="invariant.scope">${scope}</data>
   </node>
 """
 
-    def loopHead(src: String, dst: String, line: Int, column: Int) =
+    def enter(src: String, dst: String, loc: Loc) =
       s"""  <edge source="${src}" target="${dst}">
    <data key="enterLoopHead">true</data>
-   <data key="startline">${line}</data>
-   <data key="startoffset">${column}</data>
+   <data key="startline">${loc.line}</data>
+   <data key="startoffset">${loc.column}</data>
   </edge>
 """
 
-    def footer = """  </graph>
+    def leave(src: String, dst: String) =
+      s"""  <edge source="${src}" target="${dst}">
+  </edge>
+"""
+
+    def footer = """ </graph>
 """
   }
 }

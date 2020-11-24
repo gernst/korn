@@ -12,6 +12,7 @@ import java.io.OutputStream
 import java.io.FileOutputStream
 import java.io.InputStreamReader
 import java.io.BufferedReader
+import java.io.FileWriter
 
 object Main {
   val version = "0.2"
@@ -47,7 +48,7 @@ object Main {
     out.flush()
   }
 
-  def read(in: InputStream, out: PrintStream, unit: horn.Unit) {
+  def read(in: InputStream, out: PrintStream, file: String, unit: horn.Unit) {
     val reader = new BufferedReader(new InputStreamReader(in))
     val status = reader.readLine()
     out.println(status)
@@ -57,7 +58,8 @@ object Main {
         val scanner = new korn.smt.Scanner(reader)
         val parser = new korn.smt.Parser()
         val res = parser.parse(scanner)
-        Witness.dump(res.asInstanceOf[korn.smt.Model], unit, System.err)
+        val witness = new PrintStream(new File(file + ".graphml"))
+        Witness.dump(file, res.asInstanceOf[korn.smt.Model], unit, witness)
       case _ =>
     }
   }
@@ -165,7 +167,7 @@ object Main {
               print(unit, dump(to))
               val (_, out, err) = pipe(prove ++ List(to): _*)
               if (!quiet) System.out.print(path + ":")
-              if (model) read(out, System.out, unit) else cat(out, System.out)
+              if (model) read(out, System.out, path, unit) else cat(out, System.out)
               if (!quiet) cat(err, System.err)
             } else {
               val (in, out, err) = pipe(prove: _*)
@@ -173,7 +175,7 @@ object Main {
               in.println("(exit)")
               in.flush()
               if (!quiet) System.out.print(path + ":")
-              if (model) read(out, System.out, unit) else cat(out, System.out)
+              if (model) read(out, System.out, path, unit) else cat(out, System.out)
               if (!quiet) cat(err, System.err)
               in.close()
             }
