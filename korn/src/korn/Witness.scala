@@ -2,6 +2,7 @@ package korn
 
 import korn.smt._
 import korn.horn._
+import java.io.PrintStream
 
 sealed trait Witness
 
@@ -27,18 +28,18 @@ object Witness {
         "(" + c(arg1, env) + " - " + c(arg2, env) + ")"
 
       case Pure.lt(arg1, arg2) =>
-        "(" + c(arg1, env) + " < " + c(arg2, env) + ")"
+        "(" + c(arg1, env) + " &lt; " + c(arg2, env) + ")"
       case Pure.le(arg1, arg2) =>
-        "(" + c(arg1, env) + " <= " + c(arg2, env) + ")"
+        "(" + c(arg1, env) + " &lt;= " + c(arg2, env) + ")"
       case Pure.gt(arg1, arg2) =>
-        "(" + c(arg1, env) + " > " + c(arg2, env) + ")"
+        "(" + c(arg1, env) + " &gt; " + c(arg2, env) + ")"
       case Pure.ge(arg1, arg2) =>
-        "(" + c(arg1, env) + " >= " + c(arg2, env) + ")"
+        "(" + c(arg1, env) + " &gt;= " + c(arg2, env) + ")"
 
       case Pure.not(arg) =>
         "! " + c(arg, env)
       case Pure.and(arg1, arg2) =>
-        "(" + c(arg1, env) + " && " + c(arg2, env) + ")"
+        "(" + c(arg1, env) + " &amp;&amp; " + c(arg2, env) + ")"
       case Pure.or(arg1, arg2) =>
         "(" + c(arg1, env) + " || " + c(arg2, env) + ")"
       case Pure.imp(arg1, arg2) =>
@@ -63,7 +64,7 @@ object Witness {
     }
   }
 
-  def dump(df: Def, unit: Unit) {
+  def dump(df: Def, unit: Unit, out: PrintStream) {
     val Def(name, args, ret, body) = df
 
     if (unit.witness contains name) {
@@ -77,17 +78,17 @@ object Witness {
     }
   }
 
-  def dump(model: Model, unit: Unit) {
+  def dump(model: Model, unit: Unit, out: PrintStream) {
     for (df <- model.defs)
-      dump(df, unit)
+      dump(df, unit, out)
   }
 
   // copied from https://github.com/sosy-lab/sv-witnesses/blob/master/multivar_true-unreach-call1.graphml
-  val header =
-    """<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+  def header(file: String) =
+    s"""<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
  <key attr.name="originFileName" attr.type="string" for="edge" id="originfile">
-  <default>/home/dangl/sv-witnesses/multivar_true-unreach-call1.i</default>
+  <default>${file}</default>
  </key>
  <key attr.name="invariant" attr.type="string" for="node" id="invariant"/>
  <key attr.name="invariant.scope" attr.type="string" for="node" id="invariant.scope"/>
@@ -136,4 +137,41 @@ object Witness {
   val footer =
     """</graphml>
 """
+
+  object graph {
+    def header(file: String, hash: String, bits: Int, typ: String = "correctness_witness") =
+      s""" <graph edgedefault="directed">
+  <data key="witness-type">${typ}</data>
+  <data key="sourcecodelang">C</data>
+  <data key="producer">Korn ${Main.version}</data>
+  <data key="specification">CHECK( init(main()), LTL(G ! call(reach_error())) )</data>
+  <data key="programfile">${file}</data>
+  <data key="programhash">${hash}</data>
+  <data key="architecture">${bits}bit</data>
+"""
+
+    def entry(id: String) =
+      s"""  <node id="${id}">
+   <data key="entry">true</data>
+  </node>
+"""
+
+    def invariant(id: String, inv: String, scope: String) =
+      s"""  <node id="${id}">
+   <data key="invariant">${inv}</data>
+   <data key="invariant.scope">${scope}</data>
+  </node>
+"""
+
+    def loopHead(src: String, dst: String, line: Int, column: Int) =
+      s"""  <edge source="${src}" target="${dst}">
+   <data key="enterLoopHead">true</data>
+   <data key="startline">${line}</data>
+   <data key="startoffset">${column}</data>
+  </edge>
+"""
+
+    def footer = """  </graph>
+"""
+  }
 }

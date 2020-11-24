@@ -14,7 +14,7 @@ import java.io.InputStreamReader
 import java.io.BufferedReader
 
 object Main {
-  val version = "0.1"
+  val version = "0.2"
 
   var dry = false
   var config = "default"
@@ -57,7 +57,7 @@ object Main {
         val scanner = new korn.smt.Scanner(reader)
         val parser = new korn.smt.Parser()
         val res = parser.parse(scanner)
-        Witness.dump(res.asInstanceOf[korn.smt.Model], unit)
+        Witness.dump(res.asInstanceOf[korn.smt.Model], unit, System.err)
       case _ =>
     }
   }

@@ -297,12 +297,17 @@ object Stmt {
         val stmt_ = Block(List(Group(vars), Atomic(init_), loop_))
         norm(stmt_, re0)
 
-      case VarDef(Formal(typ, name), init) =>
+      case VarDef(Formal(typ, name), init) if re0 contains name =>
         val name_ = Id.fresh(name)
         val id_ = Id(name_)
         val formal_ = Formal(typ, name_)
         val init_ = init map (_ rename re0)
         (List(formal_), Assume(id_, init_, typ), re0 + (name -> name_))
+
+      case VarDef(formal@Formal(typ, name), init) =>
+        val id = Id(name)
+        val init_ = init map (_ rename re0)
+        (List(formal), Assume(id, init_, typ), re0)
 
       case _ =>
         korn.error("cannot normalize: " + stmt)
