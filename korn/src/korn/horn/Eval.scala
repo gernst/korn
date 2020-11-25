@@ -7,20 +7,17 @@ class Eval(unit: Unit) {
   import unit._
   import unit.sig._
 
-  object $cex extends korn.Counter {
-    def fresh(name: String) = "!"+ name + next
-  }
-
   def nondet_bounded(name: String, typ: Type, st: State): (Val, State) = {
     val (x, _, v) = nondet("$" + name, typ)
     val b = bounds(x, typ)
 
     val sort = resolve(typ)
-    val fun = Fun($cex fresh name, List(sort), Sort.bool)
+    val call = "__VERIFIER_nondet_" + name
+    val fun = Fun(call, List(sort), Sort.bool)
     val pred = CEX(fun)
     preds += pred
     val c = pred(x)
-    goal(st, c, "cex")
+    goal(st, c, "counterexample trace")
 
     (v, st and b and c)
   }
