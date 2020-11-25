@@ -12,57 +12,78 @@ sealed trait Witness
 object Witness {
   val N0 = "N0"
 
-  def c(pure: Pure, env: Map[String, String]): String = {
+  def c(param: Param): String = {
+    val Param(x, Sort.int) = param
+    "int " + x
+  }
+
+  def c(params: List[Param]): String = {
+    val strs = params map c
+    strs mkString ", "
+  }
+
+  def c(pure: Pure, env: Map[String, String], neg: Boolean): String = {
     pure match {
+      case True =>
+        "1"
+      case False =>
+        "0"
       case x: Var =>
         env(x.toString)
       case c: Pure.const =>
         c.toString
       case Pure.times(arg1, arg2) =>
-        "(" + c(arg1, env) + " * " + c(arg2, env) + ")"
+        "(" + c(arg1, env, neg) + " * " + c(arg2, env, neg) + ")"
       case Pure.divBy(arg1, arg2) =>
-        "(" + c(arg1, env) + " / " + c(arg2, env) + ")"
+        "(" + c(arg1, env, neg) + " / " + c(arg2, env, neg) + ")"
       case Pure.mod(arg1, arg2) =>
-        "(" + c(arg1, env) + " % " + c(arg2, env) + ")"
+        "(" + c(arg1, env, neg) + " % " + c(arg2, env, neg) + ")"
 
       case Pure.uminus(arg) =>
-        "- " + c(arg, env)
+        "- " + c(arg, env, neg)
       case Pure.plus(arg1, arg2) =>
-        "(" + c(arg1, env) + " + " + c(arg2, env) + ")"
+        "(" + c(arg1, env, neg) + " + " + c(arg2, env, neg) + ")"
       case Pure.minus(arg1, arg2) =>
-        "(" + c(arg1, env) + " - " + c(arg2, env) + ")"
+        "(" + c(arg1, env, neg) + " - " + c(arg2, env, neg) + ")"
 
       case Pure.lt(arg1, arg2) =>
-        "(" + c(arg1, env) + " &lt; " + c(arg2, env) + ")"
+        "(" + c(arg1, env, neg) + " &lt; " + c(arg2, env, neg) + ")"
       case Pure.le(arg1, arg2) =>
-        "(" + c(arg1, env) + " &lt;= " + c(arg2, env) + ")"
+        "(" + c(arg1, env, neg) + " &lt;= " + c(arg2, env, neg) + ")"
       case Pure.gt(arg1, arg2) =>
-        "(" + c(arg1, env) + " &gt; " + c(arg2, env) + ")"
+        "(" + c(arg1, env, neg) + " &gt; " + c(arg2, env, neg) + ")"
       case Pure.ge(arg1, arg2) =>
-        "(" + c(arg1, env) + " &gt;= " + c(arg2, env) + ")"
+        "(" + c(arg1, env, neg) + " &gt;= " + c(arg2, env, neg) + ")"
 
       case Pure.not(arg) =>
-        "! " + c(arg, env)
+        "! " + c(arg, env, !neg)
       case Pure.and(arg1, arg2) =>
-        "(" + c(arg1, env) + " &amp;&amp; " + c(arg2, env) + ")"
+        "(" + c(arg1, env, neg) + " &amp;&amp; " + c(arg2, env, neg) + ")"
       case Pure.or(arg1, arg2) =>
-        "(" + c(arg1, env) + " || " + c(arg2, env) + ")"
+        "(" + c(arg1, env, neg) + " || " + c(arg2, env, neg) + ")"
       case Pure.imp(arg1, arg2) =>
-        "(! " + c(arg1, env) + " || " + c(arg2, env) + ")"
+        "(! " + c(arg1, env, neg) + " || " + c(arg2, env, neg) + ")"
 
       case Pure.eqn(arg1, arg2) =>
-        "(" + c(arg1, env) + " == " + c(arg2, env) + ")"
+        "(" + c(arg1, env, neg) + " == " + c(arg2, env, neg) + ")"
       case Pure.ite(arg1, arg2, arg3) =>
-        "( " + c(arg1, env) + " ? " + c(arg2, env) + " : " + c(arg2, env) + ")"
+        "( " + c(arg1, env, neg) + " ? " + c(arg2, env, neg) + " : " + c(arg2, env, neg) + ")"
 
       case Pure.select(x: Var, arg2) =>
-        c(x, env) + "[" + c(arg2, env) + "]"
+        c(x, env, neg) + "[" + c(arg2, env, neg) + "]"
 
       case Pure.select(arg1, arg2) =>
-        "*(" + c(arg1, env) + " + " + c(arg2, env) + ")"
+        "*(" + c(arg1, env, neg) + " + " + c(arg2, env, neg) + ")"
       case Pure.let(eqs, body) =>
         val su = Map(eqs: _*)
-        c(body subst su, env)
+        c(body subst su, env, neg)
+
+      case _: Bind if !Main.witness_quant =>
+        if(neg) "false" else "true"
+      case Ex(params, body) =>
+        "(exists " + c(params) + ". " + body + ")"
+      case All(params, body) =>
+        "(forall " + c(params) + ". " + body + ")"
 
       case _ =>
         korn.error("unsupported in C: " + pure)
@@ -85,7 +106,7 @@ object Witness {
       val from = args map (_.x.toString)
       val to = pred.names
       val env = Map(from zip to: _*)
-      val inv = c(body, env)
+      val inv = c(body, env, neg = false)
 
       val nd = "N-" + loc.line + "-" + loc.column
 
@@ -93,8 +114,8 @@ object Witness {
       out println graph.loop(nd, inv)
       out println graph.leave(nd, N0)
 
-      // println(msg + " for " + proc.name + " at " + loc.line + ":" + loc.column)
-      // println("  " + inv)
+      println(msg + " for " + proc.name + " at " + loc.line + ":" + loc.column)
+      println("  " + inv)
     }
   }
 
@@ -103,16 +124,17 @@ object Witness {
 
     val df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
     val time = df.format(new Date());
-    out println graph.header(file, time, hash(file), bits)
 
-    out println graph.entry(N0)
-
-    for (df <- model.defs)
-      dump(file, df, unit, out)
-
-    out println graph.footer
-
-    out println footer
+    try {
+      out println graph.header(file, time, hash(file), bits)
+      out println graph.entry(N0)
+      for (df <- model.defs)
+        dump(file, df, unit, out)
+      println("finished writing witness for " + file)
+    } finally {
+      out println graph.footer
+      out println footer
+    }
   }
 
   // copied from https://github.com/sosy-lab/sv-witnesses/blob/master/multivar_true-unreach-call1.graphml
@@ -210,7 +232,6 @@ object Witness {
       s"""  <edge source="${src}" target="${dst}">
    <data key="enterLoopHead">true</data>
    <data key="startline">${loc.line}</data>
-   <data key="startoffset">${loc.column}</data>
   </edge>
 """
 

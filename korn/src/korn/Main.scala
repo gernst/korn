@@ -22,6 +22,8 @@ object Main {
   var debug = false
   var quiet = false
   var model = false
+  var witness = false
+  var witness_quant = false
   var write = false
   var timeout = 900 // SV-COMP default
   var prove: Seq[String] = Seq()
@@ -58,7 +60,7 @@ object Main {
         val scanner = new korn.smt.Scanner(reader)
         val parser = new korn.smt.Parser()
         val res = parser.parse(scanner)
-        val witness = new PrintStream(new File(file + ".graphml"))
+        val witness = new PrintStream(new File("witness.graphml"))
         Witness.dump(file, res.asInstanceOf[korn.smt.Model], unit, witness)
       case _ =>
     }
@@ -79,6 +81,7 @@ object Main {
 
       case ("-m" | "-model") :: rest =>
         model = true
+        witness = true
         configure(rest)
 
       case ("-p" | "-parse") :: rest =>
@@ -167,7 +170,7 @@ object Main {
               print(unit, dump(to))
               val (_, out, err) = pipe(prove ++ List(to): _*)
               if (!quiet) System.out.print(path + ":")
-              if (model) read(out, System.out, path, unit) else cat(out, System.out)
+              if (witness) read(out, System.out, path, unit) else cat(out, System.out)
               if (!quiet) cat(err, System.err)
             } else {
               val (in, out, err) = pipe(prove: _*)
@@ -175,7 +178,7 @@ object Main {
               in.println("(exit)")
               in.flush()
               if (!quiet) System.out.print(path + ":")
-              if (model) read(out, System.out, path, unit) else cat(out, System.out)
+              if (witness) read(out, System.out, path, unit) else cat(out, System.out)
               if (!quiet) cat(err, System.err)
               in.close()
             }

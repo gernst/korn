@@ -320,6 +320,14 @@ sealed trait Quant {
   def apply(params: List[Param], body: Pure) = {
     Bind(this, params, body)
   }
+
+  def unapply(pure: Pure) = {
+    pure match {
+      case Bind(quant, params, body) if quant == this=>
+        Some((params, body))
+      case _ => None
+    }
+  }
 }
 
 case object All extends Quant {
