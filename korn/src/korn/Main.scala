@@ -25,6 +25,7 @@ object Main {
   var witness = false
   var witness_quant = false
   var write = false
+  var cex = false // only Eldarica currently
   var timeout = 900 // SV-COMP default
   var prove: Seq[String] = Seq()
 
@@ -61,12 +62,38 @@ object Main {
         val parser = new korn.smt.Parser()
         val res = parser.parse(scanner)
         val model = res.asInstanceOf[korn.smt.Model]
-        val witness = new PrintStream(new File("witness.graphml"))
+
         if (debug) {
           for (df <- model.defs)
             System.err.println(df)
         }
-        Witness.dump(file, model, unit, witness)
+
+        val witness = new PrintStream(new File("witness.graphml"))
+        Witness.proof(file, model, unit, witness)
+
+      case "unsat" =>
+        var trace: List[(String, Int)] = Nil
+        var line = reader.readLine()
+        while (line != null) {
+          val pos = line indexOf "__VERIFIER_nondet_"
+          if (pos >= 0) {
+            line = line drop pos
+            val lp = line indexOf "("
+            val rp = line indexOf ")"
+            val fun = line take lp
+            val res = line drop (lp + 1) take (rp - lp - 1)
+            trace = (fun, res.toInt) :: trace
+          }
+          line = reader.readLine()
+        }
+
+        if (debug) {
+          for ((fun, res) <- trace)
+            System.err.println(fun + "() = " + res)
+        }
+
+        val witness = new PrintStream(new File("witness.graphml"))
+        Witness.cex(file, trace, unit, witness)
       case _ =>
     }
   }
@@ -115,7 +142,7 @@ object Main {
         configure(rest)
 
       case "-eld" :: rest if model =>
-        prove = Seq("eld", "-t:" + timeout, "-ssol")
+        prove = Seq("eld", "-t:" + timeout, "-ssol", "-cex")
         model = false
         write = true
         configure(rest)

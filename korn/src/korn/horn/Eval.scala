@@ -12,7 +12,7 @@ class Eval(unit: Unit) {
     val b = bounds(x, typ)
 
     val sort = resolve(typ)
-    val call = "__VERIFIER_nondet_" + name
+    val call = "$__VERIFIER_nondet_" + name
     val fun = Fun(call, List(sort), Sort.bool)
     val pred = CEX(fun)
     preds += pred

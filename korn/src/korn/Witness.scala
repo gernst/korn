@@ -11,6 +11,7 @@ sealed trait Witness
 
 object Witness {
   val N0 = "N0"
+  val NV = "NV"
 
   def c(param: Param): String = {
     val Param(x, Sort.int) = param
@@ -101,7 +102,7 @@ object Witness {
     hash
   }
 
-  def dump(file: String, df: Def, unit: Unit, out: PrintStream) {
+  def proof(df: Def, unit: Unit, out: PrintStream) {
     val Def(name, args, ret, body) = df
 
     if ((name contains "inv") && (unit.witness contains name)) {
@@ -122,18 +123,53 @@ object Witness {
     }
   }
 
-  def dump(file: String, model: Model, unit: Unit, out: PrintStream) {
+  def proof(file: String, model: Model, unit: Unit, out: PrintStream) {
     out println header(file)
 
     val df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
     val time = df.format(new Date());
 
     try {
-      out println graph.header(file, time, hash(file), bits)
+      out println graph.header(file, time, hash(file), bits, "correctness_witness")
       out println graph.entry(N0)
+
       for (df <- model.defs)
-        dump(file, df, unit, out)
-      println("finished writing witness for " + file)
+        proof(df, unit, out)
+
+      if (Main.debug)
+        println("finished writing correctness witness for " + file)
+    } finally {
+      out println graph.footer
+      out println footer
+    }
+  }
+
+  def cex(fun: String, arg: Int, i: Int, out: PrintStream) {
+    val Ni = "N" + i // current state
+    val Nj = "N" + (i + 1) // successor state
+    out println graph.node(Nj)
+    out println graph.call(fun, arg, Ni, Nj)
+  }
+
+  def cex(file: String, trace: List[(String, Int)], unit: Unit, out: PrintStream) {
+    out println header(file)
+
+    val df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
+    val time = df.format(new Date());
+
+    try {
+      out println graph.header(file, time, hash(file), bits, "violation_witness")
+      out println graph.entry(N0)
+
+      for (((call, arg), index) <- trace.zipWithIndex)
+        cex(call, arg, index, out)
+
+      val n = trace.length
+      out println graph.violation(NV)
+      out println graph.call("reach_error", "N" + n, NV)
+
+      if (Main.debug)
+        println("finished writing violation witness for " + file)
     } finally {
       out println graph.footer
       out println footer
@@ -197,7 +233,7 @@ object Witness {
 """
 
   object graph {
-    def header(file: String, time: String, hash: String, bits: Int, typ: String = "correctness_witness") =
+    def header(file: String, time: String, hash: String, bits: Int, typ: String) =
       s""" <graph edgedefault="directed">
   <data key="witness-type">${typ}</data>
   <data key="creationtime">${time}</data>
@@ -215,6 +251,12 @@ object Witness {
   </node>
 """
 
+    def violation(id: String) =
+      s"""  <node id="${id}">
+   <data key="violation">true</data>
+  </node>
+"""
+
     def node(id: String) =
       s"""  <node id="${id}"></node>
 """
@@ -229,6 +271,19 @@ object Witness {
    <data key="invariant">${inv}</data>
    <data key="invariant.scope">${scope}</data>
   </node>
+"""
+
+    def call(fun: String, src: String, dst: String) =
+      s"""  <edge source="${src}" target="${dst}">
+   <data key="enterFunction">${fun}</data>
+  </edge>
+"""
+
+    def call(fun: String, res: Int, src: String, dst: String) =
+      s"""  <edge source="${src}" target="${dst}">
+   <data key="assumption">\\result == ${res}</data>
+   <data key="assumption.resultfunction">${fun}</data>
+  </edge>
 """
 
     def enter(src: String, dst: String, loc: Loc) =
