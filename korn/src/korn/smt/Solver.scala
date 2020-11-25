@@ -7,7 +7,7 @@ case object Unknown extends Status { def self = this }
 
 case class Def(name: String, args: List[Param], ret: Sort, body: Pure) {
     def this(name: String, args: Array[Param], ret: Sort, body: Pure) = this(name, args.toList, ret, body)
-    override def toString = sexpr("define-fun", sexpr(args), ret, body)
+    override def toString = sexpr("define-fun", name, sexpr(args), ret, body)
 }
 
 case class Model(defs: List[Def]) {

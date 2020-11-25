@@ -29,7 +29,10 @@ object Witness {
       case False =>
         "0"
       case x: Var =>
-        env(x.toString)
+        val name = x.toString
+        korn.ensure(env contains name, "unknown variable " + name + " in " + env.mkString(" "))
+        env(name)
+
       case c: Pure.const =>
         c.toString
       case Pure.times(arg1, arg2) =>
@@ -79,7 +82,7 @@ object Witness {
         c(body subst su, env, neg)
 
       case _: Bind if !Main.witness_quant =>
-        if(neg) "false" else "true"
+        if (neg) "false" else "true"
       case Ex(params, body) =>
         "(exists " + c(params) + ". " + body + ")"
       case All(params, body) =>

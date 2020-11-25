@@ -60,8 +60,13 @@ object Main {
         val scanner = new korn.smt.Scanner(reader)
         val parser = new korn.smt.Parser()
         val res = parser.parse(scanner)
+        val model = res.asInstanceOf[korn.smt.Model]
         val witness = new PrintStream(new File("witness.graphml"))
-        Witness.dump(file, res.asInstanceOf[korn.smt.Model], unit, witness)
+        if (debug) {
+          for (df <- model.defs)
+            System.err.println(df)
+        }
+        Witness.dump(file, model, unit, witness)
       case _ =>
     }
   }
