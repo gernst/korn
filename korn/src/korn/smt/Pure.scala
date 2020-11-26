@@ -61,7 +61,7 @@ object Parsing {
       case ("<=", Array(arg1, arg2)) => arg1 <= arg2
       case ("<", Array(arg1, arg2))  => arg1 < arg2
       case (">", Array(arg1, arg2))  => arg1 > arg2
-      case (">=", Array(arg1, arg2)) => arg1 <= arg2
+      case (">=", Array(arg1, arg2)) => arg1 >= arg2
 
       case ("not", Array(arg1))      => !arg1
       case ("=>", Array(arg1, arg2)) => arg1 ==> arg2

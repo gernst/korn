@@ -6,9 +6,10 @@
 
   <resultfiles>**.graphml</resultfiles>
 
-  <option name="-q"/>
-  <option name="-m"/>
-  <option name="-t">10</option>
+  <option name="-quiet"/>
+  <option name="-model"/>
+  <option name="-witness">witness.graphml</option>
+  <option name="-timeout">10</option>
   <option name="-eld"/>
 
 <rundefinition name="sv-comp20_prop-reachsafety">

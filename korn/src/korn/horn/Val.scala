@@ -87,9 +87,7 @@ object Val {
       case ("%", Val(arg1, typ1), Val(arg2, typ2)) =>
         Val(arg1 % arg2, typ1 | typ2)
       case _ =>
-        val res = bool(relop(op, arg1, arg2))
-      println(arg1 + " " + op + " " + arg2 + " == " + res)
-        res
+        bool(relop(op, arg1, arg2))
     }
   }
 

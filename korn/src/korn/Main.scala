@@ -23,6 +23,7 @@ object Main {
   var quiet = false
   var model = false
   var witness = false
+  var witness_graphml = None: Option[String]
   var witness_quant = false
   var write = false
   var cex = false // only Eldarica currently
@@ -68,8 +69,8 @@ object Main {
             System.err.println(df)
         }
 
-        val witness = new PrintStream(new File(file + ".graphml"))
-        // val witness = new PrintStream(new File("witness.graphml"))
+        val graphml = witness_graphml getOrElse file + ".graphml"
+        val witness = new PrintStream(new File(graphml))
         Witness.proof(file, model, unit, witness)
 
       case "unsat" =>
@@ -93,8 +94,8 @@ object Main {
             System.err.println(fun + "() = " + res)
         }
 
-        val witness = new PrintStream(new File(file + ".graphml"))
-        // val witness = new PrintStream(new File("witness.graphml"))
+        val graphml = witness_graphml getOrElse file + ".graphml"
+        val witness = new PrintStream(new File(graphml))
         Witness.cex(file, trace, unit, witness)
       case _ =>
     }
@@ -152,6 +153,10 @@ object Main {
       case "-eld" :: rest =>
         prove = Seq("eld", "-t:" + timeout)
         write = true
+        configure(rest)
+
+      case "-witness" :: file :: rest =>
+        witness_graphml = Some(file)
         configure(rest)
 
       case "-32" :: rest =>
