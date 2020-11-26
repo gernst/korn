@@ -22,6 +22,7 @@ package object horn {
     object assume extends FunCall.unary("assume")
     object assert extends FunCall.unary("assert")
     object malloc extends FunCall.unary("malloc")
+    object __assert_fail extends FunCall.nary("__assert_fail")
   }
 
   object __VERIFIER {

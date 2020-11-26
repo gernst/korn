@@ -281,6 +281,10 @@ class Eval(unit: Unit) {
           // clause(st1, False, "abort")
           (Val.unit, st1 and False)
 
+        case stdlib.__assert_fail(args) =>
+          // ignore arguments
+          (Val.unit, st1 and False)
+
         case stdlib.assert(phi) =>
           val (_phi, st2) = rval_test(phi, st0, st1)
           goal(st2, _phi, "assert " + _phi)

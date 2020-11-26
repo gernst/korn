@@ -139,6 +139,15 @@ object FunCall {
           None
       }
   }
+  class nary(val name: String) {
+    def unapply(call: FunCall) =
+      call match {
+        case FunCall(`name`, args) =>
+          Some(args)
+        case _ =>
+          None
+      }
+  }
 }
 
 case class Init(values: Array[(Option[String], Expr)]) extends Expr { // { .field = value } or { value }

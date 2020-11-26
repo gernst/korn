@@ -165,7 +165,7 @@ IS = (u|U|l|L)*
 "__attribute__" {WS}* "((" .* "))" { }
 
 // has weird stuff in its definition
-"void reach_error()" .* {NL} { }
+// "void reach_error()" .* {NL} { }
             
 [a-zA-Z_][a-zA-Z_0-9]*
             { return resolve(yytext()); }

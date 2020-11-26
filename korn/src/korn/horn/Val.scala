@@ -16,7 +16,10 @@ object Val {
 
   def truth(arg: Val): Pure = {
     val Val(pure, typ) = arg
+    truth(pure)
+  }
 
+  def truth(pure: Pure): Pure = {
     pure match {
       case Pure.ite(test, Pure.one, Pure.zero) =>
         test
@@ -24,6 +27,19 @@ object Val {
         !test
       case _ =>
         pure !== Pure.zero
+    }
+  }
+
+  def bit(arg: Val): Pure = {
+    arg match {
+      case Val(pure, Type._Bool) =>
+        truth(pure)
+      case Val(Pure.one, _) =>
+        True
+      case Val(Pure.zero, _) =>
+        False
+      case _ =>
+        korn.error("bit-precise reasoning unsupported: " + arg)
     }
   }
 
@@ -69,6 +85,10 @@ object Val {
         arg1 > arg2
       case (">=", Val(arg1, typ1), Val(arg2, typ2)) =>
         arg1 >= arg2
+      case ("&", _, _) =>
+        bit(arg1) and bit(arg2)
+      case ("|", _, _) =>
+        bit(arg1) or bit(arg2)
       case _ =>
         korn.error("unknown binary operator: " + op)
     }

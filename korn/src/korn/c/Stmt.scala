@@ -31,9 +31,9 @@ object Parsing {
   def unescape0(xs: List[Char]): List[Char] = {
     xs match {
       case '\"' :: Nil       => Nil
-      case '\\' :: x :: rest => x :: unescape(rest)
-      case x :: rest         => x :: unescape(rest)
-      case _                 => korn.error("nonterminated string")
+      case '\\' :: x :: rest => x :: unescape0(rest)
+      case x :: rest         => x :: unescape0(rest)
+      case _                 => korn.error("nonterminated string: " + xs)
     }
   }
 
