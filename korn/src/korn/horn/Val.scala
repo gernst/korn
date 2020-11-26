@@ -20,6 +20,8 @@ object Val {
     pure match {
       case Pure.ite(test, Pure.one, Pure.zero) =>
         test
+      case Pure.ite(test, Pure.zero, Pure.one) =>
+        !test
       case _ =>
         pure !== Pure.zero
     }
@@ -27,8 +29,8 @@ object Val {
 
   def bool(arg: Pure): Val = {
     arg match {
-      case Pure.not(Pure.eqn(pure, Pure.zero)) =>
-        Val(pure, Type._Bool)
+      case Pure.not(arg) =>
+        Val(Pure.ite(arg, Pure.zero, Pure.one), Type._Bool)
       case _ =>
         Val(Pure.ite(arg, Pure.one, Pure.zero), Type._Bool)
     }
@@ -85,7 +87,9 @@ object Val {
       case ("%", Val(arg1, typ1), Val(arg2, typ2)) =>
         Val(arg1 % arg2, typ1 | typ2)
       case _ =>
-        bool(relop(op, arg1, arg2))
+        val res = bool(relop(op, arg1, arg2))
+      println(arg1 + " " + op + " " + arg2 + " == " + res)
+        res
     }
   }
 

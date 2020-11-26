@@ -68,7 +68,8 @@ object Main {
             System.err.println(df)
         }
 
-        val witness = new PrintStream(new File("witness.graphml"))
+        val witness = new PrintStream(new File(file + ".graphml"))
+        // val witness = new PrintStream(new File("witness.graphml"))
         Witness.proof(file, model, unit, witness)
 
       case "unsat" =>
@@ -92,7 +93,8 @@ object Main {
             System.err.println(fun + "() = " + res)
         }
 
-        val witness = new PrintStream(new File("witness.graphml"))
+        val witness = new PrintStream(new File(file + ".graphml"))
+        // val witness = new PrintStream(new File("witness.graphml"))
         Witness.cex(file, trace, unit, witness)
       case _ =>
     }

@@ -71,9 +71,9 @@ class Proc(
         st1
 
       case Assume(Id(name), Some(expr), typ) =>
-        val (_expr, st2) = rval(expr, st0, st1)
-        val x = st2(name) // XXX: WEIRD
-        val eq = Val.relop("==", x, _expr)
+        val (Val(pure, _), st2) = rval(expr, st0, st1)
+        val Val(x, _) = st2(name)
+        val eq = x === pure
         val st3 = st2 and eq
         st3
 
