@@ -22,6 +22,7 @@ object Main {
   var debug = false
   var quiet = false
   var model = false
+  var float = false
   var witness = false
   var witness_graphml = None: Option[String]
   var witness_quant = false
@@ -153,6 +154,10 @@ object Main {
       case "-eld" :: rest =>
         prove = Seq("eld", "-t:" + timeout)
         write = true
+        configure(rest)
+
+      case "-float" :: rest =>
+        float = true
         configure(rest)
 
       case "-witness" :: file :: rest =>

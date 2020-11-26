@@ -117,10 +117,20 @@ class Sig(unit: Unit) {
       case Type._Bool            => Sort.int
       case _: Signed             => Sort.int
       case _: Unsigned           => Sort.int
-      case PtrType(elem)         => pointers = true; Sort.pointer(resolve(elem))
-      case ArrayType(elem, dim)  => Sort.array(Sort.int, resolve(elem))
       case TypedefName("size_t") => Sort.int
-      case _                     => korn.error("cannot resolve: " + typ)
+
+      case PtrType(elem) =>
+        pointers = true; Sort.pointer(resolve(elem))
+      case ArrayType(elem, dim) =>
+        Sort.array(Sort.int, resolve(elem))
+
+      case Type._float if korn.Main.float =>
+        Sort.real
+      case Type._double if korn.Main.float =>
+        Sort.real
+
+      case _ =>
+        korn.error("cannot resolve: " + typ)
     }
   }
 
@@ -128,6 +138,9 @@ class Sig(unit: Unit) {
     typ match {
       case Type._Bool =>
         (pure === Pure.zero) or (pure === Pure.one)
+
+      case Type._float | Type._double =>
+        True
 
       case Signed(name, bytes) =>
         val bound = Pure.one << (bytes * 8 - 1)
@@ -160,6 +173,11 @@ class Sig(unit: Unit) {
 
       case Unsigned(_, bytes) =>
         val s = Sort.int
+        val x = fresh(name, s)
+        (x, s, Val(x, typ))
+
+      case Type._float | Type._double =>
+        val s = Sort.real
         val x = fresh(name, s)
         (x, s, Val(x, typ))
 

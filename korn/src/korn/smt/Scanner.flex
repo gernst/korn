@@ -88,6 +88,7 @@ kw      = ":" {symbol}
 "forall"    { return newToken(Terminals.FORALL);  }
 
 "Int"       { return newToken(Terminals.INT);     }
+"Real"      { return newToken(Terminals.REAL);    }
 "Bool"      { return newToken(Terminals.BOOL);    }
 "Array"     { return newToken(Terminals.ARRAY);   }
 "Pointer"   { return newToken(Terminals.POINTER); }

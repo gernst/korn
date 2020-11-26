@@ -49,8 +49,12 @@ package object horn {
     object nondet_u32 extends FunCall.nullary("__VERIFIER_nondet_u32")
 
     object nondet_unsigned_char extends FunCall.nullary("__VERIFIER_nondet_unsigned_char")
+    object nondet_unsigned_short extends FunCall.nullary("__VERIFIER_nondet_unsigned_short")
     object nondet_unsigned extends FunCall.nullary("__VERIFIER_nondet_unsigned")
     object nondet_unsigned_int extends FunCall.nullary("__VERIFIER_nondet_unsigned_int")
     object nondet_unsigned_long extends FunCall.nullary("__VERIFIER_nondet_unsigned_long")
+
+    object nondet_float extends FunCall.nullary("__VERIFIER_nondet_float")
+    object nondet_double extends FunCall.nullary("__VERIFIER_nondet_double")
   }
 }

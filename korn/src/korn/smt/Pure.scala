@@ -9,6 +9,10 @@ object Parsing {
     Sort.int
   }
 
+  def realSort = {
+    Sort.real
+  }
+
   def arraySort(dom: Sort, ran: Sort) = {
     Sort.array(dom, ran)
   }
@@ -89,6 +93,7 @@ case class Clause(path: List[Pure], head: Pure, reason: String) {
 object Sort {
   val bool = base("Bool")
   val int = base("Int")
+  val real = base("Real")
 
   case class base(name: String) extends Sort {
     override def toString = name
@@ -323,7 +328,7 @@ sealed trait Quant {
 
   def unapply(pure: Pure) = {
     pure match {
-      case Bind(quant, params, body) if quant == this=>
+      case Bind(quant, params, body) if quant == this =>
         Some((params, body))
       case _ => None
     }

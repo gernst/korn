@@ -51,6 +51,21 @@ sealed trait Type {
       case (Unsigned(name1, bytes1), Signed(name2, bytes2)) =>
         Unsigned(name2, bytes2)
 
+      case (Type._float, Type._double) =>
+        Type._double
+      case (Type._double, Type._float) =>
+        Type._double
+
+      case (Type._float, Type._Bool | _: Signed | _: Unsigned) =>
+        Type._float
+      case (Type._double, Type._Bool | _: Signed | _: Unsigned) =>
+        Type._double
+
+      case (Type._Bool | _: Signed | _: Unsigned, Type._float) =>
+        Type._float
+      case (Type._Bool | _: Signed | _: Unsigned, Type._double) =>
+        Type._double
+
       case _ =>
         korn.error("incompatible types: " + this + " and " + that)
     }
@@ -59,7 +74,6 @@ sealed trait Type {
 
 sealed trait CompoundType extends Type
 sealed trait TypeName extends Type { def name: String }
-
 case class BaseType(name: String) extends Type
 case class Signed(name: String, bytes: Int) extends Type
 case class Unsigned(name: String, bytes: Int) extends Type

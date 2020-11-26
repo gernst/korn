@@ -342,9 +342,18 @@ class Eval(unit: Unit) {
         case __VERIFIER.nondet_ulonglong() =>
           nondet_bounded("ulonglong", Unsigned._long_long, st1)
 
+        case __VERIFIER.nondet_float() =>
+          nondet_bounded("float", Type._float, st1)
+
+        case __VERIFIER.nondet_double() =>
+          nondet_bounded("double", Type._double, st1)
+
         // nonstandard
         case __VERIFIER.nondet_unsigned_char() =>
           nondet_bounded("uchar", Unsigned._char, st1)
+
+        case __VERIFIER.nondet_unsigned_short() =>
+          nondet_bounded("ushort", Unsigned._short, st1)
 
         case __VERIFIER.nondet_unsigned() =>
           nondet_bounded("int", Signed._int, st1)

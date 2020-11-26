@@ -10,7 +10,7 @@
 %terminals ID, KW;
 %terminals NUM;
 
-%terminals INT, BOOL, ARRAY, POINTER;
+%terminals INT, REAL, BOOL, ARRAY, POINTER;
 
 %terminals MODEL, DEFINE_FUN;
 %terminals LET, EXISTS, FORALL;
@@ -57,6 +57,7 @@ pair
 
 sort
     = INT  {: return s(Parsing.intSort());  :}
+    | REAL {: return s(Parsing.realSort()); :}
     | BOOL {: return s(Parsing.boolSort()); :}
     | LP POINTER sort.e RP
           {: return s(Parsing.pointerSort(e));  :}
