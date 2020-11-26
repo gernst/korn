@@ -74,7 +74,7 @@ object Main {
         Witness.proof(file, model, unit, witness)
 
       case "unsat" =>
-        var trace: List[(String, Int)] = Nil
+        var trace: List[(String, BigInt)] = Nil
         var line = reader.readLine()
         while (line != null) {
           val pos = line indexOf "__VERIFIER_nondet_"
@@ -84,7 +84,7 @@ object Main {
             val rp = line indexOf ")"
             val fun = line take lp
             val res = line drop (lp + 1) take (rp - lp - 1)
-            trace = (fun, res.toInt) :: trace
+            trace = (fun, BigInt(res)) :: trace
           }
           line = reader.readLine()
         }

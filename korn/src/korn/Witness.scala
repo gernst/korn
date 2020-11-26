@@ -144,14 +144,14 @@ object Witness {
     }
   }
 
-  def cex(fun: String, arg: Int, i: Int, out: PrintStream) {
+  def cex(fun: String, arg: BigInt, i: Int, out: PrintStream) {
     val Ni = "N" + i // current state
     val Nj = "N" + (i + 1) // successor state
     out println graph.node(Nj)
     out println graph.call(fun, arg, Ni, Nj)
   }
 
-  def cex(file: String, trace: List[(String, Int)], unit: Unit, out: PrintStream) {
+  def cex(file: String, trace: List[(String, BigInt)], unit: Unit, out: PrintStream) {
     out println header(file)
 
     val df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
@@ -279,7 +279,7 @@ object Witness {
   </edge>
 """
 
-    def call(fun: String, res: Int, src: String, dst: String) =
+    def call(fun: String, res: BigInt, src: String, dst: String) =
       s"""  <edge source="${src}" target="${dst}">
    <data key="assumption">\\result == ${res}</data>
    <data key="assumption.resultfunction">${fun}</data>

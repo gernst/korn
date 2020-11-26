@@ -1,19 +1,29 @@
-void main() {
-    int x;
-    int y;
-    int z = __VERIFIER_nondet_uchar();
+#include <assert.h>
+#include <stdio.h>
 
-    if(z) {
-        x = y;
-        z ++;
-        goto out;
-    } else {
-        x = y + 2;
-        y = y + 1;
-        goto out;
-    }
+int main() {
+    unsigned int z = 0, k = 0;
+    long long x, y, c;
 
-out:
-    assert(x >= y);
-    assert(z >= 0);
+    x = 1;
+    y = z;
+    c = 1;
+
+    while (c < k) {
+        // printf("invariant %d\n", x*z - x - y + 1);
+        // assert(x*z - x - y + 1 == 0);
+
+        c = c + 1;
+        x = x * z + 1;
+        y = y * z;
+
+    }  //geo1 */
+
+    x = x * (z - 1);
+    
+    printf("x = %d\n", x);
+    printf("y = %d\n", y);
+    printf("finally %lld\n", 1 + x - y);
+    assert(1 + x - y == 0);
+    return 0;
 }
