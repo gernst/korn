@@ -180,10 +180,19 @@ object Witness {
   def confirm(file: String, trace: List[BigInt]): Boolean = {
     val harness = "__VERIFIER_counterexample.c"
     val out = new PrintStream(new File(harness))
+
     out println "unsigned long long __VERIFIER_counterexample[] = {"
     for (arg <- trace)
       out println ("    (unsigned long long) " + arg + ",")
     out println "};"
+
+    out.println()
+
+    out println "static unsigned int __VERIFIER_index = 0;"
+    out println "unsigned long long __VERIFIER_next_nondet() {"
+    out println "    return __VERIFIER_counterexample[__VERIFIER_index++];"
+    out println "}"
+
     out.flush()
     out.close()
 
