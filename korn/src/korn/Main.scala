@@ -96,10 +96,7 @@ object Main {
             System.err.println(fun + "() = " + res)
         }
 
-        val harness = "__VERIFIER_counterexample.c"
-        val cex = new PrintStream(new File(harness))
-        Witness.harness(file, trace, cex)
-        val ok = Witness.confirm(file, harness, trace)
+        val ok = Witness.confirm(file, trace map (_._2))
 
         if (ok) {
           if (Main.debug)
@@ -117,6 +114,15 @@ object Main {
 
       case _ =>
     }
+  }
+
+  def cex(file: String, cex: List[String]) {
+    val trace = cex map { BigInt(_) }
+    val ok = Witness.confirm(file, trace)
+    if (ok)
+      System.err.println("counterexample confirmed")
+    else
+      System.err.println("counterexample spurious")
   }
 
   @tailrec
@@ -339,6 +345,8 @@ object Main {
       case List("-v") | List("-version") | List("--version") =>
         System.out.println(version)
         System.out.flush()
+      case "-cex" :: file :: rest =>
+        cex(file, rest)
       case args =>
         configure(args)
         run(files.toList)

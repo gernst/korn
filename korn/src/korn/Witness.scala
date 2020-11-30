@@ -6,6 +6,7 @@ import korn.horn._
 import java.io.PrintStream
 import java.text.SimpleDateFormat
 import java.util.Date
+import java.io.File
 
 sealed trait Witness
 
@@ -176,17 +177,16 @@ object Witness {
     }
   }
 
-  def harness(file: String, trace: List[(String, BigInt)], out: PrintStream) {
+  def confirm(file: String, trace: List[BigInt]): Boolean = {
+    val harness = "__VERIFIER_counterexample.c"
+    val out = new PrintStream(new File(harness))
     out println "unsigned long long __VERIFIER_counterexample[] = {"
-
-    for ((_, arg) <- trace) {
+    for (arg <- trace)
       out println ("    (unsigned long long) " + arg + ",")
-    }
-
     out println "};"
-  }
+    out.flush()
+    out.close()
 
-  def confirm(file: String, harness: String, trace: List[(String, BigInt)]): Boolean = {
     val compile = Array("gcc", file, harness, "__VERIFIER.c")
     val gcc = new ProcessBuilder(compile: _*)
     val gcc_? = gcc.start.waitFor()
