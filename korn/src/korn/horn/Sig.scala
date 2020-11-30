@@ -155,7 +155,7 @@ class Sig(unit: Unit) {
         (min <= pure) and (pure <= max)
 
       case _ =>
-        korn.error("unsupported type: " + typ)
+        korn.error("unsupported type: " + typ + " " + pure)
     }
   }
 
@@ -181,13 +181,18 @@ class Sig(unit: Unit) {
         val x = fresh(name, s)
         (x, s, Val(x, typ))
 
+      case PtrType(typ) =>
+        val s = Sort.pointer(resolve(typ))
+        val x = fresh(name, s)
+        (x, s, Val(x, typ))
+
       case ArrayType(elem, dim) =>
         val s = Sort.array(Sort.int, resolve(elem))
         val x = fresh(name, s)
         (x, s, Val(x, typ))
 
       case _ =>
-        korn.error("unsupported type: " + typ)
+        korn.error("unsupported type: " + typ + " " + name)
     }
   }
 

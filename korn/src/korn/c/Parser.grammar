@@ -118,6 +118,7 @@ params
 var
     = ptrs.x ID.n dims.ds            {: return s(new VarSpec(x, n, ds));     :}
     | ptrs.x ID.n dims.ds ASG expr.i {: return s(new VarSpec(x, n, ds, i));  :}
+    // | ptrs.x ID.n dims.ds ASG LBRACE exprs.es RBRACE {: return s(new VarSpec(x, n, ds));  :}
     ;
 
 vars

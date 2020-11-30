@@ -176,6 +176,30 @@ object Witness {
     }
   }
 
+  def harness(file: String, trace: List[(String, BigInt)], out: PrintStream) {
+    out println "unsigned long long __VERIFIER_counterexample[] = {"
+
+    for ((_, arg) <- trace) {
+      out println ("    (unsigned long long) " + arg + ",")
+    }
+
+    out println "};"
+  }
+
+  def confirm(file: String, harness: String, trace: List[(String, BigInt)]): Boolean = {
+    val compile = Array("gcc", file, harness, "__VERIFIER.c")
+    val gcc = new ProcessBuilder(compile: _*)
+    val gcc_? = gcc.start.waitFor()
+    if (gcc_? != 0) return false // compilation failed
+
+    val run = Array("./a.out")
+    val a = new ProcessBuilder(run: _*)
+    val a_? = a.start.waitFor()
+    if (a_? == 0) return false // no assertion triggered
+
+    return true
+  }
+
   // copied from https://github.com/sosy-lab/sv-witnesses/blob/master/multivar_true-unreach-call1.graphml
   def header(file: String) =
     s"""<?xml version="1.0" encoding="UTF-8" standalone="no"?>

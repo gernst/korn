@@ -84,7 +84,7 @@ object Type {
   val _float = BaseType("float")
   val _double = BaseType("double")
 
-  def sizeof(typ: Type): Int = {
+  def sizeof(typ: Type): Long = {
     typ match {
       case `_Bool` =>
         1

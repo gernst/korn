@@ -107,6 +107,8 @@ class Unit(stmts: List[Stmt]) {
         state += name -> y
       case FunDecl(ret, name, types) =>
         declare(name, ret, types)
+      case FunDef(ret, "reach_error", formals, body) =>
+        // ignore this
       case FunDef(ret, name, formals, body) =>
         val types = formals map (_.typ)
         declare(name, ret, types)

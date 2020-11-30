@@ -161,6 +161,7 @@ IS = (u|U|l|L)*
 "__const"       { }
 "__inline"      { }
 "__restrict"    { }
+"__extension__" {WS}* "({" .* "})" { return newToken(Terminals.CONST, 0); }
 "__extension__" { }
 
 "__asm__" {WS}* "(" .* ")" { }

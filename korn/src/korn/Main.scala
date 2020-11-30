@@ -56,7 +56,6 @@ object Main {
   def read(in: InputStream, out: PrintStream, file: String, unit: horn.Unit) {
     val reader = new BufferedReader(new InputStreamReader(in))
     val status = reader.readLine()
-    out.println(status)
 
     status match {
       case "sat" =>
@@ -73,6 +72,8 @@ object Main {
         val graphml = witness_graphml getOrElse file + ".graphml"
         val witness = new PrintStream(new File(graphml))
         Witness.proof(file, model, unit, witness)
+
+        out.println("sat")
 
       case "unsat" =>
         var trace: List[(String, BigInt)] = Nil
@@ -95,9 +96,25 @@ object Main {
             System.err.println(fun + "() = " + res)
         }
 
-        val graphml = witness_graphml getOrElse file + ".graphml"
-        val witness = new PrintStream(new File(graphml))
-        Witness.cex(file, trace, unit, witness)
+        val harness = "__VERIFIER_counterexample.c"
+        val cex = new PrintStream(new File(harness))
+        Witness.harness(file, trace, cex)
+        val ok = Witness.confirm(file, harness, trace)
+
+        if (ok) {
+          if (Main.debug)
+            System.err.println("counterexample confirmed")
+
+          val graphml = witness_graphml getOrElse file + ".graphml"
+          val witness = new PrintStream(new File(graphml))
+          Witness.cex(file, trace, unit, witness)
+          out.println("unsat")
+        } else {
+          if (Main.debug)
+            System.err.println("counterexample spurious")
+          out.println("unknown")
+        }
+
       case _ =>
     }
   }

@@ -162,6 +162,18 @@ class Eval(unit: Unit) {
       }
     }
 
+    def sizeof(typ: Type, st: State): Pure = {
+      typ match {
+        case ArrayType(elem, dim) =>
+          val k = sizeof(elem, st)
+          val Val(n, _) = value(dim, st)
+          k * n
+        case _ =>
+          val k = Type.sizeof(typ)
+          Pure.const(k)
+      }
+    }
+
     def rval(expr: Expr, st0: State, st1: State): (Val, State) = {
       expr match {
         case BinOp(",", fst, snd) =>
@@ -373,6 +385,18 @@ class Eval(unit: Unit) {
 
         case __VERIFIER.nondet_u32() =>
           nondet_bounded("uint", Unsigned._int, st1)
+
+        // a bit hackish
+        case SizeOfExpr(expr) =>
+          val Val(_, typ) = value(expr, st1)
+          val n = sizeof(typ, st1)
+          val v = Val(n, Unsigned._int)
+          (v, st1)
+
+        case SizeOfType(typ) =>
+          val n = sizeof(typ, st1)
+          val v = Val(n, Unsigned._int)
+          (v, st1)
 
         case expr @ FunCall(name, args) =>
           korn.avoid(name startsWith "__VERIFIER_nondet", "unsupported function: " + name)
