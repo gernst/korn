@@ -134,6 +134,7 @@ IS = (u|U|l|L)*
             { return newToken(Terminals.LONG_UNSIGNED); }
 "signed"    { return newToken(Terminals.SIGNED);   }
 "unsigned"  { return newToken(Terminals.UNSIGNED); }
+"__float128" { return newToken(Terminals.LONG_DOUBLE); }
 
 "struct"    { return newToken(Terminals.STRUCT);   }
 "union"     { return newToken(Terminals.UNION);    }
@@ -162,6 +163,7 @@ IS = (u|U|l|L)*
 "__restrict"    { }
 "__extension__" { }
 
+"__asm__" {WS}* "(" .* ")" { }
 "__attribute__" {WS}* "((" .* "))" { }
 
 // has weird stuff in its definition

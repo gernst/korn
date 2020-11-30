@@ -1,3 +1,0 @@
-#!/bin/sh
-
-/home/ernst/tools/cpachecker/scripts/benchmark.py --cloudPriority HIGH --cloudClientHeap 8000 --read-only-dir / --no-container --cloud --cloudMaster localhost $@
