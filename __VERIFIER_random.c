@@ -21,13 +21,22 @@ static void initialize() {
 /*
  * Construct non-uniformly distributed small values centering around 0
  */
-unsigned long long __VERIFIER_next_nondet() {
+unsigned long long __VERIFIER_next_nondet(unsigned int sign, unsigned int bits) {
     initialize();
 
-    switch(rand()%4) {
-        case 0: return (unsigned long long)  0;
-        case 1: return (unsigned long long) (rand() %   2 -   1);
-        case 3: return (unsigned long long) (rand() %  32 -  16);
-        case 4: return (unsigned long long) (rand() %1024 - 512);
-    }   
+    if(sign) {
+        switch(rand()%4) {
+            case 0: return (unsigned long long)  0;
+            case 1: return (unsigned long long) (rand() %   2 -   1);
+            case 3: return (unsigned long long) (rand() %  32 -  16);
+            case 4: return (unsigned long long) (rand() %1024 - 512);
+        }
+    } else {
+        switch(rand()%4) {
+            case 0: return (unsigned long long)  0;
+            case 1: return (unsigned long long) (rand() %   2);
+            case 3: return (unsigned long long) (rand() %  32);
+            case 4: return (unsigned long long) (rand() %1024);
+        }
+    }
 }

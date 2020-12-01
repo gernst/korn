@@ -189,7 +189,7 @@ object Witness {
     out.println()
 
     out println "static unsigned int __VERIFIER_index = 0;"
-    out println "unsigned long long __VERIFIER_next_nondet() {"
+    out println "unsigned long long __VERIFIER_next_nondet(unsigned int sign, unsigned int bits) {"
     out println "    return __VERIFIER_counterexample[__VERIFIER_index++];"
     out println "}"
 
