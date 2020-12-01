@@ -2,7 +2,7 @@ import mill._
 import mill.scalalib._
 
 object korn extends ScalaModule {
-    def scalaVersion = "2.13.2"
+    def scalaVersion = "2.13.3"
     def mainClass = Some("korn.Main")
 
     def ivyDeps = Agg(

@@ -31,9 +31,9 @@ object Parsing {
   def unescape0(xs: List[Char]): List[Char] = {
     xs match {
       case '\"' :: Nil       => Nil
-      case '\\' :: x :: rest => x :: unescape(rest)
-      case x :: rest         => x :: unescape(rest)
-      case _                 => korn.error("nonterminated string")
+      case '\\' :: x :: rest => x :: unescape0(rest)
+      case x :: rest         => x :: unescape0(rest)
+      case _                 => korn.error("nonterminated string: " + xs)
     }
   }
 
@@ -125,7 +125,14 @@ object Parsing {
   }
 }
 
-sealed trait Stmt
+sealed trait Stmt {
+  var loc: Option[korn.Loc] =  None
+
+  def here(line: Int, column: Int) = {
+    loc = Some(korn.Loc(line, column))
+    this
+  }
+}
 
 object Stmt {
   def modifies(expr: Expr): Set[String] = {
@@ -165,6 +172,39 @@ object Stmt {
     }
   }
 
+  def uses(expr: Expr): Set[String] = {
+    expr match {
+      case Id(name)                    => Set(name)
+      case _: Lit                      => Set()
+      case PreOp(_, arg)               => uses(arg)
+      case PostOp(_, arg)              => uses(arg)
+      case BinOp(_, arg1, arg2)        => uses(arg1) ++ uses(arg2)
+      case Index(arg1, arg2)           => uses(arg1) ++ uses(arg2)
+      case Question(test, left, right) => uses(test) ++ uses(left) ++ uses(right)
+      case Cast(typ, expr)             => uses(expr)
+      case SizeOfExpr(expr)            => Set() // compile time
+      case SizeOfType(typ)             => Set()
+      case Arrow(expr, field)          => uses(expr)
+      case Dot(expr, field)            => uses(expr)
+      case FunCall(name, args)         => Set() ++ (args flatMap uses)
+      case Init(values)                => Set() ++ (values flatMap { case (_, expr) => uses(expr) })
+    }
+  }
+
+  def uses(stmt: Stmt): Set[String] = {
+    stmt match {
+      case Block(stmts)                => ???
+      case Group(stmts)                => Set(stmts flatMap uses: _*)
+      case Atomic(Some(expr))          => uses(expr)
+      case Assume(id, Some(init), typ) => uses(init)
+      case Return(Some(expr))          => uses(expr)
+      case Label(label, stmt)          => Set(label) ++ uses(stmt)
+      case If(test, left, right)       => uses(test) ++ uses(left) ++ uses(right)
+      case While(test, body)           => uses(test) ++ uses(body)
+      case _                           => Set()
+    }
+  }
+
   def labels(stmt: Stmt): Set[String] = {
     stmt match {
       case Block(stmts)          => ???
@@ -181,9 +221,7 @@ object Stmt {
     (formals, stmt_)
   }
 
-  def norm(
-      stmts: List[Stmt],
-      re0: Map[String, String]): (List[Formal], List[Stmt], Map[String, String]) =
+  def norm(stmts: List[Stmt], re0: Map[String, String]): (List[Formal], List[Stmt], Map[String, String]) =
     stmts match {
       case Nil =>
         (Nil, Nil, re0)
@@ -238,12 +276,16 @@ object Stmt {
       case While(test, body) =>
         val test_ = test rename re0
         val (formals, body_, re1) = norm(body, re0)
-        (formals, While(test_, body_), re1)
+        val loop_ = While(test_, body_)
+        loop_.loc = stmt.loc
+        (formals, loop_, re1)
 
       case DoWhile(body, test) =>
         val test_ = test rename re0
         val (formals, body_, re1) = norm(body, re0)
-        (formals, DoWhile(body_, test_), re1)
+        val loop_ = DoWhile(body_, test_)
+        loop_.loc = stmt.loc
+        (formals, loop_, re1)
 
       case For(vars, init, test, inc, body) =>
         val init_ = Expr.comma(init)
@@ -251,21 +293,21 @@ object Stmt {
         val inc_ = Expr.comma(inc)
         val body_ = Block(List(body, Atomic(inc_)))
         val loop_ = While(test_, body_)
+        loop_.loc = stmt.loc
         val stmt_ = Block(List(Group(vars), Atomic(init_), loop_))
         norm(stmt_, re0)
 
-      case VarDef(Formal(typ, name), None) =>
-        val name_ = Id.fresh(name)
-        val formal_ = Formal(typ, name_)
-        (List(formal_), Atomic.none, re0 + (name -> name_))
-
-      case VarDef(Formal(typ, name), Some(init)) =>
+      case VarDef(Formal(typ, name), init) if re0 contains name =>
         val name_ = Id.fresh(name)
         val id_ = Id(name_)
         val formal_ = Formal(typ, name_)
-        val init_ = init rename re0
-        // (List(formal_), id_ := init_, re0 + (name -> name_))
+        val init_ = init map (_ rename re0)
         (List(formal_), Assume(id_, init_, typ), re0 + (name -> name_))
+
+      case VarDef(formal@Formal(typ, name), init) =>
+        val id = Id(name)
+        val init_ = init map (_ rename re0)
+        (List(formal), Assume(id, init_, typ), re0)
 
       case _ =>
         korn.error("cannot normalize: " + stmt)
@@ -310,7 +352,7 @@ case object Continue extends Stmt {
   def self = this
 }
 
-case class Assume(id: Id, expr: Expr, typ: Type) extends Stmt
+case class Assume(id: Id, init: Option[Expr], typ: Type) extends Stmt
 
 case class Return(expr: Option[Expr]) extends Stmt {
   def this(expr: Expr) = this(Some(expr))
@@ -328,8 +370,7 @@ case class While(test: Expr, body: Stmt) extends Stmt
 
 case class DoWhile(body: Stmt, test: Expr) extends Stmt
 
-case class For(vars: List[VarDef], init: List[Expr], test: List[Expr], inc: List[Expr], body: Stmt)
-    extends Stmt {
+case class For(vars: List[VarDef], init: List[Expr], test: List[Expr], inc: List[Expr], body: Stmt) extends Stmt {
 
   def this(init: Array[Expr], test: Array[Expr], inc: Array[Expr], body: Stmt) = {
     this(Nil, init.toList, test.toList, inc.toList, body)

@@ -2,8 +2,10 @@
 
 MILL = ./mill
 
-KORN_JAVA 	= korn/src/korn/c/Parser.java \
-              korn/src/korn/c/Scanner.java
+KORN_JAVA 	= korn/src/korn/c/Parser.java   \
+              korn/src/korn/c/Scanner.java  \
+			  korn/src/korn/smt/Parser.java \
+              korn/src/korn/smt/Scanner.java
 KORN_SCALA	= $(shell find korn/src -iname "*.scala")
 
 KORN_C      = $(shell find examples -iname "*.c")

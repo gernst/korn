@@ -16,55 +16,34 @@ class Proc(
   import unit._
   import unit.sig._
 
-  /** types of code identifiers (params and locals) */
-  val env = mutable.Map[String, Sort]()
-
   val branch = config.branch
   val loop = config.loop
 
   /** collect identifiers in scope and their types */
+  val used = Stmt.uses(body)
+  val extra = globals filter { used contains _.name }
+  object toplevel extends Scope(extra)
   object external extends Scope(params)
-  object internal extends Scope(params ++ locals)
+  object internal extends Scope(extra ++ params ++ locals)
 
   object eval extends unit.eval.scoped(this)
   import eval._
 
-  def init() = {
-    var st0: Store = Map()
-
-    for ((name, sort) <- internal.sig) {
-      env += (name -> sort)
-      st0 += (name -> vr(name, sort))
-    }
-
-    state ++ st0
-  }
-
   def run() {
-    val st0 = init()
+    val st0 = state
     val st1 = contract.enter(st0, this)
-    val ctx = Context.empty
-    val st2 = local(body, st0, st1, ctx)
-    contract.leave(st2, this) // implicit return without value
+    val ctx = Context.init(st1)
+    val st2 = local(body, st1, st1, ctx)
+    contract.leave(st1, st2, None, this) // implicit return without value
   }
 
-  def now(pred: Pred, st1: State, reason: String) {
-    val prop = internal.apply(pred, st1)
+  def now(pred: Step, st0: State, st1: State, reason: String) {
+    val prop = pred(st0, st1)
     clause(st1, prop, reason)
   }
 
-  def now(pred: Pred, st0: State, st1: State, reason: String) {
-    val prop = internal.apply(pred, st0, st1)
-    clause(st1, prop, reason)
-  }
-
-  def from(pred: Pred, st1: State): State = {
-    val prop = internal.apply(pred, st1)
-    st1 and prop
-  }
-
-  def from(pred: Pred, st0: State, st1: State): State = {
-    val prop = internal.apply(pred, st0, st1)
+  def from(pred: Step, st0: State, st1: State): State = {
+    val prop = pred(st0, st1)
     st1 and prop
   }
 
@@ -88,10 +67,13 @@ class Proc(
       case Group(stmts) =>
         local(stmts, st0, st1, ctx)
 
-      case Assume(Id(name), expr, typ) =>
-        val (_expr, st2) = rval(expr, st0, st1)
-        val x = st2(name) // XXX: WEIRD
-        val eq = (x === _expr)
+      case Assume(Id(name), None, typ) =>
+        st1
+
+      case Assume(Id(name), Some(expr), typ) =>
+        val (Val(pure, _), st2) = rval(expr, st0, st1)
+        val Val(x, _) = st2(name)
+        val eq = x === pure
         val st3 = st2 and eq
         st3
 
@@ -107,24 +89,24 @@ class Proc(
         local(stmt, st0, st2, ctx)
 
       case Goto(label) =>
-        val st2 = loop.goto(label, st0, st1, ctx.hyps, this)
+        val st2 = loop.goto(label, st1, ctx.hyps, this)
         branch.goto(label, st0, st2, this)
         unreach(st2)
 
       case Return(None) =>
-        val st2 = loop.return_(st0, st1, ctx.hyps, this)
-        contract.leave(st2, this)
+        val st2 = loop.return_(st1, ctx.hyps, this)
+        contract.leave(ctx.entry, st2, None, this)
         unreach(st2)
 
       case Return(Some(res)) =>
-        val st2 = loop.return_(st0, st1, ctx.hyps, this)
+        val st2 = loop.return_(st1, ctx.hyps, this)
         val (_res, st3) = rval(res, st0, st2)
-        contract.leave(st3, _res, this)
+        contract.leave(ctx.entry, st3, Some(_res), this)
         unreach(st3)
 
       case Break =>
         val hyp :: _ = ctx.hyps
-        loop.break(st0, st1, hyp, this)
+        loop.break(st1, hyp, this)
         unreach(st1)
 
       case If(test, left, right) =>
@@ -142,14 +124,17 @@ class Proc(
         val sin = si1 and !_test
         val siy = si1 and _test
 
-        val hyp = Hyp(inv, sum, si0, sin, siy, dont)
+        val hyp = Hyp(inv, sum, st1, si0, sin, siy, dont)
+        val loc = korn.unpack(stmt.loc, "no location for while loop")
+        witness += inv.name -> (this, loc, inv, "invariant")
+        witness += sum.name -> (this, loc, sum, "summary")
 
         loop.term(hyp, this)
 
-        val si3 = local(body, si0, siy, hyp :: ctx)
-        loop.iter(si3, hyp, this)
+        val si2 = local(body, si0, siy, hyp :: ctx)
+        loop.iter(si2, hyp, this)
 
-        loop.leave(st1, hyp, this)
+        loop.leave(hyp, this)
 
       case _ =>
         korn.error("cannot execute as local statement: " + stmt)

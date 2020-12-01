@@ -4,6 +4,7 @@ import scala.collection.mutable
 
 import korn.c._
 import korn.smt._
+import korn.Loc
 
 class Unit(stmts: List[Stmt]) {
 
@@ -20,14 +21,16 @@ class Unit(stmts: List[Stmt]) {
   var pointers = false
 
   /** numeric constants defined by enums */
-  val consts = mutable.Map[String, Pure]()
+  val consts = mutable.Map[String, Val]()
 
   /** collected predicates and clauses */
-  val pres = mutable.Map[String, Pred]()
-  val posts = mutable.Map[String, (Pred, Option[Sort])]()
+  val pres = mutable.Map[String, Pre]()
+  val posts = mutable.Map[String, Post]()
 
   var preds = mutable.Set[Pred]()
   val clauses = mutable.Buffer[Clause]()
+
+  var witness = mutable.Map[String, (Proc, Loc, Step, String)]()
 
   /** types of additional logical variables */
   var typing = mutable.Map[String, Sort]()
@@ -38,7 +41,7 @@ class Unit(stmts: List[Stmt]) {
   object sig extends Sig(this)
   object eval extends Eval(this)
 
-  def clause(st: State, phi: Prop, reason: String) {
+  def clause(st: State, phi: Pure, reason: String) {
     val f = (st.path contains False)
     val t = (st.path contains phi) || (phi == True)
 
@@ -46,13 +49,13 @@ class Unit(stmts: List[Stmt]) {
       clauses += Clause(st.path, phi, reason)
   }
 
-  def goal(st: State, phi: Prop, reason: String) {
+  def goal(st: State, phi: Pure, reason: String) {
     clause(st and !phi, False, reason)
   }
 
   def enum(cases: List[String]) = {
     for ((name, index) <- cases.zipWithIndex)
-      consts += name -> Pure.const(index)
+      consts += name -> Val(Pure.const(index), Signed._int)
   }
 
   def run() {
@@ -93,17 +96,19 @@ class Unit(stmts: List[Stmt]) {
       case VarDef(formal @ Formal(typ, name), None) =>
         globals ++= List(formal)
         vars += name -> typ
-        var x = fresh(name, resolve(typ))
+        var (_, _, x) = nondet(name, typ)
         state += (name -> x)
       case VarDef(formal @ Formal(typ, name), Some(init)) =>
         globals ++= List(formal)
         vars += name -> typ
-        var x = fresh(name, resolve(typ))
+        var (_, _, x) = nondet(name, typ)
         state += (name -> x)
         val y = value(init, state)
         state += name -> y
       case FunDecl(ret, name, types) =>
         declare(name, ret, types)
+      case FunDef(ret, "reach_error", formals, body) =>
+        // ignore this
       case FunDef(ret, name, formals, body) =>
         val types = formals map (_.typ)
         declare(name, ret, types)

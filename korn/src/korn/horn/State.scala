@@ -7,13 +7,13 @@ object State {
 }
 
 object Context {
-  val empty = Context(Nil, Nil)
+  def init(st: State) = Context(st, Nil, Nil)
 }
 
-case class State(path: List[Prop], store: Store) extends (String => Pure) {
-  def and(that: Prop): State = {
+case class State(path: List[Pure], store: Store) extends (String => Val) {
+  def and(that: Pure): State = {
     that match {
-      case Prop.and(phi, psi) =>
+      case Pure.and(phi, psi) =>
         this and psi and phi
       case _ =>
         copy(path = that :: path)
@@ -22,7 +22,7 @@ case class State(path: List[Prop], store: Store) extends (String => Pure) {
 
   def maybePrune(pred: Pred, keep: Boolean) = {
     copy(path = path filter {
-      case Prop.app(`pred`, _) => keep
+      case Pure.app(`pred`, _) => keep
       case _                   => true
     })
   }
@@ -30,13 +30,15 @@ case class State(path: List[Prop], store: Store) extends (String => Pure) {
   def contains(name: String) = store contains name
   def apply(name: String) = store(name)
   def apply(names: List[String]) = names map store
-  def +(that: (String, Pure)) = copy(store = store + that)
-  def ++(that: Iterable[(String, Pure)]) = copy(store = store ++ that)
+  def +(that: (String, Val)) = copy(store = store + that)
+  def ++(that: Iterable[(String, Val)]) = copy(store = store ++ that)
+
+  override def toString = "State(" + path + "," + store + ")"
 }
 
-case class Hyp(inv: Pred, sum: Pred, si0: State, sin: State, siy: State, dont: Set[String])
+case class Hyp(inv: Step, sum: Step, st1: State, si0: State, sin: State, siy: State, dont: Set[String])
 
-case class Context(hyps: List[Hyp], switches: List[Pure]) {
+case class Context(entry: State, hyps: List[Hyp], switches: List[Pure]) {
   def ::(hyp: Hyp) = copy(hyps = hyp :: hyps)
   def ::(sw: Pure) = copy(switches = sw :: switches)
 }

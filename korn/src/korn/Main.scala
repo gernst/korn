@@ -10,17 +10,25 @@ import java.io.PrintStream
 import java.io.InputStream
 import java.io.OutputStream
 import java.io.FileOutputStream
+import java.io.InputStreamReader
+import java.io.BufferedReader
+import java.io.FileWriter
 
 object Main {
-  val version = "0.1"
+  val version = "0.2"
 
   var dry = false
   var config = "default"
   var debug = false
   var quiet = false
   var model = false
-  var unbounded = false
+  var float = false
+  var random = 0
+  var witness = false
+  var witness_graphml = None: Option[String]
+  var witness_quant = false
   var write = false
+  var cex = false // only Eldarica currently
   var timeout = 900 // SV-COMP default
   var prove: Seq[String] = Seq()
 
@@ -41,9 +49,90 @@ object Main {
     out
   }
 
-  def cat(in: InputStream, out: OutputStream) {
+  def read(in: InputStream, out: OutputStream) = {
+    val reader = new BufferedReader(new InputStreamReader(in))
+    val status = reader.readLine()
     in.transferTo(out)
     out.flush()
+    status
+  }
+
+  def cat(in: InputStream, out: OutputStream) = {
+    in.transferTo(out)
+    out.flush()
+  }
+
+  def read(in: InputStream, out: PrintStream, file: String, unit: horn.Unit) = {
+    val reader = new BufferedReader(new InputStreamReader(in))
+    val status = reader.readLine()
+
+    status match {
+      case "sat" =>
+        val scanner = new korn.smt.Scanner(reader)
+        val parser = new korn.smt.Parser()
+        val res = parser.parse(scanner)
+        val model = res.asInstanceOf[korn.smt.Model]
+
+        if (debug) {
+          for (df <- model.defs)
+            System.err.println(df)
+        }
+
+        val graphml = witness_graphml getOrElse file + ".graphml"
+        val witness = new PrintStream(new File(graphml))
+        Witness.proof(file, model, unit, witness)
+
+        "sat"
+
+      case "unsat" =>
+        var trace: List[(String, BigInt)] = Nil
+        var line = reader.readLine()
+        while (line != null) {
+          val pos = line indexOf "__VERIFIER_nondet_"
+          if (pos >= 0) {
+            line = line drop pos
+            val lp = line indexOf "("
+            val rp = line indexOf ")"
+            val fun = line take lp
+            val res = line drop (lp + 1) take (rp - lp - 1)
+            trace = (fun, BigInt(res)) :: trace
+          }
+          line = reader.readLine()
+        }
+
+        if (debug) {
+          for ((fun, res) <- trace)
+            System.err.println(fun + "() = " + res)
+        }
+
+        val ok = Witness.confirm(file, trace map (_._2))
+
+        if (ok) {
+          if (Main.debug)
+            System.err.println("counterexample confirmed")
+
+          val graphml = witness_graphml getOrElse file + ".graphml"
+          val witness = new PrintStream(new File(graphml))
+          Witness.cex(file, trace, unit, witness)
+          "unsat"
+        } else {
+          if (Main.debug)
+            System.err.println("counterexample spurious")
+          "unknown"
+        }
+
+      case _ =>
+        "unknown"
+    }
+  }
+
+  def cex(file: String, cex: List[String]) {
+    val trace = cex map { BigInt(_) }
+    val ok = Witness.confirm(file, trace)
+    if (ok)
+      System.err.println("counterexample confirmed")
+    else
+      System.err.println("counterexample spurious")
   }
 
   @tailrec
@@ -61,10 +150,7 @@ object Main {
 
       case ("-m" | "-model") :: rest =>
         model = true
-        configure(rest)
-
-      case ("-u" | "-unbounded") :: rest =>
-        unbounded = true
+        witness = true
         configure(rest)
 
       case ("-p" | "-parse") :: rest =>
@@ -73,6 +159,10 @@ object Main {
 
       case ("-w" | "-write") :: rest =>
         write = true
+        configure(rest)
+
+      case ("-r" | "-random") :: n :: rest =>
+        random = n.toInt
         configure(rest)
 
       case ("-d" | "-debug") :: rest =>
@@ -93,7 +183,7 @@ object Main {
         configure(rest)
 
       case "-eld" :: rest if model =>
-        prove = Seq("eld", "-t:" + timeout, "-ssol")
+        prove = Seq("eld", "-t:" + timeout, "-ssol", "-cex")
         model = false
         write = true
         configure(rest)
@@ -103,12 +193,20 @@ object Main {
         write = true
         configure(rest)
 
+      case "-float" :: rest =>
+        float = true
+        configure(rest)
+
+      case "-witness" :: file :: rest =>
+        witness_graphml = Some(file)
+        configure(rest)
+
       case "-32" :: rest =>
-        c._bits = 32
+        c.bits = 32
         configure(rest)
 
       case "-64" :: rest =>
-        c._bits = 64
+        c.bits = 64
         configure(rest)
 
       case "--" :: rest =>
@@ -138,6 +236,34 @@ object Main {
           object unit extends horn.Unit(stmts)
           unit.run()
 
+          if (random > 0) {
+            import util.control.Breaks._
+
+            if (debug)
+              System.err.println("random testing for " + random + " seconds")
+
+            /* random sampling for given number of seconds */
+            val start = System.currentTimeMillis()
+
+            val bin = "./fuzz"
+            val compile = Array("gcc", path, "__VERIFIER.c", "__VERIFIER_random.c", "-o", bin)
+            val gcc = new ProcessBuilder(compile: _*)
+            val gcc_? = gcc.start.waitFor()
+
+            if (gcc_? == 0) {
+              breakable {
+                while (true) {
+                  val end = System.currentTimeMillis()
+                  if (end - start > random * 1000)
+                    break
+
+                  val (in, out, err) = pipe(bin)
+                  if (witness) read(out, System.out, path, unit) else read(out, System.out)
+                }
+              }
+            }
+          }
+
           if (prove.isEmpty) {
             if (write) {
               val to = smt(path)
@@ -153,7 +279,7 @@ object Main {
               print(unit, dump(to))
               val (_, out, err) = pipe(prove ++ List(to): _*)
               if (!quiet) System.out.print(path + ":")
-              cat(out, System.out)
+              if (witness) read(out, System.out, path, unit) else read(out, System.out)
               if (!quiet) cat(err, System.err)
             } else {
               val (in, out, err) = pipe(prove: _*)
@@ -161,7 +287,7 @@ object Main {
               in.println("(exit)")
               in.flush()
               if (!quiet) System.out.print(path + ":")
-              cat(out, System.out)
+              if (witness) read(out, System.out, path, unit) else read(out, System.out)
               if (!quiet) cat(err, System.err)
               in.close()
             }
@@ -199,7 +325,7 @@ object Main {
 
     if (model) {
       out.println(sexpr("set-option", ":produce-models", "true"))
-      out.println(sexpr("set-option", ":produce-unsat-cores", "true"))
+      // out.println(sexpr("set-option", ":produce-unsat-cores", "true"))
     }
 
     out.println()
@@ -209,8 +335,8 @@ object Main {
       out.println()
     }
 
-    for (pred <- unit.preds) {
-      val korn.smt.Pred(name, args) = pred
+    for (pred <- unit.preds ++ unit.pres.values ++ unit.posts.values) {
+      val korn.smt.Fun(name, args, _) = pred.fun
       val defn = sexpr("declare-fun", name, sexpr(args), "Bool")
       out.println(defn)
     }
@@ -245,7 +371,7 @@ object Main {
 
     if (model) {
       out.println(sexpr("get-model"))
-      out.println(sexpr("get-unsat-core"))
+      // out.println(sexpr("get-unsat-core"))
     }
 
     out.flush()
@@ -261,6 +387,8 @@ object Main {
       case List("-v") | List("-version") | List("--version") =>
         System.out.println(version)
         System.out.flush()
+      case "-cex" :: file :: rest =>
+        cex(file, rest)
       case args =>
         configure(args)
         run(files.toList)

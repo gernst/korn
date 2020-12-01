@@ -1,17 +1,22 @@
+void __VERIFIER_assume(_Bool cond);
+
 void main() {
     int n;
+    int k;
     assume(n > 0);
+    assume(0 <= k && k < n);
     int a[n];
     int b[n];
-    int i;
+    int i=0;
 
-    for(i=0; i<n; i++) {
+    while(i<n) {
         b[i] = a[i];
+        i++;
     }
 
-    assert(i == n);
+    if(i != n)
+        reach_error();
 
-    int k;
-    assume(0 <= k && k < n);
-    assert(a[k] == b[k]);
+    if(a[k] != b[k])
+        reach_error();
 }

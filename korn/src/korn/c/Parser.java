@@ -232,7 +232,16 @@ public class Parser extends beaver.Parser {
 	};
 
     Set<String> types;
-    Symbol s(Object x) { return new Symbol(x); }
+
+    Symbol s(Object x) {
+        return new Symbol(x);
+    }
+    
+    Symbol s(Symbol h, Stmt x) {
+        int a = h.getStart();
+        x.here(h.getLine(a), h.getColumn(a));
+        return new Symbol(x);
+    }
 
 	private final Action[] actions;
 
@@ -760,26 +769,29 @@ public class Parser extends beaver.Parser {
 					 return s(new If(a, b, c));
 				}
 			},
-			new Action() {	// [77] stmt = WHILE LPAREN expr.a RPAREN stmt.b
+			new Action() {	// [77] stmt = WHILE.w LPAREN expr.a RPAREN stmt.b
 				public Symbol reduce(Symbol[] _symbols, int offset) {
+					final Symbol w = _symbols[offset + 1];
 					final Symbol _symbol_a = _symbols[offset + 3];
 					final Expr a = (Expr) _symbol_a.value;
 					final Symbol _symbol_b = _symbols[offset + 5];
 					final Stmt b = (Stmt) _symbol_b.value;
-					 return s(new While(a, b));
+					 return s(w, new While(a, b));
 				}
 			},
-			new Action() {	// [78] stmt = DO stmt.b WHILE LPAREN expr.a RPAREN SEMICOLON
+			new Action() {	// [78] stmt = DO.w stmt.b WHILE LPAREN expr.a RPAREN SEMICOLON
 				public Symbol reduce(Symbol[] _symbols, int offset) {
+					final Symbol w = _symbols[offset + 1];
 					final Symbol _symbol_b = _symbols[offset + 2];
 					final Stmt b = (Stmt) _symbol_b.value;
 					final Symbol _symbol_a = _symbols[offset + 5];
 					final Expr a = (Expr) _symbol_a.value;
-					 return s(new DoWhile(b, a));
+					 return s(w, new DoWhile(b, a));
 				}
 			},
-			new Action() {	// [79] stmt = FOR LPAREN exprs_.a SEMICOLON exprs_.b SEMICOLON exprs_.c RPAREN stmt.p
+			new Action() {	// [79] stmt = FOR.w LPAREN exprs_.a SEMICOLON exprs_.b SEMICOLON exprs_.c RPAREN stmt.p
 				public Symbol reduce(Symbol[] _symbols, int offset) {
+					final Symbol w = _symbols[offset + 1];
 					final Symbol _symbol_a = _symbols[offset + 3];
 					final Expr[] a = (Expr[]) _symbol_a.value;
 					final Symbol _symbol_b = _symbols[offset + 5];
@@ -788,11 +800,12 @@ public class Parser extends beaver.Parser {
 					final Expr[] c = (Expr[]) _symbol_c.value;
 					final Symbol _symbol_p = _symbols[offset + 9];
 					final Stmt p = (Stmt) _symbol_p.value;
-					 return s(new For(a, b, c, p));
+					 return s(w, new For(a, b, c, p));
 				}
 			},
-			new Action() {	// [80] stmt = FOR LPAREN type.t vars.vs SEMICOLON exprs_.b SEMICOLON exprs_.c RPAREN stmt.p
+			new Action() {	// [80] stmt = FOR.w LPAREN type.t vars.vs SEMICOLON exprs_.b SEMICOLON exprs_.c RPAREN stmt.p
 				public Symbol reduce(Symbol[] _symbols, int offset) {
+					final Symbol w = _symbols[offset + 1];
 					final Symbol _symbol_t = _symbols[offset + 3];
 					final Type t = (Type) _symbol_t.value;
 					final Symbol _symbol_vs = _symbols[offset + 4];
@@ -804,7 +817,7 @@ public class Parser extends beaver.Parser {
 					final Expr[] c = (Expr[]) _symbol_c.value;
 					final Symbol _symbol_p = _symbols[offset + 10];
 					final Stmt p = (Stmt) _symbol_p.value;
-					 return s(new For(Parsing.vars(t, vs), b, c, p));
+					 return s(w, new For(Parsing.vars(t, vs), b, c, p));
 				}
 			},
 			Action.RETURN,	// [81] expr = PREFIX

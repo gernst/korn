@@ -1,0 +1,87 @@
+%package "korn.smt";
+%class "Parser";
+
+%embed {:
+    Symbol s(Object x) { return new Symbol(x); }
+:};
+
+
+%terminals LP, RP, BANG;
+%terminals ID, KW;
+%terminals NUM;
+
+%terminals INT, REAL, BOOL, ARRAY, POINTER;
+
+%terminals MODEL, DEFINE_FUN;
+%terminals LET, EXISTS, FORALL;
+
+%typeof ID      = "String";
+%typeof NUM     = "String";
+
+%typeof model   = "Model";
+%typeof def     = "Def";
+%typeof param   = "Param";
+
+%typeof sort    = "Sort";
+%typeof expr    = "Pure";
+%typeof var     = "Var";
+
+%typeof pair    = "scala.Tuple2";
+
+%goal model;
+
+model
+    = defs.ds              {: return s(new Model(ds)); :}
+    | LP MODEL defs.ds RP  {: return s(new Model(ds)); :}
+    ;
+
+defs   = def   *;
+params = param *;
+exprs  = expr  *;
+pairs  = pair  *;
+
+def
+    = LP DEFINE_FUN ID.n LP params.ps RP sort.s expr.b RP
+      {: return s(new Def(n, ps, s, b)); :}
+    ;
+
+param
+    = LP var.n sort.s RP
+      {: return s(new Param(n, s)); :}
+    ;
+
+pair
+    = LP var.n expr.e RP
+      {: return s(Parsing.pair(n,e)); :}
+    ;
+
+sort
+    = INT  {: return s(Parsing.intSort());  :}
+    | REAL {: return s(Parsing.realSort()); :}
+    | BOOL {: return s(Parsing.boolSort()); :}
+    | LP POINTER sort.e RP
+          {: return s(Parsing.pointerSort(e));  :}
+    | LP ARRAY sort.d sort.r RP
+           {: return s(Parsing.arraySort(d,r)); :}
+    ;
+
+var
+  = ID.n  {: return s(Var.apply(n)); :}
+  ;
+
+attr  = KW.k expr.e;
+attrs = attr*;
+
+expr
+  = NUM.n {: return s(Parsing.num(n));   :}
+  | ID.n  {: return s(Parsing.apply(n)); :}
+  | LP BANG expr.e attrs RP
+  | LP ID.n exprs.es RP
+          {: return s(Parsing.apply(n, es)); :}
+  | LP LET LP pairs.ps RP expr.b RP
+          {: return s(Parsing.let(ps, b)); :}
+  | LP EXISTS LP params.ps RP expr.b RP
+          {: return s(Parsing.bind("exists", ps, b)); :}
+  | LP FORALL LP params.ps RP expr.b RP
+          {: return s(Parsing.bind("forall", ps, b)); :}
+  ;

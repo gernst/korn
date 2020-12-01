@@ -134,6 +134,7 @@ IS = (u|U|l|L)*
             { return newToken(Terminals.LONG_UNSIGNED); }
 "signed"    { return newToken(Terminals.SIGNED);   }
 "unsigned"  { return newToken(Terminals.UNSIGNED); }
+"__float128" { return newToken(Terminals.LONG_DOUBLE); }
 
 "struct"    { return newToken(Terminals.STRUCT);   }
 "union"     { return newToken(Terminals.UNION);    }
@@ -160,11 +161,14 @@ IS = (u|U|l|L)*
 "__const"       { }
 "__inline"      { }
 "__restrict"    { }
+"__extension__" {WS}* "({" .* "})" { return newToken(Terminals.CONST, 0); }
 "__extension__" { }
-"__attribute__" {WS}+ "((" .* "))" { }
+
+"__asm__" {WS}* "(" .* ")" { }
+"__attribute__" {WS}* "((" .* "))" { }
 
 // has weird stuff in its definition
-"void reach_error()" .* {NL} { }
+// "void reach_error()" .* {NL} { }
             
 [a-zA-Z_][a-zA-Z_0-9]*
             { return resolve(yytext()); }
