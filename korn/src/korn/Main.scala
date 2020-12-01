@@ -35,15 +35,6 @@ object Main {
   var files = mutable.Buffer[String]()
   var out = System.out
 
-  def pipe(cmd: String*) = {
-    val builder = new ProcessBuilder(cmd: _*)
-    val proc = builder.start()
-    val in = new PrintStream(proc.getOutputStream())
-    val out = proc.getInputStream()
-    val err = proc.getErrorStream()
-    (in, out, err)
-  }
-
   def dump(path: String) = {
     val out = new PrintStream(new FileOutputStream(path))
     out
@@ -246,20 +237,16 @@ object Main {
             val start = System.currentTimeMillis()
 
             val bin = "./fuzz"
-            val compile = Array("gcc", path, "__VERIFIER.c", "__VERIFIER_random.c", "-o", bin)
-            val gcc = new ProcessBuilder(compile: _*)
-            val gcc_? = gcc.start.waitFor()
+            Tool.compile(bin, path, "__VERIFIER.c", "__VERIFIER_random.c")
 
-            if (gcc_? == 0) {
-              breakable {
-                while (true) {
-                  val end = System.currentTimeMillis()
-                  if (end - start > random * 1000)
-                    break
+            breakable {
+              while (true) {
+                val end = System.currentTimeMillis()
+                if (end - start > random * 1000)
+                  break
 
-                  val (in, out, err) = pipe(bin)
-                  if (witness) read(out, System.out, path, unit) else read(out, System.out)
-                }
+                val (in, out, err) = Tool.pipe(bin)
+                if (witness) read(out, System.out, path, unit) else read(out, System.out)
               }
             }
           }
@@ -277,12 +264,12 @@ object Main {
               if (debug) System.err.println(smt(path))
               val to = smt(path)
               print(unit, dump(to))
-              val (_, out, err) = pipe(prove ++ List(to): _*)
+              val (_, out, err) = Tool.pipe(prove ++ List(to): _*)
               if (!quiet) System.out.print(path + ":")
               if (witness) read(out, System.out, path, unit) else read(out, System.out)
               if (!quiet) cat(err, System.err)
             } else {
-              val (in, out, err) = pipe(prove: _*)
+              val (in, out, err) = Tool.pipe(prove: _*)
               print(unit, in)
               in.println("(exit)")
               in.flush()

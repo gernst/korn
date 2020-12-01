@@ -9,6 +9,8 @@ import java.util.Date
 import java.io.File
 
 sealed trait Witness
+case class Proof(model: Model) extends Witness
+case class Violation(trace: List[(String, BigInt)]) extends Witness
 
 object Witness {
   val N0 = "N0"
@@ -197,17 +199,9 @@ object Witness {
     out.close()
 
     val bin = "./confirm"
-    val compile = Array("gcc", file, harness, "__VERIFIER.c", "-o", bin)
-    val gcc = new ProcessBuilder(compile: _*)
-    val gcc_? = gcc.start.waitFor()
-    if (gcc_? != 0) return false // compilation failed
-
-    val run = Array(bin)
-    val a = new ProcessBuilder(run: _*)
-    val a_? = a.start.waitFor()
-    if (a_? == 0) return false // no assertion triggered
-
-    return true
+    Tool.compile(bin, file, harness, "__VERIFIER.c")
+    val status = Tool.run(bin)
+    return status != 0
   }
 
   // copied from https://github.com/sosy-lab/sv-witnesses/blob/master/multivar_true-unreach-call1.graphml
