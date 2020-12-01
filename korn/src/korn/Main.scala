@@ -23,6 +23,7 @@ object Main {
   var quiet = false
   var model = false
   var float = false
+  var random = 0
   var witness = false
   var witness_graphml = None: Option[String]
   var witness_quant = false
@@ -149,6 +150,10 @@ object Main {
 
       case ("-w" | "-write") :: rest =>
         write = true
+        configure(rest)
+
+      case ("-r" | "-random") :: n :: rest =>
+        random = n.toInt
         configure(rest)
 
       case ("-d" | "-debug") :: rest =>
