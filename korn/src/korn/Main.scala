@@ -49,12 +49,20 @@ object Main {
     out
   }
 
-  def cat(in: InputStream, out: OutputStream) {
+  def read(in: InputStream, out: OutputStream) = {
+    val reader = new BufferedReader(new InputStreamReader(in))
+    val status = reader.readLine()
+    in.transferTo(out)
+    out.flush()
+    status
+  }
+
+  def cat(in: InputStream, out: OutputStream) = {
     in.transferTo(out)
     out.flush()
   }
 
-  def read(in: InputStream, out: PrintStream, file: String, unit: horn.Unit) {
+  def read(in: InputStream, out: PrintStream, file: String, unit: horn.Unit) = {
     val reader = new BufferedReader(new InputStreamReader(in))
     val status = reader.readLine()
 
@@ -74,7 +82,7 @@ object Main {
         val witness = new PrintStream(new File(graphml))
         Witness.proof(file, model, unit, witness)
 
-        out.println("sat")
+        "sat"
 
       case "unsat" =>
         var trace: List[(String, BigInt)] = Nil
@@ -106,14 +114,15 @@ object Main {
           val graphml = witness_graphml getOrElse file + ".graphml"
           val witness = new PrintStream(new File(graphml))
           Witness.cex(file, trace, unit, witness)
-          out.println("unsat")
+          "unsat"
         } else {
           if (Main.debug)
             System.err.println("counterexample spurious")
-          out.println("unknown")
+          "unknown"
         }
 
       case _ =>
+        "unknown"
     }
   }
 
@@ -227,6 +236,34 @@ object Main {
           object unit extends horn.Unit(stmts)
           unit.run()
 
+          if (random > 0) {
+            import util.control.Breaks._
+
+            if (debug)
+              System.err.println("random testing for " + random + " seconds")
+
+            /* random sampling for given number of seconds */
+            val start = System.currentTimeMillis()
+
+            val bin = "./fuzz"
+            val compile = Array("gcc", path, "__VERIFIER.c", "__VERIFIER_random.c", "-o", bin)
+            val gcc = new ProcessBuilder(compile: _*)
+            val gcc_? = gcc.start.waitFor()
+
+            if (gcc_? == 0) {
+              breakable {
+                while (true) {
+                  val end = System.currentTimeMillis()
+                  if (end - start > random * 1000)
+                    break
+
+                  val (in, out, err) = pipe(bin)
+                  if (witness) read(out, System.out, path, unit) else read(out, System.out)
+                }
+              }
+            }
+          }
+
           if (prove.isEmpty) {
             if (write) {
               val to = smt(path)
@@ -242,7 +279,7 @@ object Main {
               print(unit, dump(to))
               val (_, out, err) = pipe(prove ++ List(to): _*)
               if (!quiet) System.out.print(path + ":")
-              if (witness) read(out, System.out, path, unit) else cat(out, System.out)
+              if (witness) read(out, System.out, path, unit) else read(out, System.out)
               if (!quiet) cat(err, System.err)
             } else {
               val (in, out, err) = pipe(prove: _*)
@@ -250,7 +287,7 @@ object Main {
               in.println("(exit)")
               in.flush()
               if (!quiet) System.out.print(path + ":")
-              if (witness) read(out, System.out, path, unit) else cat(out, System.out)
+              if (witness) read(out, System.out, path, unit) else read(out, System.out)
               if (!quiet) cat(err, System.err)
               in.close()
             }

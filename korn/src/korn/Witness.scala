@@ -196,12 +196,13 @@ object Witness {
     out.flush()
     out.close()
 
-    val compile = Array("gcc", file, harness, "__VERIFIER.c")
+    val bin = "./confirm"
+    val compile = Array("gcc", file, harness, "__VERIFIER.c", "-o", bin)
     val gcc = new ProcessBuilder(compile: _*)
     val gcc_? = gcc.start.waitFor()
     if (gcc_? != 0) return false // compilation failed
 
-    val run = Array("./a.out")
+    val run = Array(bin)
     val a = new ProcessBuilder(run: _*)
     val a_? = a.start.waitFor()
     if (a_? == 0) return false // no assertion triggered
