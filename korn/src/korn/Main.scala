@@ -34,97 +34,45 @@ object Main {
 
   var files = mutable.Buffer[String]()
   var out = System.out
+  var err = System.err
 
-  def dump(path: String) = {
-    val out = new PrintStream(new FileOutputStream(path))
-    out
-  }
-
-  def read(in: InputStream, out: OutputStream) = {
-    val reader = new BufferedReader(new InputStreamReader(in))
-    val status = reader.readLine()
-    in.transferTo(out)
-    out.flush()
-    status
-  }
-
-  def cat(in: InputStream, out: OutputStream) = {
-    in.transferTo(out)
-    out.flush()
-  }
-
-  def read(in: InputStream, out: PrintStream, file: String, unit: horn.Unit) = {
-    val reader = new BufferedReader(new InputStreamReader(in))
-    val status = reader.readLine()
-
-    status match {
-      case "sat" =>
-        val scanner = new korn.smt.Scanner(reader)
-        val parser = new korn.smt.Parser()
-        val res = parser.parse(scanner)
-        val model = res.asInstanceOf[korn.smt.Model]
-
-        if (debug) {
-          for (df <- model.defs)
-            System.err.println(df)
-        }
-
-        val graphml = witness_graphml getOrElse file + ".graphml"
-        val witness = new PrintStream(new File(graphml))
-        Witness.proof(file, model, unit, witness)
-
-        "sat"
-
-      case "unsat" =>
-        var trace: List[(String, BigInt)] = Nil
-        var line = reader.readLine()
-        while (line != null) {
-          val pos = line indexOf "__VERIFIER_nondet_"
-          if (pos >= 0) {
-            line = line drop pos
-            val lp = line indexOf "("
-            val rp = line indexOf ")"
-            val fun = line take lp
-            val res = line drop (lp + 1) take (rp - lp - 1)
-            trace = (fun, BigInt(res)) :: trace
-          }
-          line = reader.readLine()
-        }
-
-        if (debug) {
-          for ((fun, res) <- trace)
-            System.err.println(fun + "() = " + res)
-        }
-
-        val ok = Witness.confirm(file, trace map (_._2))
-
-        if (ok) {
-          if (Main.debug)
-            System.err.println("counterexample confirmed")
-
-          val graphml = witness_graphml getOrElse file + ".graphml"
-          val witness = new PrintStream(new File(graphml))
-          Witness.cex(file, trace, unit, witness)
-          "unsat"
-        } else {
-          if (Main.debug)
-            System.err.println("counterexample spurious")
-          "unknown"
-        }
-
-      case _ =>
-        "unknown"
+  def note(line: String) {
+    if (quiet) {
+      out.println(line)
+      out.flush()
     }
   }
 
-  def cex(file: String, cex: List[String]) {
-    val trace = cex map { BigInt(_) }
-    val ok = Witness.confirm(file, trace)
-    if (ok)
-      System.err.println("counterexample confirmed")
-    else
-      System.err.println("counterexample spurious")
+  def info(line: String) {
+    if (!quiet) {
+      out.println(line)
+      out.flush()
+    }
   }
+
+  def debug(line: String) {
+    if (debug) {
+      err.println(line)
+      err.flush()
+    }
+  }
+
+  // def dump(path: String) = {
+  //   val out = new PrintStream(new FileOutputStream(path))
+  //   out
+  // }
+
+  // def read(in: BufferedReader, out: OutputStream) = {
+  //   val status = in.readLine()
+  //   in.transferTo(???)
+  //   out.flush()
+  //   status
+  // }
+
+  // def cat(in: InputStream, out: OutputStream) = {
+  //   in.transferTo(out)
+  //   out.flush()
+  // }
 
   @tailrec
   def configure(args: List[String]) {
@@ -214,159 +162,127 @@ object Main {
     (path dropRight 2) + ".smt2"
   }
 
+  def graphml(path: String) = {
+    ensure((path endsWith ".c") || (path endsWith ".i"), "unrecognized file ending: " + path)
+    (path dropRight 2) + ".graphml"
+  }
+
+  def run(file: String) {
+    info("program:      " + file)
+
+    if (dry) {
+      Tool.parse(file)
+    } else {
+      if (random > 0) {
+        val result = Tool.fuzz(file, random)
+
+        result match {
+          case Incorrect(trace) =>
+            note("unsat")
+            info("status:       incorrect")
+            info("backend:      random")
+            debug("trace:        " + trace)
+
+            if (witness) {
+              val dest = witness_graphml getOrElse graphml(file)
+              val out = new PrintStream(new File(dest))
+              Witness.cex(file, trace, out)
+              info("witness:      " + dest)
+            }
+
+            return
+
+          case _ =>
+          // continue
+        }
+      }
+
+      if (prove.isEmpty) {
+        if (write) {
+          val to = smt(file)
+          val out = new PrintStream(new File(to))
+          info("clauses:      " + to)
+          Tool.horn(file, model, out)
+        } else {
+          Tool.horn(file, model, out)
+        }
+      }
+
+      if (prove.nonEmpty) {
+        val (unit, result) = if (write) {
+          val to = smt(file)
+          info("clauses:      " + to)
+          Tool.solve(file, model, Some(to), prove: _*)
+        } else {
+          Tool.solve(file, model, None, prove: _*)
+        }
+
+        result match {
+          case Unknown(message) =>
+            note("unknown")
+            info("status:       " + message)
+
+          case Correct(_model) =>
+            note("sat")
+
+            info("status:       correct")
+            info("backend:      " + prove.mkString(" "))
+            debug("model:")
+            for (df <- _model.defs)
+              debug("  " + df)
+
+            if (witness) {
+              val dest = witness_graphml getOrElse graphml(file)
+              val out = new PrintStream(new File(dest))
+              Witness.proof(file, _model, unit, out)
+              info("witness:      " + dest)
+            }
+
+          case Incorrect(trace) =>
+            note("unsat")
+
+            info("status:       incorrect")
+            info("backend:      " + prove.mkString(" "))
+            debug("trace:        " + trace)
+
+            if (witness) {
+              val dest = witness_graphml getOrElse graphml(file)
+              val out = new PrintStream(new File(dest))
+              Witness.cex(file, trace, out)
+              info("witness:      " + dest)
+            }
+        }
+      }
+    }
+  }
+
   def run(files: List[String]) {
     for (path <- files) {
       try {
-        System.out.flush()
-        System.err.flush()
-
-        if (debug) System.err.println(path)
-        val stmts = korn.c.parse(path)
-
-        if (!dry) {
-          object unit extends horn.Unit(stmts)
-          unit.run()
-
-          if (random > 0) {
-            import util.control.Breaks._
-
-            if (debug)
-              System.err.println("random testing for " + random + " seconds")
-
-            /* random sampling for given number of seconds */
-            val start = System.currentTimeMillis()
-
-            val bin = "./fuzz"
-            Tool.compile(bin, path, "__VERIFIER.c", "__VERIFIER_random.c")
-
-            breakable {
-              while (true) {
-                val end = System.currentTimeMillis()
-                if (end - start > random * 1000)
-                  break
-
-                val (in, out, err) = Tool.pipe(bin)
-                if (witness) read(out, System.out, path, unit) else read(out, System.out)
-              }
-            }
-          }
-
-          if (prove.isEmpty) {
-            if (write) {
-              val to = smt(path)
-              if (debug) System.err.println(to)
-              print(unit, dump(to))
-            } else {
-              print(unit, System.out)
-            }
-          } else {
-            if (write) {
-              if (debug) System.err.println(smt(path))
-              val to = smt(path)
-              print(unit, dump(to))
-              val (_, out, err) = Tool.pipe(prove ++ List(to): _*)
-              if (!quiet) System.out.print(path + ":")
-              if (witness) read(out, System.out, path, unit) else read(out, System.out)
-              if (!quiet) cat(err, System.err)
-            } else {
-              val (in, out, err) = Tool.pipe(prove: _*)
-              print(unit, in)
-              in.println("(exit)")
-              in.flush()
-              if (!quiet) System.out.print(path + ":")
-              if (witness) read(out, System.out, path, unit) else read(out, System.out)
-              if (!quiet) cat(err, System.err)
-              in.close()
-            }
-          }
-        }
+        run(path)
       } catch {
         case e: beaver.Parser.Exception =>
-          if (!quiet) System.err.println("parser error")
-          if (!quiet) System.out.print(path + ":")
-          System.out.println("error")
+          note("error")
+          info("error:        " + e.getMessage())
+          if (debug) e.printStackTrace()
         case e: NotImplementedError =>
+          note("error")
           val st = e.getStackTrace()(1)
           val file = st.getFileName + ":" + st.getLineNumber
           val code = st.getClassName + "." + st.getMethodName
           val where = code + " (" + file + ")"
-          if (!quiet) System.err.println("not implemented: " + where)
-          if (!quiet) System.out.print(path + ":")
-          System.out.println("error")
+          info("error:        not implemented " + where)
+          if (debug) e.printStackTrace()
         case e: Error =>
-          if (!quiet) System.err.println(e.msg)
-          if (!quiet) System.out.print(path + ":")
-          System.out.println("error")
+          note("error")
+          info("error:        " + e.msg)
+          if (debug) e.printStackTrace()
         case e: Throwable =>
-          if (!quiet) System.err.println("error: " + e.getMessage)
-          if (!quiet) e.printStackTrace()
-          if (!quiet) System.out.print(path + ":")
-          System.out.println("error")
+          note("error")
+          info("error:        " + e.getMessage())
+          if (debug) e.printStackTrace()
       }
     }
-  }
-
-  def print(unit: horn.Unit, out: PrintStream) {
-    import korn.smt.sexpr
-    out.println(sexpr("set-logic", "HORN"))
-
-    if (model) {
-      out.println(sexpr("set-option", ":produce-models", "true"))
-      // out.println(sexpr("set-option", ":produce-unsat-cores", "true"))
-    }
-
-    out.println()
-
-    if (unit.pointers) {
-      out.println(sexpr("declare-sort", "Pointer", "1"))
-      out.println()
-    }
-
-    for (pred <- unit.preds ++ unit.pres.values ++ unit.posts.values) {
-      val korn.smt.Fun(name, args, _) = pred.fun
-      val defn = sexpr("declare-fun", name, sexpr(args), "Bool")
-      out.println(defn)
-    }
-    out.println()
-
-    for (clause <- unit.clauses) {
-      val korn.smt.Clause(path, head, reason) = clause
-      val bound = clause.free map (_.toString)
-
-      out.println("; " + reason)
-      out.println("(assert")
-      if (bound.nonEmpty)
-        out.println("  (forall " + bind(bound, unit.typing))
-
-      if (path.nonEmpty) {
-        out.println(path.mkString("    (=> (and ", "\n             ", ")"))
-      }
-
-      out.print("        " + head)
-
-      if (path.nonEmpty)
-        out.print(")")
-
-      if (bound.nonEmpty)
-        out.print(")")
-
-      out.println(")")
-      out.println()
-    }
-
-    out.println(sexpr("check-sat"))
-
-    if (model) {
-      out.println(sexpr("get-model"))
-      // out.println(sexpr("get-unsat-core"))
-    }
-
-    out.flush()
-  }
-
-  def bind[V, T](vars: Iterable[V], typing: V => T): String = {
-    import korn.smt.sexpr
-    sexpr(vars map { x => sexpr(x, typing(x)) })
   }
 
   def main(args: Array[String]) {
@@ -374,8 +290,6 @@ object Main {
       case List("-v") | List("-version") | List("--version") =>
         System.out.println(version)
         System.out.flush()
-      case "-cex" :: file :: rest =>
-        cex(file, rest)
       case args =>
         configure(args)
         run(files.toList)

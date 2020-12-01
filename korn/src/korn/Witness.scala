@@ -8,10 +8,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.io.File
 
-sealed trait Witness
-case class Proof(model: Model) extends Witness
-case class Violation(trace: List[(String, BigInt)]) extends Witness
-
 object Witness {
   val N0 = "N0"
   val NV = "NV"
@@ -97,14 +93,6 @@ object Witness {
     }
   }
 
-  def hash(file: String) = {
-    import java.nio.file.Files
-    import java.nio.file.Paths
-    val md = java.security.MessageDigest.getInstance("SHA-256")
-    val hash = md.digest(Files.readAllBytes(Paths.get(file))).map("%02x".format(_)).mkString
-    hash
-  }
-
   def proof(df: Def, unit: Unit, out: PrintStream) {
     val Def(name, args, ret, body) = df
 
@@ -112,6 +100,7 @@ object Witness {
       val (proc, loc, pred, msg) = unit witness name
       val from = args map (_.x.toString)
       val to = pred.names
+      korn.ensure(from.length == to.length, "parameter length mismatch: " + from + " and " + to)
       val env = Map(from zip to: _*)
       val inv = c(body, env, neg = false)
 
@@ -121,8 +110,10 @@ object Witness {
       out println graph.loop(nd, inv)
       out println graph.leave(nd, N0)
 
-      println(msg + " for " + proc.name + " at " + loc.line + ":" + loc.column)
-      println("  " + inv)
+      if (Main.debug) {
+        println(msg + " for " + proc.name + " at " + loc.line + ":" + loc.column)
+        println("  " + inv)
+      }
     }
   }
 
@@ -133,7 +124,7 @@ object Witness {
     val time = df.format(new Date());
 
     try {
-      out println graph.header(file, time, hash(file), bits, "correctness_witness")
+      out println graph.header(file, time, Tool.hash(file), bits, "correctness_witness")
       out println graph.entry(N0)
 
       for (df <- model.defs)
@@ -154,14 +145,14 @@ object Witness {
     out println graph.call(fun, arg, Ni, Nj)
   }
 
-  def cex(file: String, trace: List[(String, BigInt)], unit: Unit, out: PrintStream) {
+  def cex(file: String, trace: List[(String, BigInt)], out: PrintStream) {
     out println header(file)
 
     val df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
     val time = df.format(new Date());
 
     try {
-      out println graph.header(file, time, hash(file), bits, "violation_witness")
+      out println graph.header(file, time, Tool.hash(file), bits, "violation_witness")
       out println graph.entry(N0)
 
       for (((call, arg), index) <- trace.zipWithIndex)
@@ -177,31 +168,6 @@ object Witness {
       out println graph.footer
       out println footer
     }
-  }
-
-  def confirm(file: String, trace: List[BigInt]): Boolean = {
-    val harness = "__VERIFIER_counterexample.c"
-    val out = new PrintStream(new File(harness))
-
-    out println "unsigned long long __VERIFIER_counterexample[] = {"
-    for (arg <- trace)
-      out println ("    (unsigned long long) " + arg + ",")
-    out println "};"
-
-    out.println()
-
-    out println "static unsigned int __VERIFIER_index = 0;"
-    out println "unsigned long long __VERIFIER_next_nondet(unsigned int sign, unsigned int bits, const char *fn) {"
-    out println "    return __VERIFIER_counterexample[__VERIFIER_index++];"
-    out println "}"
-
-    out.flush()
-    out.close()
-
-    val bin = "./confirm"
-    Tool.compile(bin, file, harness, "__VERIFIER.c")
-    val status = Tool.run(bin)
-    return status != 0
   }
 
   // copied from https://github.com/sosy-lab/sv-witnesses/blob/master/multivar_true-unreach-call1.graphml

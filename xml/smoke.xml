@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <!DOCTYPE benchmark PUBLIC "+//IDN sosy-lab.org//DTD BenchExec benchmark 1.9//EN" "https://www.sosy-lab.org/benchexec/benchmark-1.9.dtd">
-<benchmark tool="korn" timelimit="15 min" hardtimelimit="15 min" memlimit="4 GB" cpuCores="1">
+<benchmark tool="korn" timelimit="1 min" hardtimelimit="1 min" memlimit="4 GB" cpuCores="1">
 
   <!-- <require cpuModel="Intel Xeon E3-1230 v5 @ 3.40 GHz" cpuCores="1"/> -->
    -->
@@ -8,8 +8,7 @@
 
   <resultfiles>**.graphml</resultfiles>
 
-
-  <option name="-quiet"/>
+  <option name="-random">5</option>
   <option name="-model"/>
   <option name="-witness">witness.graphml</option>
   <option name="-timeout">900</option>
@@ -46,5 +45,9 @@
     <propertyfile>../sv-benchmarks/c/properties/unreach-call.prp</propertyfile>
   </tasks> -->
 </rundefinition>
+
+  <columns>
+    <column title="backend">backend:</column>
+  </columns>
 
 </benchmark>
