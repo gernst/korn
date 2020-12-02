@@ -50,7 +50,7 @@ object Contract {
   object main extends Contract {
     def enter(st0: State, proc: Proc): State = {
       import proc._
-      st0 ++ internal.havoc
+      st0 ++ internal.havoc // preserve global state
     }
 
     def leave(st0: State, st1: State, res: Option[Val], proc: Proc) {
@@ -92,22 +92,22 @@ object Branch {
   object relational extends Branch {
     def join(st0: State, st1: State, reason1: String, st2: State, reason2: String, proc: Proc): State = {
       import proc._
-      val pred = internal.step($if newLabel name)
+      val pred = combined.step($if newLabel name)
       now(pred, st0, st1, reason1)
       now(pred, st0, st2, reason2)
-      from(pred, st0, internal.arbitrary)
+      from(pred, st0, combined.arbitrary)
     }
 
     def label(label: String, st0: State, st1: State, proc: Proc): State = {
       import proc._
-      val pred = internal.step($label.newLabel(name, label))
+      val pred = combined.step($label.newLabel(name, label))
       now(pred, st0, st1, "label " + label)
-      from(pred, st0, internal.arbitrary)
+      from(pred, st0, combined.arbitrary)
     }
 
     def goto(label: String, st0: State, st1: State, proc: Proc) {
       import proc._
-      val pred = internal.step($label.newLabel(name, label))
+      val pred = combined.step($label.newLabel(name, label))
       // Note: using st0 here bridges the correct origin
       //       wrt. labels for non-local forward control-flow inside a loop,
       //       alternatively fix the origin here as st2
@@ -131,13 +131,13 @@ object Loop {
     def enter(st0: State, st1: State, proc: Proc): (Step, Step, State) = {
       import proc._
       val inv =
-        if (!rel) internal.state($inv newLabel name)
-        else internal.step($inv newLabel name)
+        if (!rel) combined.state($inv newLabel name)
+        else combined.step($inv newLabel name)
       val sum =
-        if (!rel) internal.state($sum newLabel name)
-        else internal.step($sum newLabel name)
+        if (!rel) combined.state($sum newLabel name)
+        else combined.step($sum newLabel name)
       now(inv, st1, st1, "loop entry " + inv)
-      val si0 = from(inv, st1, internal.arbitrary)
+      val si0 = from(inv, st1, combined.arbitrary)
       (inv, sum, si0)
     }
 
@@ -156,7 +156,7 @@ object Loop {
     def leave(hyp: Hyp, proc: Proc): State = {
       import proc._
       val Hyp(inv, sum, st1, si0, sin, siy, dont) = hyp
-      from(sum, st1, internal.arbitrary)
+      from(sum, st1, combined.arbitrary)
     }
 
     def break(si1: State, hyp: Hyp, proc: Proc) {
@@ -179,11 +179,11 @@ object Loop {
     def enter(st0: State, st1: State, proc: Proc): (Step, Step, State) = {
       import proc._
       val inv =
-        if (!rel) internal.state($inv newLabel name)
-        else internal.step($inv newLabel name)
-      val sum = internal.step($sum newLabel name)
+        if (!rel) combined.state($inv newLabel name)
+        else combined.step($inv newLabel name)
+      val sum = combined.step($sum newLabel name)
       now(inv, st1, st1, "loop entry " + inv)
-      val si0 = from(inv, st1, internal.arbitrary)
+      val si0 = from(inv, st1, combined.arbitrary)
       (inv, sum, si0)
     }
 
@@ -201,7 +201,7 @@ object Loop {
       now(inv, si0, si1, "forwards " + inv)
 
       val st = si1.maybePrune(inv, keep = !only)
-      val stz = internal.arbitrary
+      val stz = combined.arbitrary
       val prem = sum(si1, stz)
       val concl = sum(siy, stz)
       clause(st and prem, concl, "backwards " + sum)
@@ -210,7 +210,7 @@ object Loop {
     def leave(hyp: Hyp, proc: Proc): State = {
       import proc._
       val Hyp(inv, sum, st1, si0, sin, siy, dont) = hyp
-      from(sum, st1, st1 ++ internal.havoc)
+      from(sum, st1, st1 ++ combined.havoc)
     }
 
     def break(si1: State, hyp: Hyp, proc: Proc) {

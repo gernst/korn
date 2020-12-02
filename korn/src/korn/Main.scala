@@ -15,7 +15,7 @@ import java.io.BufferedReader
 import java.io.FileWriter
 
 object Main {
-  val version = "0.2"
+  val version = "0.3"
 
   var dry = false
   var config = "default"

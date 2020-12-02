@@ -41,6 +41,8 @@ object Tool {
   }
 
   def confirm(file: String, trace: List[(String, BigInt)]) = {
+    Main.debug("confirming " + trace)
+
     val cex = "__VERIFIER_counterexample.c"
     val out = new PrintStream(new File(cex))
 

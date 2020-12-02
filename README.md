@@ -38,19 +38,20 @@ The following options are supported
 - `-w` write verification task to file instead of stdout
 - `-s` use summaries and invariants (default: only invariants)
 - `-s0` force correctness proof via summaries
-- `-m` generate `(get-model)` in the task (resp. specify `-ssol` for Eldarica)
+- `-m` generate `(get-model)` in the task (resp. specify `-ssol -cex` for Eldarica)
 - `-p` parse only
 - `-d` print some debug output
 - `-q` output only one of `sat`, `unsat`, `error`, `unknown` and suppress all other output to stdout/stderr
 - `-t n` specify timeout in seconds (for directly supported solvers, default: 900)
 - `-32` and `-64`: size constraints for numeric types (affects `long`)
 - `-u` unbounded arithmetic, omit size constraints for `__VERIFIER_nondet_*`
+- `-r n` run `n` seconds of random sampling to detect trivial counterexamples
 
 The following solvers have first-class support and can be specified with options
 
 - `-z3` call `z3 -in -t:<timeout>` resp `z3 -t:timeout <file>` if `-w` is set
    (binary must be on `$PATH`)
-- `-eld` call `eld -t:<timeout> <file>` resp `eld -t:<timeout> -ssol <file>` if `-m` is set
+- `-eld` call `eld -t:<timeout> <file>` resp `eld -t:<timeout> -ssol -cex <file>` if `-m` is set
    (implies `-w`, binary must be on `$PATH`)
 
 Both solvers are in the git repository and can be used by setting `export

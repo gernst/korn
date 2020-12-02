@@ -21,8 +21,8 @@ KORN_LAUNCHER = out/korn/launcher/dest/run
 KORN_SH  = ./korn.sh
 KORN_FLAGS ?=
 
-ARCHIVES = archives-2021/2021
-KORN_DIST = run korn.jar z3 eld eld.jar LICENSE LICENSE.z3 LICENSE.Eldarica
+ARCHIVES = ../sv-comp/archives-2021/2021
+KORN_DIST = run korn.jar z3 eld eld.jar README.md LICENSE LICENSE.z3 LICENSE.Eldarica __VERIFIER.c __VERIFIER_random.c
 
 all: $(KORN_JAR) $(KORN_ASSEMBLY) $(KORN_SH) plots
 
@@ -34,10 +34,11 @@ parser: $(KORN_JAVA)
 
 archives-2021: $(ARCHIVES)/korn.zip
 
-$(ARCHIVES)/korn.zip: $(ARCHIVES)/korn $(KORN_DIST)
+$(ARCHIVES)/korn.zip: $(KORN_DIST)
 	@echo $@
+	@mkdir -p $(ARCHIVES)/korn
 	@cp $(KORN_DIST) $(ARCHIVES)/korn
-	@zip $(ARCHIVES)/korn.zip -r $(ARCHIVES)/korn
+	@(cd $(ARCHIVES); zip korn.zip -r korn)
 
 clean:
 	$(MILL) clean

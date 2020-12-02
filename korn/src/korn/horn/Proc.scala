@@ -20,11 +20,10 @@ class Proc(
   val loop = config.loop
 
   /** collect identifiers in scope and their types */
-  val used = Stmt.uses(body)
-  val extra = globals filter { used contains _.name }
-  object toplevel extends Scope(extra)
+  object toplevel extends Scope(globals)
   object external extends Scope(params)
-  object internal extends Scope(extra ++ params ++ locals)
+  object internal extends Scope(params ++ locals)
+  object combined extends Scope(globals ++ params ++ locals)
 
   object eval extends unit.eval.scoped(this)
   import eval._

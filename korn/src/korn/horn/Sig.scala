@@ -15,7 +15,9 @@ sealed trait Step extends Pred {
 }
 
 case class CEX(fun: Fun) extends Pred {
-  def apply(arg: Pure) = Pure.app(fun, List(arg))
+  def apply(arg: Pure) = {
+    Pure.app(fun, List(arg))
+  }
 }
 
 case class Pre(fun: Fun) extends Pred {

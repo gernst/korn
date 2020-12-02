@@ -59,22 +59,24 @@ class Unit(stmts: List[Stmt]) {
   }
 
   def run() {
-    global(stmts)
+    run(stmts, static)
+    run(stmts, signature)
+    run(stmts, dynamic)
   }
 
-  def global(stmts: List[Stmt]) {
-    for (stmt <- stmts)
-      global(stmt)
+  def run(stmts: List[Stmt], action: Stmt => Any) {
+    stmts foreach action
   }
 
-  def global(stmt: Stmt) {
+  // Collect global declarations but defer functions to a later stage
+  def static(stmt: Stmt) {
     import sig._
     import eval._
 
     stmt match {
       case Group(stmts) =>
-        global(stmts)
-      // Declarations
+        // use case: groups of variable declarations
+        run(stmts, static)
       case StructDecl(name) =>
         structs += name -> None
       case UnionDecl(name) =>
@@ -92,29 +94,60 @@ class Unit(stmts: List[Stmt]) {
       case EnumDef(Some(name), cases) =>
         enum(cases)
         enums += name -> Some(cases)
-      // Definitions
-      case VarDef(formal @ Formal(typ, name), None) =>
+      case VarDef(formal @ Formal(typ, name), _) =>
         globals ++= List(formal)
         vars += name -> typ
-        var (_, _, x) = nondet(name, typ)
-        state += (name -> x)
-      case VarDef(formal @ Formal(typ, name), Some(init)) =>
-        globals ++= List(formal)
-        vars += name -> typ
-        var (_, _, x) = nondet(name, typ)
-        state += (name -> x)
-        val y = value(init, state)
-        state += name -> y
+      case _: FunDecl | _: FunDef =>
+      // declare functions later when global variables are known
+      case _ =>
+        korn.error("unsupported global statement: " + stmt)
+    }
+  }
+
+  // Collect function signatures, including global variables
+  def signature(stmt: Stmt) {
+    import sig._
+    import eval._
+
+    stmt match {
+      case Group(stmts) =>
+        // use case: groups of function declarations (possible?)
+        run(stmts, signature)
       case FunDecl(ret, name, types) =>
         declare(name, ret, types)
       case FunDef(ret, "reach_error", formals, body) =>
-        // ignore this
+        // built-in
       case FunDef(ret, name, formals, body) =>
         val types = formals map (_.typ)
         declare(name, ret, types)
+      case _ =>
+        // nothing to do
+    }
+  }
+
+  // Set up initial state for main, and define all functions
+  def dynamic(stmt: Stmt) {
+    import sig._
+    import eval._
+
+    stmt match {
+      case Group(stmts) =>
+        // use case: groups of variable declarations
+        run(stmts, dynamic)
+      case VarDef(formal @ Formal(typ, name), None) =>
+        var (_, _, x) = nondet(name, typ)
+        state += name -> x
+      case VarDef(formal @ Formal(typ, name), Some(init)) =>
+        var (_, _, x) = nondet(name, typ)
+        state += name -> x
+        val y = value(init, state)
+        state += name -> y
+      case FunDef(ret, "reach_error", formals, body) =>
+        // built-in
+      case FunDef(ret, name, formals, body) =>
         define(name, formals, body)
       case _ =>
-        korn.error("unsupported global statement: " + stmt)
+        // nothing to do
     }
   }
 
