@@ -183,7 +183,7 @@ class Sig(unit: Unit) {
         val x = fresh(name, s)
         (x, s, Val(x, typ))
 
-      case PtrType(typ) =>
+      case PtrType(elem) =>
         val s = Sort.pointer(resolve(typ))
         val x = fresh(name, s)
         (x, s, Val(x, typ))
