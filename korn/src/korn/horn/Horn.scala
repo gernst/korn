@@ -63,13 +63,6 @@ object Contract {
       import proc._
       import proc.unit._
 
-      println(typing)
-      println(toplevel)
-      println(toplevel.types)
-      println(toplevel.sorts)
-      println(internal)
-      println(internal.types)
-      println(internal.sorts)
       val st1 = st0 ++ toplevel.havoc ++ internal.havoc
       val pre = pres(name)
       val prop = pre.eval(st1, toplevel.names, external.names)

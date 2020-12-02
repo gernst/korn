@@ -28,9 +28,8 @@ object Main {
   var witness_graphml = None: Option[String]
   var witness_quant = false
   var write = false
-  var cex = false // only Eldarica currently
   var timeout = 900 // SV-COMP default
-  var prove: Seq[String] = Seq()
+  var tools = mutable.Buffer[Tool]()
 
   var files = mutable.Buffer[String]()
   var out = System.out
@@ -117,19 +116,16 @@ object Main {
         configure(rest)
 
       case "-z3" :: rest =>
-        prove = Seq("z3", "-t:" + (timeout * 1000))
-        write = true
+        // somehow piping is not working
+        tools += Tool(model, true, "z3", "-t:" + (timeout * 1000))
         configure(rest)
 
       case "-eld" :: rest if model =>
-        prove = Seq("eld", "-t:" + timeout, "-ssol", "-cex")
-        model = false
-        write = true
+        tools += Tool(false, true, "eld", "-t:" + timeout, "-ssol", "-cex")
         configure(rest)
 
       case "-eld" :: rest =>
-        prove = Seq("eld", "-t:" + timeout)
-        write = true
+        tools += Tool(false, true, "eld", "-t:" + timeout)
         configure(rest)
 
       case "-float" :: rest =>
@@ -149,7 +145,7 @@ object Main {
         configure(rest)
 
       case "--" :: rest =>
-        prove = rest
+        tools += Tool(model, write, rest: _*)
 
       case file :: rest =>
         files += file
@@ -174,6 +170,7 @@ object Main {
       Tool.parse(file)
     } else {
       if (random > 0) {
+        debug("running:      random (" + random + "s)")
         val result = Tool.fuzz(file, random)
 
         result match {
@@ -197,7 +194,7 @@ object Main {
         }
       }
 
-      if (prove.isEmpty) {
+      if (tools.isEmpty) {
         if (write) {
           val to = smt(file)
           val out = new PrintStream(new File(to))
@@ -208,49 +205,71 @@ object Main {
         }
       }
 
-      if (prove.nonEmpty) {
-        val (unit, result) = if (write) {
-          val to = smt(file)
-          info("clauses:      " + to)
-          Tool.solve(file, model, Some(to), prove: _*)
-        } else {
-          Tool.solve(file, model, None, prove: _*)
-        }
+      import scala.util.control.Breaks._
 
-        result match {
-          case Unknown(message) =>
-            note("unknown")
-            info("status:       " + message)
+      breakable {
+        for (tool <- tools) {
+          // Note: local variables shadow class attribute
+          val Tool(model, write, cmd @ _*) = tool
 
-          case Correct(_model) =>
-            note("sat")
+          debug("running:      " + cmd.mkString(" "))
 
-            info("status:       correct")
-            info("backend:      " + prove.mkString(" "))
-            debug("model:")
-            for (df <- _model.defs)
-              debug("  " + df)
+          val (unit, result) = if (write) {
+            val to = smt(file)
+            info("clauses:      " + to)
+            Tool.solve(file, model, Some(to), cmd)
+          } else {
+            Tool.solve(file, model, None, cmd)
+          }
 
-            if (witness) {
-              val dest = witness_graphml getOrElse graphml(file)
-              val out = new PrintStream(new File(dest))
-              Witness.proof(file, _model, unit, out)
-              info("witness:      " + dest)
+          try {
+            result match {
+              case Unknown(message) =>
+                note("unknown")
+                info("status:       " + message)
+
+              case Correct(_model) =>
+                note("sat")
+
+                info("status:       correct")
+                info("backend:      " + cmd.mkString(" "))
+
+                if (_model.defs.nonEmpty)
+                  debug("model:")
+                for (df <- _model.defs)
+                  debug("  " + df)
+
+                if (witness) {
+                  val dest = witness_graphml getOrElse graphml(file)
+                  val out = new PrintStream(new File(dest))
+                  Witness.proof(file, _model, unit, out)
+                  info("witness:      " + dest)
+                }
+
+                break
+
+              case Incorrect(trace) =>
+                note("unsat")
+
+                info("status:       incorrect")
+                info("backend:      " + cmd.mkString(" "))
+                debug("trace:        " + trace)
+
+                if (witness) {
+                  val dest = witness_graphml getOrElse graphml(file)
+                  val out = new PrintStream(new File(dest))
+                  Witness.cex(file, trace, out)
+                  info("witness:      " + dest)
+                }
+
+                break
             }
-
-          case Incorrect(trace) =>
-            note("unsat")
-
-            info("status:       incorrect")
-            info("backend:      " + prove.mkString(" "))
-            debug("trace:        " + trace)
-
-            if (witness) {
-              val dest = witness_graphml getOrElse graphml(file)
-              val out = new PrintStream(new File(dest))
-              Witness.cex(file, trace, out)
-              info("witness:      " + dest)
-            }
+          } catch {
+            case err: Error =>
+              if (Main.debug)
+                throw err
+            // witness cannot be translated
+          }
         }
       }
     }

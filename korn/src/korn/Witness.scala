@@ -8,6 +8,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.io.File
 
+case object InvalidWitness extends Exception
+
 object Witness {
   val N0 = "N0"
   val NV = "NV"
@@ -82,14 +84,15 @@ object Witness {
         c(body subst su, env, neg)
 
       case _: Bind if !Main.witness_quant =>
-        if (neg) "false" else "true"
+        // if (neg) "false" else "true"
+        korn.error("unsupported quantifier in invariant: " + pure)
       case Ex(params, body) =>
         "(exists " + c(params) + ". " + body + ")"
       case All(params, body) =>
         "(forall " + c(params) + ". " + body + ")"
 
       case _ =>
-        korn.error("unsupported in C: " + pure)
+        korn.error("unsupported in invariant: " + pure)
     }
   }
 

@@ -16,6 +16,8 @@ object Result {
   val unknown = Unknown("unknown")
 }
 
+case class Tool(model: Boolean, write: Boolean, cmd: String*)
+
 object Tool {
   def run(cmd: String*) = {
     val process = new ProcessBuilder(cmd: _*)
@@ -138,7 +140,7 @@ object Tool {
     Backend.write(unit, model, out)
   }
 
-  def solve(file: String, model: Boolean, write: Option[String], cmd: String*) = {
+  def solve(file: String, model: Boolean, write: Option[String], cmd: Seq[String]) = {
     val unit = translate(file)
 
     write match {
