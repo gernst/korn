@@ -35,7 +35,7 @@ object Tool {
   }
 
   def compile(bin: String, files: String*) {
-    val gcc = List("gcc", "-m" + c.bits, "-o", bin)
+    val gcc = List("gcc", "-m" + c.bits, "-o", bin, "-lm")
     val cmd = gcc ++ files
     val status = run(cmd: _*)
     Main.debug(cmd.mkString(" "))

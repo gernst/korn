@@ -164,21 +164,26 @@ lemma suffix_while[intro]:
 
 (* Theorem 4: Completeness of Loop Summaries wrt. Safe Invariants *)
 theorem summary_complete:
-  assumes "invariant_safe P I t B"
+  (* assumes "invariant_safe P I t B" *)
   assumes "hoare P (while t B) Q"
-  obtains R where "summary_correct P t B R Q"
+  obtains I R
+  where "invariant_safe  P I t B"
+    and "summary_correct P t B R Q"
 proof -
-  have "summary_correct P t B (\<lambda> s s'. suffix t B s s') Q"
+  have "invariant_safe P (\<lambda> s. \<exists> s0. P s0 \<and> prefix t B s0 s) t B"
+    using assms by auto
+  moreover have "summary_correct P t B (\<lambda> s s'. suffix t B s s') Q"
     using assms by blast
-  then show ?thesis ..
+  ultimately show ?thesis ..
 qed
 
-(* Corollary 1: Safe Invariants are Necessary *)
-corollary safe_necessary:
-  assumes "hoare P (while t B) Q"
-  shows   "(\<exists> R. summary_correct P t B R Q) \<longleftrightarrow> (\<exists> I. invariant_safe P I t B)"
-  using assms invariant_complete summary_complete
-  by (metis invariant_correctE)
+(* Corollary 2: Coincidence of Invariants and Summaries
+   proof via soundness and completeness of the approaches *)
+corollary coincidence:
+  "(\<exists> I. invariant_correct P I t B Q)
+    \<longleftrightarrow> (\<exists> J R.  invariant_safe P J t B
+               \<and> summary_correct P t B R Q)"
+  by (meson invariant_sound invariant_complete summary_sound summary_complete)
 
 (* Proposition 1: Lifting of Summaries to Invariants *)
 proposition lift_summary:
@@ -230,13 +235,13 @@ proposition lift_post:
         \<and> summary_correct P t B (\<lambda> s0 s. I s0 \<longrightarrow> Q s) Q"
   by blast
 
-(* Corollary 2: Coincidence of Invariants and Summaries *)
-corollary coincidence:
+(* Corollary 2: Coincidence of Invariants and Summaries
+   proof using the constructure translation *)
+corollary coincidence':
   "(\<exists> I. invariant_correct P I t B Q)
     \<longleftrightarrow> (\<exists> J R.  invariant_safe P J t B
                \<and> summary_correct P t B R Q)"
   using lift_summary lift_post by (metis (mono_tags, lifting))
-
 
 (* Soundness of a "stronger" formulation that includes invariants in the conditions for summaries,
    all in one large set of proof obligations,  note the additional assumption I s for the backwards propagation conditions. *)
