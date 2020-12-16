@@ -17,7 +17,6 @@
 % \usepackage[numbers,sort&compress]{natbib}
 \newcommand{\mailto}[1]{\href{mailto:#1}{\ttfamily #1}}
 
-\newcommand{\SVCOMP}[1]{SV-COMP~#1\xspace}
 \newcommand{\Korn}{\textsc{Korn}\xspace}
 \newcommand{\err}{\lightning}
 \newcommand{\brk}[1]{{#1}_\downarrow}
@@ -45,84 +44,87 @@
 \section{Verification Approach}
 \label{sec:approach}
 
-\Korn translates C programs into possibly cyclic systems of Horn clauses (CHCs),
-an idea that enjoys some popularity, see e.g.~\cite{bjorner2015horn} for a nice introduction.
-The fundamental idea is to abstract program points of interest using predicates over the respective live program variables.
-This affords a concise translation of join-points, unstructured control flow, procedure summaries, and loop invariants
-that is linear in the size of the input program.
-SeaHorn~\cite{gurfinkel2019science} for C/LLVM is a well-known verification tool that implements this approach.
-A standard SMT-LIB like format and efficient solvers are available,
-for example Z3~\cite{bjorner2013solving} and Eldarica~\cite{hojjat2018eldarica},
-the top performers in the latest CHC competition~\cite{rummer2020competition}.
+\Korn is a verifier for C programs that is based on a translation into systems of Horn clauses
+\cite{bjorner2015horn,gurfinkel2019science}, similarly to SeaHorn~\cite{gurfinkel2015seahorn}.
+Such Horn clause systems have unknown predicates that characterize sets of states,
+or relations between states, together with additional constraints that encode the correctness of the program.
 
-To verify loops, some form of inductive argument has to be made.
-Loop invariants~\cite{hoare1969axiomatic} are the most widely used technique
-but they are have been recognized to be somewhat lacking~\cite{hehner1999refinement,tuerk2010local,hehner2005specified},
-and the proposal found in these papers is to employ loop specifications in terms of preconditions (effectively invariants),
-and relational postconditions (called summaries here).
-This style of proofs about loops can sometimes express key properties more naturally in comparison to invariants,
-where postconditions reflect the majority of the correctness argument~\cite{tuerk2010local,ernst:sttt2015,jacobs2015solving}.
-Some more advanced cyclic proof systems with similar flexibility are \cite{schellhorn2014rgitl,rosu2009circular,brotherston2005cyclic}.
+Traditionally, loops are abstracted by invariants, which need to hold in the states
+encounteded throughout the execution of a loop, and which characterize the work done by the loop so far.
+\Korn additionally supports a second verification approach (not used in SV-COMP 2021, cf \cref{sec:project}), relying on loop summaries that instead characterize
+the work that remains to be done until completion of the loop~\cite{hehner1999refinement,tuerk2010local,hehner2005specified}
+(also called loop postconditions).
+As shown in~\cite{ernst:arxiv2020:summaries}, summaries are a fundamental and principled technique dual to invariants,
+which is relatively complete under certain conditions, analogously to~\cite{hoare1969axiomatic}.
 
-\Korn was developed to compare the automatic inference of invariants and summaries
-and therefore implements both approaches in a common framework.
-It is based on a concise presentation of the underlying theory~\cite{ernst:arxiv2020:summaries}
-that exhibits that invariants and summaries are not only \emph{complementary} to each other, but in fact fundamentally dual.
+\Korn uses state-of-the-art solvers to determine the satisfiability of the generated Horn clause system
+using off-the-shelf solvers, specifically here Z3~\cite{bjorner2013solving} and Eldarica~\cite{hojjat2018eldarica},
+the top performers in the latest CHC competition~\cite{rummer2020competition},
+Both solvers generate evidence for correctness of a given program in terms of models that describe how the unknown predicates need to be instantiated.
+Moreover, Eldarica can generate counterexample traces, and \Korn instruments the Horn clause system to get
+the concrete values returned by the \texttt{\_\_VERIFIER\_nondet\_*()} functions on an error path.
 
-Presuming a model of program commands $C$ over states~$S$ as relations $C \subseteq S \times S$,
-we focus on the Horn clauses generated for a while loop $W(t,B)$ with test $t \subseteq S$ and body $B \subseteq S \times S$,
-defined as a least fixpoint as usual. We ignore termination, runtime errors, and early loop exit via \texttt{break} here, see~\cite{ernst:arxiv2020:summaries}.
-The verification conditions for such a loop wrt. precondition~$P \subseteq S$ and postcondition~$Q \subseteq S$
-are shown for an invariant~$I \subseteq I \times I$ that relates the state before the loop to intermediate ones (left),
-and dually for a summary~$R \subseteq I \times I$ that relates intermediate states to final ones (right):
-\small
-\begin{align*}
-    P(s_0)
-        & \implies I(s_0,s_0)
-  & \lnot t(s_n)
-        & \implies R(s_n,s_n)
-  \\
-    I(s_0,s) \land t(s) \land B(s,s')
-        & \implies I(s_0,s')
-  & R(s',s_n) \land t(s) \land B(s,s')
-        & \implies R(s,s_n)
-  \\
-    P(s_0) \land I(s_0,s_n) \land \lnot t(s_n)
-        & \implies Q(s_n)
-  & P(s_0) \land R(s_0,s_n) \land \lnot t(s_n)
-        & \implies Q(s_n)
-\end{align*}
-\normalsize
-In both cases, (last line), the entire loop is overapproximated in terms of the respective predicate,
-which bridges from the pre-state~$s_0$ with $P(s_0)$ to a final state of the loop~$s_n$ with $\lnot t(s_n)$ to establish~$Q(s_n)$.
-However, while the invariant is established initially (first line) and propagates its second argument forwards over iterations (second line),
-the summary is established when the loop terminates and propagates its first argument backwards over iterations.
+The encoding of C programs in \Korn is currently subject to several limitations,
+which can cause unsound and/or imprecise analysis in some corner cases.
+The different solvers have different strengths and weaknesses, too,
+and may fail to find proofs, claim false counterexamples (e.g. when no \emph{non-recursive} model exists),
+and sometimes fail to find trivial counterexamples.
+To that end, \Korn implements a portfolio approach with several sequential stages.
+\begin{enumerate}
+    \item Initially, a short round of random sampling with small values is performed.
+          The concrete scheme picks for each nondeterministic choice
+          uniformly among four options: constant 0 or a random value of either 1, 5, or 10 bits.
+          This approach prevents long running loops and overall turned out to be enormeously effective
+          (> 100 solved benchmarks within a few seconds each).
+          Random sampling can sometimes bypass unsound verdicts,
+          which happens in a single instance in the competition (cf. \cref{sec:discussion}).
+    \item Next, Z3 is executed on the verification problem, translated from C to Horn clauses,
+          again for a short time. Empirically, Z3 finds most solutions very quickly if it succeeds,
+          including those where Z3 succeeds but not Eldarica.
+    \item Finally, Eldarica is executed for the remaining time.
+          It is slightly better in comparison to Z3 in the long run on this specific set of tasks~\cite{ernst:arxiv2020:summaries}.
+    More importantly, the generated invariants from Eldarica tend to be simpler and avoid the existential quantifiers
+    often introduced by Z3, which improves witness generation.
+    To prevent spurious counterexamples,
+    \Korn reports a violation of the specification only if it can be confirmed by executing the program natively.
+\end{enumerate}
 
-Both approaches are theoretically on par, i.e, there is an invariant~$I$ satisfying the above Horn clauses
-if and only if there is a summary~$R$~\cite[Prop.~1 and~2]{ernst:arxiv2020:summaries}.
-However, summaries are useless to prevent runtime errors during the execution of the body,
-as they reason about the loop after the fact. The full theory therefore considers a class of ``safe'' invariants,
-that are necessary and sufficient to make summary-based verification complete.
 
 \section{Software Architecture}
 \label{sec:architecture}
 
-\Korn is written in Scala~\footnote{https://scala-lang.org} and runs on the Java Virtual Machine,
-the frontend is hand-crafted with JFlex and Beaver,
-and supports a substantial fraction of the C~language.
-
-Verification conditions are generated in the fragment of SMT-LIB of the \texttt{HORN} logic.
+\Korn is written in the JVM language Scala%
+    \footnote{\url{https://scala-lang.org}}, with the exception of the random sampler that is written in C.
+The translation from C to Horn clauses supports a substantial fraction of the C~language.
+Verification conditions are generated in the fragment of SMT-LIB of the \texttt{HORN} logic.%
+    \footnote{\url{https://chc-comp.github.io/format.html}}
 It can invoke any compliant solver as a backend either using its standard input or a file to communicate the verification task.
 \Korn comes with some explicit support for Z3~\cite{gurfinkel2019science} and Eldarica~\cite{hojjat2018eldarica}
-to pass e.g. timeouts or specific options to output models.
+to pass e.g. timeouts or specific options to produce models resp. counterexamples.
+Currently, \Korn makes use of the theory of integers (possibly using modulo and division of the C program uses it) and the theory of arrays.
 
-Currently, \Korn makes use of the theory of integers (possibly using modulo and division of the C program uses it),
-and also the theory of arrays (C arrays are treated as value types so far, which is unsound in the presence of aliasing).
+Different translation schemes for blocks, invariants, summaries, ...
+
+Easy to hack :)
+
+In order to produce SV-COMP correctness witnesses, \Korn can read the models generated by the backend-solvers, and translate them back into C expressions.
+The correctness witnesses produced currently are derived entirely from invariants (summaries would require quantifiers).
+
+Violation witnesses 
+
+random sampling implementation
 
 \section{Discussion of Strengths and Weaknesses of the Approach}
 \label{sec:discussion}
 
+, including msot of the control structures including labels and goto.
+Arrays are treated as value types without bounds, which is unsound in general but sufficient as a work-around for the categories in which \Korn participates.
+There is no model of the heap currently, and thus there is no support for dynamic memory allocation
+
 Evaluation of the results for the benchmark categories, where was the checker successful, where not, why?
+
+Random sampling cool! PRevents spurious proofs
+
 
 \section{Tool Setup and Configuration}
 \label{sec:project}
@@ -135,7 +137,7 @@ and shows version number \texttt{0.3}.
 
 \Korn can be downloaded and installed from the repository, type \texttt{make} to compile,
 more detailed instructions can be found in the \texttt{README.md}.
-All dependencies, except for Java~11, are included or will be downloaded automatically.
+All dependencies, except for Java~11 and \texttt{gcc}, are included or will be downloaded automatically.
 After compilation, you can run \texttt{./korn.sh} or \texttt{./run}
 (where the latter includes the current directory \texttt{.} in \texttt{PATH}).
 A pre-built, ready-to-run
@@ -149,7 +151,14 @@ is with the competition version is available in the official repository.
 \texttt{XCSP}
 for property \texttt{ReachSafety}.
 
-\paragraph{Configuration.} In \SVCOMP{2021}, \Korn ran with the following options
+\paragraph{Configuration.}
+Originally, it was planned to run \Korn using the summary-based translation in SV-COMP 2021,
+but it is unclear how to generate correctness witnesses for these.
+A constructive translation from summaries to invariants exists~\cite[Prop. 1]{ernst:arxiv2020:summaries},
+however this comes at the expense of additional quantifiers which cannot be faithfully represented in witnesses.
+Hence, a standard translation using invariants only was chosen.
+
+\Korn ran with the following options
 (which are spelled out in their long form in the benchmark \texttt{xml} file).
 
 \smallskip
@@ -168,23 +177,18 @@ for property \texttt{ReachSafety}.
 \smallskip
 
 \texttt{-r~~10}
-    \tabto{2.8cm} Try to find obvious bugs by random sampling for at most 10s.
+    \tabto{2.8cm} Try to find obvious bugs by random sampling for at most 10s
 
 \texttt{-t~~20 -z3}
     \tabto{2.8cm} Try Z3 4.8.9 subsequently for at most 20s
 
 \texttt{-t~900 -eld}
-    \tabto{2.8cm} Run Eldarica~\cite{hojjat2018eldarica} 2.0.4 for the remaining time, invoked with \\
-    \tabto{2.8cm} \texttt{java -Xmx14g -Xss20m -cp eld.jar lazabs.Main <file>}
+    \tabto{2.8cm} Run Eldarica 2.0.4 for the remaining time
 
 \smallskip
 
-\noindent    
-Verification via summaries that have a backwards-propagating first argument was not used
-for two reasons that would have impacted the final score of \Korn.
-The main reason is that the current witness format does not support quantifiers,
-which would be necessary to translate summaries into regular invariants.
-Moreover, Z3 and to some extend, perform worse with an encoding using summaries.
+\noindent
+The arguments to the backend solver are shown in the command line output.
 
 \paragraph{Contributors \& Acknowledgement.}
 
