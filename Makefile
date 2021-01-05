@@ -24,7 +24,7 @@ KORN_FLAGS ?=
 ARCHIVES = ../sv-comp/archives-2021/2021
 KORN_DIST = run korn.jar z3 eld eld.jar README.md $(wildcard LICENSE*) __VERIFIER.c __VERIFIER_random.c
 
-all: $(KORN_JAR) $(KORN_ASSEMBLY) $(KORN_SH) plots
+all: $(KORN_JAR) $(KORN_ASSEMBLY) $(KORN_SH)
 
 examples: $(KORN_SMT)
 
