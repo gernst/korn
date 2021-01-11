@@ -8,10 +8,17 @@ datatype 'a res
   = Ok 'a
   | Break 'a
 
+(* TODO: get rid of option, to have working seq for both body and prog *)
+
 type_synonym 'a cond = "'a \<Rightarrow> bool"
 type_synonym 'a rel  = "'a \<Rightarrow> 'a \<Rightarrow> bool"
 type_synonym 'a body = "'a \<Rightarrow> ('a res) option \<Rightarrow> bool"
 type_synonym 'a prog = "'a \<Rightarrow> 'a option \<Rightarrow> bool"
+
+inductive breaks :: "'a body \<Rightarrow> bool" where
+breaksI[intro!]:
+  "c s (Some (Break s'))
+    \<Longrightarrow> breaks c"
 
 (* Definition 1: Semantics of Loops *)
 inductive while :: "'a cond \<Rightarrow> 'a body \<Rightarrow> 'a prog" where

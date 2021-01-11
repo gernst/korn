@@ -130,28 +130,28 @@ object Tool {
 
   def translate(file: String) = {
     val stmts = korn.c.parse(file)
-    object unit extends korn.horn.Unit(stmts)
+    object unit extends korn.horn.Unit(file, stmts)
     unit.run()
     unit
   }
 
-  def horn(file: String, model: Boolean, out: PrintStream) = {
+  def horn(file: String, model: Boolean, expect: Option[String], out: PrintStream) = {
     val unit = translate(file)
-    Backend.write(unit, model, out)
+    Backend.write(unit, model, expect, out)
   }
 
-  def solve(file: String, model: Boolean, write: Option[String], cmd: Seq[String]) = {
+  def solve(file: String, model: Boolean, expect: Option[String], write: Option[String], cmd: Seq[String]) = {
     val unit = translate(file)
 
     write match {
       case None =>
         val (out, in, err, proc) = pipe(cmd: _*)
-        Backend.write(unit, model, out)
+        Backend.write(unit, model, expect, out)
         unit -> Backend.read(in, file)
 
       case Some(smt) =>
         val out = new PrintStream(new File(smt))
-        Backend.write(unit, model, out)
+        Backend.write(unit, model, expect, out)
         val (_, in, err, proc) = pipe(cmd ++ Seq(smt): _*)
         unit -> Backend.read(in, file)
     }

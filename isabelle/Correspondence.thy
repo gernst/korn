@@ -46,12 +46,22 @@ combinedI[intro!]:
 
 inductive_cases combinedE[elim!]: "combined P I t B R Q"
 
-(* Soundness of the combined approach, direct proof *)
+(* Soundness of the combined approach,
+   via safe invariants,
+   and one of either correct invariants or correct summaries *)
 
 lemma combined_invariant_safe:
   assumes "combined P I t B R Q"
   shows   "invariant_safe P (\<lambda> s0 s. P s0 \<and> I s0 s) t B"
   using assms by blast
+
+lemma combined_invariant_correct:
+  assumes "combined P I t B R Q"
+  shows   "invariant_correct P (\<lambda> s0 s. P s0 \<and> I s0 s \<and> (\<forall> sn. R s sn \<longrightarrow> R s0 sn)) t B Q"
+  using assms
+  apply (elim combinedE)
+  apply (intro invariant_correctI)
+  by meson+
 
 lemma combined_summary_correct:
   assumes "combined P I t B R Q"

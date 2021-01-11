@@ -14,6 +14,9 @@ object Witness {
   val N0 = "N0"
   val NV = "NV"
 
+  var escape: Boolean = true
+  var quant: Boolean = false
+
   def c(param: Param): String = {
     val Param(x, Sort.int) = param
     "int " + x
@@ -22,6 +25,10 @@ object Witness {
   def c(params: List[Param]): String = {
     val strs = params map c
     strs mkString ", "
+  }
+
+  def c(a: String, b: String) = {
+    if (escape) b else a
   }
 
   def c(pure: Pure, env: Map[String, String], neg: Boolean): String = {
@@ -52,18 +59,18 @@ object Witness {
         "(" + c(arg1, env, neg) + " - " + c(arg2, env, neg) + ")"
 
       case Pure.lt(arg1, arg2) =>
-        "(" + c(arg1, env, neg) + " &lt; " + c(arg2, env, neg) + ")"
+        "(" + c(arg1, env, neg) + c(" < ", " &lt; ") + c(arg2, env, neg) + ")"
       case Pure.le(arg1, arg2) =>
-        "(" + c(arg1, env, neg) + " &lt;= " + c(arg2, env, neg) + ")"
+        "(" + c(arg1, env, neg) + c(" <= ", " &lt;= ") + c(arg2, env, neg) + ")"
       case Pure.gt(arg1, arg2) =>
-        "(" + c(arg1, env, neg) + " &gt; " + c(arg2, env, neg) + ")"
+        "(" + c(arg1, env, neg) + c(" > ", " &gt; ") + c(arg2, env, neg) + ")"
       case Pure.ge(arg1, arg2) =>
-        "(" + c(arg1, env, neg) + " &gt;= " + c(arg2, env, neg) + ")"
+        "(" + c(arg1, env, neg) + c(" >= ", " &gt;= ") + c(arg2, env, neg) + ")"
 
       case Pure.not(arg) =>
         "! " + c(arg, env, !neg)
       case Pure.and(arg1, arg2) =>
-        "(" + c(arg1, env, neg) + " &amp;&amp; " + c(arg2, env, neg) + ")"
+        "(" + c(arg1, env, neg) + c(" && ", " &amp;&amp; ") + c(arg2, env, neg) + ")"
       case Pure.or(arg1, arg2) =>
         "(" + c(arg1, env, neg) + " || " + c(arg2, env, neg) + ")"
       case Pure.imp(arg1, arg2) =>
@@ -83,7 +90,7 @@ object Witness {
         val su = Map(eqs: _*)
         c(body subst su, env, neg)
 
-      case _: Bind if !Main.witness_quant =>
+      case _: Bind if !quant =>
         // if (neg) "false" else "true"
         korn.error("unsupported quantifier in invariant: " + pure)
       case Ex(params, body) =>
@@ -105,6 +112,9 @@ object Witness {
       val to = pred.names
       korn.ensure(from.length == to.length, "parameter length mismatch: " + from + " and " + to)
       val env = Map(from zip to: _*)
+
+      quant = Main.witness_quant
+      escape = true
       val inv = c(body, env, neg = false)
 
       val nd = "N-" + loc.line + "-" + loc.column
@@ -114,6 +124,11 @@ object Witness {
       out println graph.leave(nd, N0)
 
       if (Main.debug) {
+
+        quant = true
+        escape = false
+        val inv = c(body, env, neg = false)
+
         println(msg + " for " + proc.name + " at " + loc.line + ":" + loc.column)
         println("  " + inv)
       }
@@ -123,8 +138,7 @@ object Witness {
   def proof(file: String, model: Model, unit: Unit, out: PrintStream) {
     out println header(file)
 
-    val df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
-    val time = df.format(new Date());
+    val time = now()
 
     try {
       out println graph.header(file, time, Tool.hash(file), bits, "correctness_witness")

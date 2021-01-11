@@ -24,6 +24,7 @@ object Main {
   var model = false
   var float = false
   var random = 0
+  var expect = None: Option[String]
   var witness = false
   var witness_graphml = None: Option[String]
   var witness_quant = false
@@ -55,23 +56,6 @@ object Main {
       err.flush()
     }
   }
-
-  // def dump(path: String) = {
-  //   val out = new PrintStream(new FileOutputStream(path))
-  //   out
-  // }
-
-  // def read(in: BufferedReader, out: OutputStream) = {
-  //   val status = in.readLine()
-  //   in.transferTo(???)
-  //   out.flush()
-  //   status
-  // }
-
-  // def cat(in: InputStream, out: OutputStream) = {
-  //   in.transferTo(out)
-  //   out.flush()
-  // }
 
   @tailrec
   def configure(args: List[String]) {
@@ -134,6 +118,10 @@ object Main {
 
       case "-witness" :: file :: rest =>
         witness_graphml = Some(file)
+        configure(rest)
+
+      case "-status" :: status :: rest =>
+        expect = Some(status)
         configure(rest)
 
       case "-32" :: rest =>
@@ -199,9 +187,9 @@ object Main {
           val to = smt(file)
           val out = new PrintStream(new File(to))
           info("clauses:      " + to)
-          Tool.horn(file, model, out)
+          Tool.horn(file, model, expect, out)
         } else {
-          Tool.horn(file, model, out)
+          Tool.horn(file, model, expect, out)
         }
       }
 
@@ -217,9 +205,9 @@ object Main {
           val (unit, result) = if (write) {
             val to = smt(file)
             info("clauses:      " + to)
-            Tool.solve(file, model, Some(to), cmd)
+            Tool.solve(file, model, expect, Some(to), cmd)
           } else {
-            Tool.solve(file, model, None, cmd)
+            Tool.solve(file, model, expect, None, cmd)
           }
 
           try {
