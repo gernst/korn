@@ -165,8 +165,7 @@ object Witness {
   def cex(file: String, trace: List[(String, BigInt)], out: PrintStream) {
     out println header(file)
 
-    val df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
-    val time = df.format(new Date());
+    val time = now()
 
     try {
       out println graph.header(file, time, Tool.hash(file), bits, "violation_witness")
