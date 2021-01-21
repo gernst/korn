@@ -7,16 +7,16 @@ begin
 inductive invariant_safe :: "'a cond \<Rightarrow> 'a rel \<Rightarrow> 'a cond \<Rightarrow> 'a body \<Rightarrow> bool" where
 invariant_safeI[intro!]:
 "\<lbrakk>\<And> s0.      \<lbrakk>P s0\<rbrakk> \<Longrightarrow> I s0 s0;
-  \<And> s0 s s'. \<lbrakk>I s0 s; t s; B s (Some (Ok    s'))\<rbrakk> \<Longrightarrow> I s0 s';
-  \<And> s0 s.    \<lbrakk>I s0 s; t s; B s None\<rbrakk> \<Longrightarrow> False\<rbrakk>
+  \<And> s0 s s'. \<lbrakk>I s0 s; t s; B s (Ok s')\<rbrakk> \<Longrightarrow> I s0 s';
+  \<And> s0 s.    \<lbrakk>I s0 s; t s; B s Err\<rbrakk> \<Longrightarrow> False\<rbrakk>
   \<Longrightarrow> invariant_safe P I t B"
 
 inductive invariant_correct :: "'a cond \<Rightarrow> 'a rel \<Rightarrow> 'a cond \<Rightarrow> 'a body \<Rightarrow> 'a cond \<Rightarrow> bool" where
 invariant_correctI[intro!]:
 "\<lbrakk>\<And> s0.      \<lbrakk>P s0\<rbrakk> \<Longrightarrow> I s0 s0;
-  \<And> s0 s s'. \<lbrakk>I s0 s; t s; B s (Some (Ok    s'))\<rbrakk> \<Longrightarrow> I s0 s';
+  \<And> s0 s s'. \<lbrakk>I s0 s; t s; B s (Ok s')\<rbrakk> \<Longrightarrow> I s0 s';
   \<And> s0 s.    \<lbrakk>I s0 s; \<not> t s\<rbrakk> \<Longrightarrow> Q s;
-  \<And> s0 s s'. \<lbrakk>I s0 s; t s; B s (Some (Break s'))\<rbrakk> \<Longrightarrow> Q s'\<rbrakk>
+  \<And> s0 s s'. \<lbrakk>I s0 s; t s; B s (Brk s')\<rbrakk> \<Longrightarrow> Q s'\<rbrakk>
   \<Longrightarrow> invariant_correct P I t B Q"
 
 inductive_cases invariant_safeE[elim!]:      "invariant_safe      P I t B"
@@ -26,7 +26,7 @@ lemma invariant_no_error:
   assumes "while t B s r"
   assumes "I s0 s"
   assumes "invariant_safe P I t B"
-  obtains s' where "r = Some s'"
+  obtains s' where "r = Ok s'"
   using assms by induction blast+
 
 theorem invariant_safe:
@@ -38,14 +38,14 @@ proof
   with assms have I: "I s s" by blast
   assume w: "while t B s r"
   from w I assms
-  obtain s' where "r = Some s'"
+  obtain s' where "r = Ok s'"
     by (rule invariant_no_error)
-  then show "\<exists>s'. r = Some s'" ..
+  then show "\<exists>s'. r = Ok s'" ..
 qed
 
 lemma invariant_post:
   assumes "while t B s r"
-  assumes "r = Some s'"
+  assumes "r = Ok s'"
   assumes "I s0 s"
   assumes "invariant_correct P I t B Q"
   shows   "Q s'"
@@ -58,7 +58,7 @@ proof
   fix s s'
   assume P: "P s"
   with assms have I: "I s s" by blast
-  assume w: "while t B s (Some s')"
+  assume w: "while t B s (Ok s')"
   from w I assms
   show "Q s'"
     by (metis invariant_post)
@@ -69,25 +69,25 @@ inductive prefix :: "'a cond \<Rightarrow> 'a body \<Rightarrow> 'a rel" where
 prefix_baseI[intro]:
   "prefix t B s s" |
 prefix_stepI[intro]:
-  "\<lbrakk>t s; B s (Some (Ok s')); prefix t B s' s''\<rbrakk> \<Longrightarrow> prefix t B s s''"
+  "\<lbrakk>t s; B s (Ok s'); prefix t B s' s''\<rbrakk> \<Longrightarrow> prefix t B s s''"
 
 lemma prefix_while_base[intro]:
   assumes "prefix t B s s'" "\<not> t s'"
-  shows   "while t B s (Some s')"
+  shows   "while t B s (Ok s')"
   using assms by induction auto
 
 lemma prefix_while_err[intro]:
-  assumes "prefix t B s0 s" "t s" "B s None"
-  shows   "while t B s0 None"
+  assumes "prefix t B s0 s" "t s" "B s Err"
+  shows   "while t B s0 Err"
   using assms by induction auto
 
 lemma prefix_while_break[intro]:
-  assumes "prefix t B s0 s" "t s" "B s (Some (Break s'))"
-  shows "while t B s0 (Some s')"
+  assumes "prefix t B s0 s" "t s" "B s (Brk s')"
+  shows "while t B s0 (Ok s')"
   using assms by induction auto
 
 lemma prefix_prefix_step[intro]:
-  assumes "prefix t B s0 s" "t s" "B s (Some (Ok s'))"
+  assumes "prefix t B s0 s" "t s" "B s (Ok s')"
   shows   "prefix t B s0 s'"
   using assms by induction auto
 
@@ -109,5 +109,12 @@ theorem invariant_complete:
     "invariant_safe    P I t B"
     "invariant_correct P I t B Q"
   using assms by (meson hoare_split invariant_safe_complete invariant_correct_complete)
+
+proposition invariant_safe_unary:
+  shows "invariant_safe    P I t B
+          \<Longrightarrow> invariant_safe    P (\<lambda> _ s. \<exists> s0. I s0 s) t B"
+    and "invariant_correct P I t B Q
+          \<Longrightarrow> invariant_correct P (\<lambda> _ s. \<exists> s0. I s0 s) t B Q"
+  by blast+
 
 end

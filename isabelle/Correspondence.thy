@@ -33,13 +33,13 @@ corollary coincidence':
 inductive combined :: "'a cond \<Rightarrow> 'a rel \<Rightarrow> 'a cond \<Rightarrow> 'a body \<Rightarrow> 'a rel \<Rightarrow> 'a cond \<Rightarrow> bool" where
 combinedI[intro!]:
 "\<lbrakk>\<And> s0.         \<lbrakk>P s0\<rbrakk> \<Longrightarrow> I s0 s0;
-  \<And> s0 s s'.    \<lbrakk>P s0; I s0 s; t s; B s (Some (Ok    s'))\<rbrakk> \<Longrightarrow> I s0 s';
+  \<And> s0 s s'.    \<lbrakk>P s0; I s0 s; t s; B s (Ok s')\<rbrakk> \<Longrightarrow> I s0 s';
  
-  \<And> s0 s.       \<lbrakk>P s0; I s0 s; t s; B s None\<rbrakk> \<Longrightarrow> False;
+  \<And> s0 s.       \<lbrakk>P s0; I s0 s; t s; B s Err\<rbrakk> \<Longrightarrow> False;
   
   \<And> s0 s.       \<lbrakk>P s0; I s0 s; \<not> t s\<rbrakk> \<Longrightarrow> R s s;
-  \<And> s0 s s'.    \<lbrakk>P s0; I s0 s; t s; B s (Some (Break s'))\<rbrakk> \<Longrightarrow> R s s';
-  \<And> s0 s s' sn. \<lbrakk>P s0; I s0 s; t s; R s' sn; B s (Some (Ok s'))\<rbrakk> \<Longrightarrow> R s sn;
+  \<And> s0 s s'.    \<lbrakk>P s0; I s0 s; t s; B s (Brk s')\<rbrakk> \<Longrightarrow> R s s';
+  \<And> s0 s s' sn. \<lbrakk>P s0; I s0 s; t s; R s' sn; B s (Ok s')\<rbrakk> \<Longrightarrow> R s sn;
 
   \<And> s0 sn.   \<lbrakk>P s0; R s0 sn\<rbrakk> \<Longrightarrow> Q sn\<rbrakk>
   \<Longrightarrow> combined P I t B R Q"
