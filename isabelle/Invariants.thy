@@ -4,14 +4,14 @@ begin
 
 (* Definition 3: Loop Invariants *)
 
-inductive invariant_safe :: "'a cond \<Rightarrow> 'a rel \<Rightarrow> 'a cond \<Rightarrow> 'a body \<Rightarrow> bool" where
+inductive invariant_safe :: "'a cond \<Rightarrow> 'a rel \<Rightarrow> 'a cond \<Rightarrow> 'a prog \<Rightarrow> bool" where
 invariant_safeI[intro!]:
 "\<lbrakk>\<And> s0.      \<lbrakk>P s0\<rbrakk> \<Longrightarrow> I s0 s0;
   \<And> s0 s s'. \<lbrakk>I s0 s; t s; B s (Ok s')\<rbrakk> \<Longrightarrow> I s0 s';
   \<And> s0 s.    \<lbrakk>I s0 s; t s; B s Err\<rbrakk> \<Longrightarrow> False\<rbrakk>
   \<Longrightarrow> invariant_safe P I t B"
 
-inductive invariant_correct :: "'a cond \<Rightarrow> 'a rel \<Rightarrow> 'a cond \<Rightarrow> 'a body \<Rightarrow> 'a cond \<Rightarrow> bool" where
+inductive invariant_correct :: "'a cond \<Rightarrow> 'a rel \<Rightarrow> 'a cond \<Rightarrow> 'a prog \<Rightarrow> 'a cond \<Rightarrow> bool" where
 invariant_correctI[intro!]:
 "\<lbrakk>\<And> s0.      \<lbrakk>P s0\<rbrakk> \<Longrightarrow> I s0 s0;
   \<And> s0 s s'. \<lbrakk>I s0 s; t s; B s (Ok s')\<rbrakk> \<Longrightarrow> I s0 s';
@@ -65,7 +65,7 @@ proof
 qed
 
 (* Loop prefix characterization I* *)
-inductive prefix :: "'a cond \<Rightarrow> 'a body \<Rightarrow> 'a rel" where
+inductive prefix :: "'a cond \<Rightarrow> 'a prog \<Rightarrow> 'a rel" where
 prefix_baseI[intro]:
   "prefix t B s s" |
 prefix_stepI[intro]:

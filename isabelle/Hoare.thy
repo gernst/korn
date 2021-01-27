@@ -13,11 +13,10 @@ datatype 'a res
 
 type_synonym 'a cond = "'a \<Rightarrow> bool"
 type_synonym 'a rel  = "'a \<Rightarrow> 'a \<Rightarrow> bool"
-type_synonym 'a body = "'a \<Rightarrow> 'a res \<Rightarrow> bool"
 type_synonym 'a prog = "'a \<Rightarrow> 'a res \<Rightarrow> bool"
 
 (* Definition 1: Semantics of Loops *)
-inductive while :: "'a cond \<Rightarrow> 'a body \<Rightarrow> 'a prog" where
+inductive while :: "'a cond \<Rightarrow> 'a prog \<Rightarrow> 'a prog" where
 while_baseI[intro]:
   "\<lbrakk>\<not> t s\<rbrakk> \<Longrightarrow> while t B s (Ok s)" |
 while_errI[intro]:

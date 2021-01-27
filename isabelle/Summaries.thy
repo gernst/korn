@@ -3,7 +3,7 @@ theory Summaries
 begin
 
 (* Definition 4: Loop Summaries *)
-inductive summary_correct :: "'a cond \<Rightarrow> 'a cond \<Rightarrow> 'a body \<Rightarrow> 'a rel \<Rightarrow> 'a cond \<Rightarrow> bool" where
+inductive summary_correct :: "'a cond \<Rightarrow> 'a cond \<Rightarrow> 'a prog \<Rightarrow> 'a rel \<Rightarrow> 'a cond \<Rightarrow> bool" where
 summary_correctI[intro!]:
 "\<lbrakk>\<And> s.       \<lbrakk>\<not> t s\<rbrakk> \<Longrightarrow> R s s;
   \<And> s s'.    \<lbrakk>t s; B s (Brk s')\<rbrakk> \<Longrightarrow> R s s';
@@ -33,7 +33,7 @@ theorem summary_correct:
   by rule (metis assms summary_post)
 
 (* Loop suffix characterization R* *)
-inductive suffix :: "'a cond \<Rightarrow> 'a body \<Rightarrow> 'a rel" where
+inductive suffix :: "'a cond \<Rightarrow> 'a prog \<Rightarrow> 'a rel" where
 suffix_baseI[intro]:
   "\<lbrakk>\<not> t s\<rbrakk> \<Longrightarrow> suffix t B s s" |
 suffix_breakI[intro]:
@@ -41,10 +41,19 @@ suffix_breakI[intro]:
 suffix_stepI[intro]:
   "\<lbrakk>t s; B s (Ok s'); suffix t B s' s''\<rbrakk> \<Longrightarrow> suffix t B s s''"
 
-lemma suffix_while[intro]:
-  assumes "suffix t B s s'"
-  shows   "while t B s (Ok s')"
-  using assms by induction auto
+lemma suffix_while[simp]:
+"suffix t B s s' = while t B s (Ok s')"
+proof
+  assume "suffix t B s s'"
+  then show "while t B s (Ok s')"
+    by induction auto
+next
+  assume "while t B s (Ok s')"
+  then obtain r where "while t B s r" "r = Ok s'"
+    by simp
+  then show "suffix t B s s'"
+    by induction auto
+qed
 
 (* Theorem 4: Completeness of Loop Summaries wrt. Safe Invariants *)
 theorem summary_complete:

@@ -30,7 +30,7 @@ corollary coincidence':
 
 (* Soundness of a "stronger" formulation that includes preconditions and invariants in the conditions for summaries,
    all in one large set of proof obligations. *)
-inductive combined :: "'a cond \<Rightarrow> 'a rel \<Rightarrow> 'a cond \<Rightarrow> 'a body \<Rightarrow> 'a rel \<Rightarrow> 'a cond \<Rightarrow> bool" where
+inductive combined :: "'a cond \<Rightarrow> 'a rel \<Rightarrow> 'a cond \<Rightarrow> 'a prog \<Rightarrow> 'a rel \<Rightarrow> 'a cond \<Rightarrow> bool" where
 combinedI[intro!]:
 "\<lbrakk>\<And> s0.         \<lbrakk>P s0\<rbrakk> \<Longrightarrow> I s0 s0;
   \<And> s0 s s'.    \<lbrakk>P s0; I s0 s; t s; B s (Ok s')\<rbrakk> \<Longrightarrow> I s0 s';
