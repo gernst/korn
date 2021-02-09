@@ -116,22 +116,22 @@ class Proc(
 
       case While(test, body) =>
         val dont = Stmt.labels(body)
+        val loc = korn.unpack(stmt.loc, "no location for while loop")
 
-        val (inv, sum, si0) = loop.enter(st0, st1, this)
+        val (inv, sum, si0) = loop.enter(st0, st1, loc, this)
 
         val (_test, si1) = rval_test(test, si0, si0)
         val sin = si1 and !_test
         val siy = si1 and _test
 
         val hyp = Hyp(inv, sum, st1, si0, sin, siy, dont)
-        val loc = korn.unpack(stmt.loc, "no location for while loop")
         witness += inv.name -> (this, loc, inv, "invariant")
         witness += sum.name -> (this, loc, sum, "summary")
 
-        loop.term(hyp, this)
+        loop.term(hyp, loc, this)
 
         val si2 = local(body, si0, siy, hyp :: ctx)
-        loop.iter(si2, hyp, this)
+        loop.iter(si2, hyp, loc, this)
 
         loop.leave(hyp, this)
 

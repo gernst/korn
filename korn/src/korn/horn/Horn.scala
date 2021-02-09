@@ -1,6 +1,7 @@
 package korn.horn
 
 import korn.smt._
+import korn.Loc
 
 case class Config(branch: Branch, loop: Loop)
 
@@ -29,9 +30,9 @@ sealed trait Branch {
 }
 
 sealed trait Loop {
-  def enter(st0: State, st1: State, proc: Proc): (Step, Step, State)
-  def term(hyp: Hyp, proc: Proc)
-  def iter(si1: State, hyp: Hyp, proc: Proc)
+  def enter(st0: State, st1: State, loc: Loc, proc: Proc): (Step, Step, State)
+  def term(hyp: Hyp, loc: Loc, proc: Proc)
+  def iter(si1: State, hyp: Hyp, loc: Loc, proc: Proc)
   def leave(hyp: Hyp, proc: Proc): State
 
   def break(si1: State, hyp: Hyp, proc: Proc)
@@ -128,7 +129,7 @@ object Loop {
 
   /** non-relational invariants and loop final states */
   case class invariants(rel: Boolean) extends Loop {
-    def enter(st0: State, st1: State, proc: Proc): (Step, Step, State) = {
+    def enter(st0: State, st1: State, loc: Loc, proc: Proc): (Step, Step, State) = {
       import proc._
       val inv =
         if (!rel) combined.state($inv newLabel name)
@@ -136,21 +137,21 @@ object Loop {
       val sum =
         if (!rel) combined.state($sum newLabel name)
         else combined.step($sum newLabel name)
-      now(inv, st1, st1, "loop entry " + inv)
+      now(inv, st1, st1, "loop entry " + inv + " (line " + loc.line + ")")
       val si0 = from(inv, st1, combined.arbitrary)
       (inv, sum, si0)
     }
 
-    def term(hyp: Hyp, proc: Proc) {
+    def term(hyp: Hyp, loc: Loc, proc: Proc) {
       import proc._
       val Hyp(inv, sum, st1, si0, sin, siy, dont) = hyp
-      now(sum, st1, sin, "loop term " + sum)
+      now(sum, st1, sin, "loop term " + sum + " (line " + loc.line + ")")
     }
 
-    def iter(si1: State, hyp: Hyp, proc: Proc) {
+    def iter(si1: State, hyp: Hyp, loc: Loc, proc: Proc) {
       import proc._
       val Hyp(inv, sum, st1, si0, sin, siy, dont) = hyp
-      now(inv, st1, si1, "forwards " + inv)
+      now(inv, st1, si1, "forwards " + inv + " (line " + loc.line + ")")
     }
 
     def leave(hyp: Hyp, proc: Proc): State = {
@@ -176,35 +177,35 @@ object Loop {
 
   /** non-relational invariants and relational loop summaries */
   case class summaries(rel: Boolean, only: Boolean, strong: Boolean = false) extends Loop {
-    def enter(st0: State, st1: State, proc: Proc): (Step, Step, State) = {
+    def enter(st0: State, st1: State, loc: Loc, proc: Proc): (Step, Step, State) = {
       import proc._
       val inv =
         if (!rel) combined.state($inv newLabel name)
         else combined.step($inv newLabel name)
       val sum = combined.step($sum newLabel name)
-      now(inv, st1, st1, "loop entry " + inv)
+      now(inv, st1, st1, "loop entry " + inv + " (line " + loc.line + ")")
       val si0 = from(inv, st1, combined.arbitrary)
       (inv, sum, si0)
     }
 
-    def term(hyp: Hyp, proc: Proc) {
+    def term(hyp: Hyp, loc: Loc, proc: Proc) {
       import proc._
       val Hyp(inv, sum, st1, si0, sin, siy, dont) = hyp
       val st = sin.maybePrune(inv, keep = !only)
-      now(sum, st, st, "loop term " + sum)
+      now(sum, st, st, "loop term " + sum + " (line " + loc.line + ")")
     }
 
-    def iter(si1: State, hyp: Hyp, proc: Proc) {
+    def iter(si1: State, hyp: Hyp, loc: Loc, proc: Proc) {
       import proc._
       import proc.unit._
       val Hyp(inv, sum, st1, si0, sin, siy, dont) = hyp
-      now(inv, si0, si1, "forwards " + inv)
+      now(inv, si0, si1, "forwards " + inv + " (line " + loc.line + ")")
 
       val st = si1.maybePrune(inv, keep = !only)
       val stz = combined.arbitrary
       val prem = sum(si1, stz)
       val concl = sum(siy, stz)
-      clause(st and prem, concl, "backwards " + sum)
+      clause(st and prem, concl, "backwards " + sum + " (line " + loc.line + ")")
     }
 
     def leave(hyp: Hyp, proc: Proc): State = {
