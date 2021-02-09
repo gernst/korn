@@ -91,11 +91,11 @@ class Eval(unit: Unit) {
   class scoped(proc: Proc) {
     import proc._
 
-    def assign(lhs: Expr, rhs: Expr, st0: State, st1: State): List[(Val, Val, State)] = {
+    def assign(lhs: Expr, rhs: Expr, st1: State): List[(Val, Val, State)] = {
       lhs match {
         case Id(name) if st1 contains name =>
           val _old = st1(name)
-          for ((_rhs, st2) <- rval(rhs, st0, st1))
+          for ((_rhs, st2) <- rval(rhs, st1))
             yield (_old, _rhs, st2 + (name -> _rhs))
 
         case Id(name) =>
@@ -104,8 +104,8 @@ class Eval(unit: Unit) {
         case Index(Id(name), idx) if st1 contains name =>
           val _old = st1(name)
           for (
-            (_rhs, st2) <- rval(rhs, st0, st1);
-            (_idx, st3) <- rval(idx, st0, st2)
+            (_rhs, st2) <- rval(rhs, st1);
+            (_idx, st3) <- rval(idx, st2)
           )
             yield {
               val _new = Val.store(_old, _idx, _rhs)
@@ -116,9 +116,9 @@ class Eval(unit: Unit) {
         case Index(Index(Id(name), idx1), idx2) if st1 contains name =>
           val _old0 = st1(name)
           for (
-            (_rhs, st2) <- rval(rhs, st0, st1);
-            (_idx1, st3) <- rval(idx1, st0, st2);
-            (_idx2, st4) <- rval(idx2, st0, st3)
+            (_rhs, st2) <- rval(rhs, st1);
+            (_idx1, st3) <- rval(idx1, st2);
+            (_idx2, st4) <- rval(idx2, st3)
           )
             yield {
               val _old1 = Val.select(_old0, _idx1)
@@ -153,20 +153,20 @@ class Eval(unit: Unit) {
       }
     }
 
-    def rval_test(expr: Expr, st0: State, st1: State): List[(Pure, State)] = {
-      for ((_res, st2) <- rval(expr, st0, st1))
+    def rval_test(expr: Expr, st1: State): List[(Pure, State)] = {
+      for ((_res, st2) <- rval(expr, st1))
         yield (Val.truth(_res), st2)
     }
 
-    def rvals(exprs: List[Expr], st0: State, st1: State): List[(List[Val], State)] = {
+    def rvals(exprs: List[Expr], st1: State): List[(List[Val], State)] = {
       exprs match {
         case Nil =>
           List((Nil, st1))
 
         case expr :: rest => // XXX: right-to-left, should be parallel
           for (
-            (xs, st2) <- rvals(rest, st0, st1);
-            (x, st3) <- rval(expr, st0, st2)
+            (xs, st2) <- rvals(rest, st1);
+            (x, st3) <- rval(expr, st2)
           )
             yield (x :: xs, st3)
       }
@@ -184,12 +184,12 @@ class Eval(unit: Unit) {
       }
     }
 
-    def rval(expr: Expr, st0: State, st1: State): List[(Val, State)] = {
+    def rval(expr: Expr, st1: State): List[(Val, State)] = {
       expr match {
         case BinOp(",", fst, snd) =>
           for (
-            (_fst, st2) <- rval(fst, st0, st1);
-            (_snd, st3) <- rval(snd, st0, st2)
+            (_fst, st2) <- rval(fst, st1);
+            (_snd, st3) <- rval(snd, st2)
           )
             yield (_snd, st3)
 
@@ -203,16 +203,16 @@ class Eval(unit: Unit) {
           korn.error("cannot take address of variable: " + expr)
 
         case PreOp("&", PreOp("*", ptr)) =>
-          rval(ptr, st0, st1)
+          rval(ptr, st1)
 
         case PreOp("&", Index(base, index)) =>
           val expr = BinOp("+", base, index)
-          rval(expr, st0, st1)
+          rval(expr, st1)
 
         case Index(arg1, arg2) =>
           for (
-            (_arg1, st2) <- rval(arg1, st0, st1);
-            (_arg2, st3) <- rval(arg2, st0, st2)
+            (_arg1, st2) <- rval(arg1, st1);
+            (_arg2, st3) <- rval(arg2, st2)
           )
             yield (Val.select(_arg1, _arg2), st3)
 
@@ -238,41 +238,41 @@ class Eval(unit: Unit) {
       } */
 
         case PreOp("++", arg) =>
-          for ((_, _rhs, st2) <- assign(arg, BinOp("+", arg, Lit(1)), st0, st1))
+          for ((_, _rhs, st2) <- assign(arg, BinOp("+", arg, Lit(1)), st1))
             yield (_rhs, st2)
         case PreOp("--", arg) =>
-          for ((_, _rhs, st2) <- assign(arg, BinOp("-", arg, Lit(1)), st0, st1))
+          for ((_, _rhs, st2) <- assign(arg, BinOp("-", arg, Lit(1)), st1))
             yield (_rhs, st2)
 
         case PostOp("++", arg) =>
-          for ((_val, _, st2) <- assign(arg, BinOp("+", arg, Lit(1)), st0, st1))
+          for ((_val, _, st2) <- assign(arg, BinOp("+", arg, Lit(1)), st1))
             yield (_val, st2)
         case PostOp("--", arg) =>
-          for ((_val, _, st2) <- assign(arg, BinOp("-", arg, Lit(1)), st0, st1))
+          for ((_val, _, st2) <- assign(arg, BinOp("-", arg, Lit(1)), st1))
             yield (_val, st2)
 
         case BinOp("=", lhs, rhs) =>
-          for ((_, _rhs, st2) <- assign(lhs, rhs, st0, st1))
+          for ((_, _rhs, st2) <- assign(lhs, rhs, st1))
             yield (_rhs, st2)
 
         // don't fork if the rhs has no side effects
         case BinOp("||", arg1, arg2) if !Expr.hasEffects(arg2) =>
           for (
-            (_arg1, st2) <- rval_test(arg1, st0, st1);
-            (_arg2, st3) <- rval_test(arg2, st0, st2)
+            (_arg1, st2) <- rval_test(arg1, st1);
+            (_arg2, st3) <- rval_test(arg2, st2)
           )
             yield (Val.bool(_arg1 or _arg2), st3)
 
         case BinOp("&&", arg1, arg2) if !Expr.hasEffects(arg2) =>
           for (
-            (_arg1, st2) <- rval_test(arg1, st0, st1);
-            (_arg2, st3) <- rval_test(arg2, st0, st2)
+            (_arg1, st2) <- rval_test(arg1, st1);
+            (_arg2, st3) <- rval_test(arg2, st2)
           )
             yield (Val.bool(_arg1 and _arg2), st3)
 
         // shortcut evaluation yields two states
         case BinOp("||", arg1, arg2) =>
-          val _arg1_st = rval_test(arg1, st0, st1)
+          val _arg1_st = rval_test(arg1, st1)
 
           val left =
             for ((_arg1, st2) <- _arg1_st)
@@ -281,15 +281,15 @@ class Eval(unit: Unit) {
           val right =
             for (
               (_arg1, st2) <- _arg1_st;
-              (_arg2, st3) <- rval_test(arg2, st0, st2 and !_arg1)
+              (_arg2, st3) <- rval_test(arg2, st2 and !_arg1)
             )
               yield (Val.bool(_arg2), st3)
 
-          // val st4 = branch.join(st0, st2, "or left", st3, "or right", proc)
+          // val st4 = branch.join(st2, "or left", st3, "or right", proc)
           left ++ right
 
         case BinOp("&&", arg1, arg2) =>
-          val _arg1_st = rval_test(arg1, st0, st1)
+          val _arg1_st = rval_test(arg1, st1)
 
           val left =
             for ((_arg1, st2) <- _arg1_st)
@@ -298,50 +298,50 @@ class Eval(unit: Unit) {
           val right =
             for (
               (_arg1, st2) <- _arg1_st;
-              (_arg2, st3) <- rval_test(arg2, st0, st2 and _arg1)
+              (_arg2, st3) <- rval_test(arg2, st2 and _arg1)
             )
               yield (Val.bool(_arg2), st3)
 
-          // val st4 = branch.join(st0, st2, "or left", st3, "or right", proc)
+          // val st4 = branch.join(st2, "or left", st3, "or right", proc)
           left ++ right
 
         case PreOp(op, arg) =>
-          for ((_arg, st2) <- rval(arg, st0, st1))
+          for ((_arg, st2) <- rval(arg, st1))
             yield (Val.preop(op, _arg), st2)
 
         case BinOp(op, arg1, arg2) =>
           for (
-            (_arg1, st2) <- rval(arg1, st0, st1);
-            (_arg2, st3) <- rval(arg2, st0, st2)
+            (_arg1, st2) <- rval(arg1, st1);
+            (_arg2, st3) <- rval(arg2, st2)
           )
             yield (Val.binop(op, _arg1, _arg2), st3)
 
         case Question(test, arg1, arg2) =>
-          val _test_st = rval_test(test, st0, st1)
+          val _test_st = rval_test(test, st1)
 
           val left =
             for (
               (_test, st2) <- _test_st;
-              (_arg1, sty) <- rval(arg1, st0, st2 and _test)
+              (_arg1, sty) <- rval(arg1, st2 and _test)
             )
               yield (_arg1, sty)
 
           val right =
             for (
               (_test, st2) <- _test_st;
-              (_arg2, stn) <- rval(arg2, st0, st2 and !_test)
+              (_arg2, stn) <- rval(arg2, st2 and !_test)
             )
               yield (_arg2, stn)
 
           left ++ right
 
         /*
-          val (_arg2, stn) = rval(arg2, st0, st2 and !_test)
+          val (_arg2, stn) = rval(arg2, st2 and !_test)
 
           if (false && st2.store == sty.store && st2.store == stn.store) {
             (Val.question(_test, _arg1, _arg2), st2)
           } else {
-            val st3 = branch.join(st0, sty, "ite left", stn, "ite right", proc)
+            val st3 = branch.join(sty, "ite left", stn, "ite right", proc)
             (Val.question(_test, _arg1, _arg2), st3)
           } */
 
@@ -357,18 +357,18 @@ class Eval(unit: Unit) {
           List((Val.unit, st1 and False))
 
         case stdlib.assert(phi) =>
-          for ((_phi, st2) <- rval_test(phi, st0, st1))
+          for ((_phi, st2) <- rval_test(phi, st1))
             yield {
               goal(st2, _phi, "assert " + _phi)
               (Val.unit, st2)
             }
 
         case stdlib.assume(phi) =>
-          for ((_phi, st2) <- rval_test(phi, st0, st1))
+          for ((_phi, st2) <- rval_test(phi, st1))
             yield (Val.unit, st2 and _phi)
 
         case __VERIFIER.assume(phi) =>
-          for ((_phi, st2) <- rval_test(phi, st0, st1))
+          for ((_phi, st2) <- rval_test(phi, st1))
             yield (Val.unit, st2 and _phi)
 
         case __VERIFIER.error() =>
@@ -473,7 +473,7 @@ class Eval(unit: Unit) {
               (x, Some(x))
           }
 
-          for ((_in, st2) <- rvals(args, st0, st1))
+          for ((_in, st2) <- rvals(args, st1))
             yield {
               // XXX: need to return the modifed heap
               val _pre = pre(st2, toplevel.names, _in)
@@ -485,7 +485,7 @@ class Eval(unit: Unit) {
             }
 
         case Cast(typ, expr) =>
-          rval(expr, st0, st1)
+          rval(expr, st1)
 
         case _ =>
           korn.error("cannot compute: " + expr)

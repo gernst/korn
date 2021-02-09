@@ -59,6 +59,7 @@ class Proc(
     }
   }
 
+
   def local(stmt: Stmt, st0: State, st1: State, ctx: Context): List[State] = {
     stmt match {
       case Group(stmts) =>
@@ -68,7 +69,7 @@ class Proc(
         List(st1)
 
       case Assume(Id(name), Some(expr), typ) =>
-        for ((Val(pure, _), st2) <- rval(expr, st0, st1))
+        for ((Val(pure, _), st2) <- rval(expr, st1))
           yield {
             val Val(x, _) = st2(name)
             val eq = x === pure
@@ -80,7 +81,7 @@ class Proc(
         List(st1)
 
       case Atomic(Some(expr)) =>
-        for ((_, st2) <- rval(expr, st0, st1))
+        for ((_, st2) <- rval(expr, st1))
           yield st2
 
       case Label(label, stmt) =>
@@ -99,7 +100,7 @@ class Proc(
 
       case Return(Some(res)) =>
         val st2 = loop.return_(st1, ctx.hyps, this)
-        for ((_res, st3) <- rval(res, st0, st2))
+        for ((_res, st3) <- rval(res, st2))
           contract.leave(ctx.entry, st3, Some(_res), this)
         Nil
 
@@ -109,7 +110,7 @@ class Proc(
         Nil
 
       case If(test, left, right) =>
-        val _test_st = rval_test(test, st0, st1)
+        val _test_st = rval_test(test, st1)
 
         val _left =
           for (

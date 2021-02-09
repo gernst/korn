@@ -42,17 +42,11 @@ plot \
         using 1:5 title "Eldarica (invariants)" \
         with linespoints lw 1.5 lt rgb "red" pointinterval -213 ps 0.5, \
      "test/2020-10-10.results/eld-summaries-only-900.2020-10-10_15-36-16.csv" \
-        using 1:5 title "Eldarica (summaries)" \
+        using 1:5 title "Eldarica (contracts)" \
         with linespoints lw 1.5 lt rgb "blue" pointinterval -205 ps 0.5, \
-     "test/2020-10-10.results/eld-summaries-900.2020-10-10_15-36-15.csv" \
-        using 1:5 title "Eldarica (both)" \
-        with linespoints lw 1.5 lt rgb "black" pointinterval -200 ps 0.5, \
      "test/2020-10-10.results/z3-invariants-900.2020-10-10_15-36-17.csv" \
         using 1:5 title "Z3 (invariants)" \
         with linespoints lw 1.5 lt rgb "red" pointinterval -226 ps 0.5, \
      "test/2020-10-10.results/z3-summaries-only-900.2020-10-10_15-36-18.csv" \
-        using 1:5 title "Z3 (summaries)" \
-        with linespoints lw 1.5 lt rgb "blue" pointinterval -190 ps 0.5, \
-     "test/2020-10-10.results/z3-summaries-900.2020-10-10_15-36-18.csv" \
-        using 1:5 title "Z3 (both)" \
-        with linespoints lw 1.5 lt rgb "black" pointinterval -194 ps 0.5
+        using 1:5 title "Z3 (contracts)" \
+        with linespoints lw 1.5 lt rgb "blue" pointinterval -190 ps 0.5
