@@ -1,5 +1,6 @@
 package korn.horn
 
+import korn.Loc
 import korn.c._
 import korn.smt._
 
@@ -7,6 +8,7 @@ import scala.collection.mutable
 
 class Proc(
     val unit: Unit,
+    val ploc: Loc,
     val name: String,
     val params: List[Formal],
     val locals: List[Formal],
@@ -30,10 +32,18 @@ class Proc(
 
   def run() {
     val st0 = state
-    val st1 = contract.enter(st0, this)
+    val (pre_, st1) = contract.enter(st0, this)
     val ctx = Context.init(st1)
     val st2 = local(body, st1, st1, ctx)
-    contract.leave(st1, st2, None, this) // implicit return without value
+    val post_ = contract.leave(st1, st2, None, this) // implicit return without value
+
+    for (pre <- pre_) {
+      witness += pre.name -> (this, ploc, pre, external.names, "precondition")
+    }
+
+    for (post <- post_) {
+      witness += post.name -> (this, ploc, post, external.names ++ List("\\result"), "postcondition")
+    }
   }
 
   def now(pred: Step, st0: State, st1: State, reason: String) {
@@ -125,8 +135,8 @@ class Proc(
         val siy = si1 and _test
 
         val hyp = Hyp(inv, sum, st1, si0, sin, siy, dont)
-        witness += inv.name -> (this, loc, inv, "invariant")
-        witness += sum.name -> (this, loc, sum, "summary")
+        witness += inv.name -> (this, loc, inv, inv.names, "invariant")
+        witness += sum.name -> (this, loc, sum, sum.names, "summary")
 
         loop.term(hyp, loc, this)
 

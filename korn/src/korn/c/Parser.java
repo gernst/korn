@@ -625,7 +625,7 @@ public class Parser extends beaver.Parser {
 					final int x = (int) _symbol_x.value;
 					final Symbol _symbol_n = _symbols[offset + 3];
 					final String n = (String) _symbol_n.value;
-					 return s(new FunDecl(Parsing.wrap(t, x), n));
+					 return s(_symbol_n, new FunDecl(Parsing.wrap(t, x), n));
 				}
 			},
 			new Action() {	// [61] stmt = type.t ptrs.x fun.n LPAREN RPAREN block.b
@@ -638,7 +638,7 @@ public class Parser extends beaver.Parser {
 					final String n = (String) _symbol_n.value;
 					final Symbol _symbol_b = _symbols[offset + 6];
 					final Block b = (Block) _symbol_b.value;
-					 return s(new FunDef(Parsing.wrap(t, x), n, b));
+					 return s(_symbol_n, new FunDef(Parsing.wrap(t, x), n, b));
 				}
 			},
 			new Action() {	// [62] stmt = type.t ptrs.x fun.n LPAREN params.ps RPAREN SEMICOLON
@@ -652,7 +652,7 @@ public class Parser extends beaver.Parser {
 					final Symbol _symbol_ps = _symbols[offset + 5];
 					final ArrayList _list_ps = (ArrayList) _symbol_ps.value;
 					final ParamSpec[] ps = _list_ps == null ? new ParamSpec[0] : (ParamSpec[]) _list_ps.toArray(new ParamSpec[_list_ps.size()]);
-					 return s(new FunDecl(Parsing.wrap(t, x), n, Parsing.params(ps)));
+					 return s(_symbol_n, new FunDecl(Parsing.wrap(t, x), n, Parsing.params(ps)));
 				}
 			},
 			new Action() {	// [63] stmt = type.t ptrs.x fun.n LPAREN params.ps RPAREN block.b
@@ -668,7 +668,7 @@ public class Parser extends beaver.Parser {
 					final ParamSpec[] ps = _list_ps == null ? new ParamSpec[0] : (ParamSpec[]) _list_ps.toArray(new ParamSpec[_list_ps.size()]);
 					final Symbol _symbol_b = _symbols[offset + 7];
 					final Block b = (Block) _symbol_b.value;
-					 return s(new FunDef(Parsing.wrap(t, x), n, Parsing.formals(ps), b));
+					 return s(_symbol_n, new FunDef(Parsing.wrap(t, x), n, Parsing.formals(ps), b));
 				}
 			},
 			new Action() {	// [64] stmt = type.t vars.vs SEMICOLON

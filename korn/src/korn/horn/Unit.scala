@@ -30,7 +30,7 @@ class Unit(val source: String, stmts: List[Stmt]) {
   var preds = mutable.Set[Pred]()
   val clauses = mutable.Buffer[Clause]()
 
-  var witness = mutable.Map[String, (Proc, Loc, Step, String)]()
+  var witness = mutable.Map[String, (Proc, Loc, Pred, List[String], String)]()
 
   /** types of additional logical variables */
   var typing = mutable.Map[String, Sort]()
@@ -144,21 +144,22 @@ class Unit(val source: String, stmts: List[Stmt]) {
         state += name -> y
       case FunDef(ret, "reach_error", formals, body) =>
         // built-in
-      case FunDef(ret, name, formals, body) =>
-        define(name, formals, body)
+      case stmt@FunDef(ret, name, formals, body) =>
+        val loc = korn.unpack(stmt.loc, "no location for while loop")
+        define(loc, name, formals, body)
       case _ =>
         // nothing to do
     }
   }
 
-  def define(name: String, params: List[Formal], body: Stmt) {
+  def define(loc: Loc, name: String, params: List[Formal], body: Stmt) {
     import sig._
 
     val (locals, stmt) = Stmt.norm(body)
 
     val contract = Contract(name)
     val config = Config(korn.Main.config)
-    object proc extends Proc(this, name, params, locals, stmt, contract, config)
+    object proc extends Proc(this, loc, name, params, locals, stmt, contract, config)
 
     proc.run()
   }
