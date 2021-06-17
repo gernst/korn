@@ -9,8 +9,6 @@ datatype 'a res
   | Brk 'a
   | Err
 
-(* TODO: get rid of option, to have working seq for both body and prog *)
-
 type_synonym 'a cond = "'a \<Rightarrow> bool"
 type_synonym 'a rel  = "'a \<Rightarrow> 'a \<Rightarrow> bool"
 type_synonym 'a prog = "'a \<Rightarrow> 'a res \<Rightarrow> bool"
