@@ -29,6 +29,7 @@ object Main {
   var witness_graphml = None: Option[String]
   var witness_quant = false
   var write = false
+  var confirm = false
   var timeout = 900 // SV-COMP default
   var tools = mutable.Buffer[Tool]()
 
@@ -72,6 +73,12 @@ object Main {
 
       case ("-m" | "-model") :: rest =>
         model = true
+        witness = true
+        configure(rest)
+
+      case ("-c" | "-confirm") :: rest =>
+        model = true
+        confirm = true
         witness = true
         configure(rest)
 
@@ -159,7 +166,11 @@ object Main {
     } else {
       if (random > 0) {
         debug("running:      random (" + random + "s)")
-        val result = Tool.fuzz(file, random)
+        var result = Tool.fuzz(file, random)
+
+        if(confirm) {
+          result = Tool.confirm(file, result)
+        }
 
         result match {
           case Incorrect(trace) =>
@@ -202,12 +213,16 @@ object Main {
 
           debug("running:      " + cmd.mkString(" "))
 
-          val (unit, result) = if (write) {
+          var (unit, result: Result) = if (write) {
             val to = smt(file)
             info("clauses:      " + to)
             Tool.solve(file, model, expect, Some(to), cmd)
           } else {
             Tool.solve(file, model, expect, None, cmd)
+          }
+
+          if(confirm) {
+            result = Tool.confirm(file, result)
           }
 
           try {

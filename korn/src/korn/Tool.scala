@@ -42,48 +42,54 @@ object Tool {
     korn.ensure(status == 0, "compilation failed: " + cmd.mkString(" "))
   }
 
-  def confirm(file: String, trace: List[(String, BigInt)]) = {
-    Main.debug("confirming " + trace)
+  def confirm(file: String, result: Result) = {
+    result match {
+      case Incorrect(trace) =>
+        Main.debug("confirming " + trace)
 
-    val cex = "__VERIFIER_counterexample.c"
-    val out = new PrintStream(new File(cex))
+        val cex = "__VERIFIER_counterexample.c"
+        val out = new PrintStream(new File(cex))
 
-    out println "#include <stdio.h>"
-    out.println()
+        out println "#include <stdio.h>"
+        out.println()
 
-    out println "void __assert_fail(const char * assertion, const char * file, unsigned int line, const char * function) {"
-    out println "    printf(\"unsat\\n\");"
-    out println "    exit(0);"
-    out println "}"
+        out println "void __assert_fail(const char * assertion, const char * file, unsigned int line, const char * function) {"
+        out println "    printf(\"unsat\\n\");"
+        out println "    exit(0);"
+        out println "}"
 
-    out.println()
+        out.println()
 
-    out println "static unsigned long long trace[] = {"
-    for ((_, arg) <- trace)
-      out println ("    (unsigned long long) " + arg + ",")
-    out println "};"
+        out println "static unsigned long long trace[] = {"
+        for ((_, arg) <- trace)
+          out println ("    (unsigned long long) " + arg + ",")
+        out println "};"
 
-    out.println()
+        out.println()
 
-    out println "static unsigned int index = 0;"
-    out println "unsigned long long __VERIFIER_next_nondet(unsigned int sign, unsigned int bits, const char *fn) {"
-    out println "    return trace[index++];"
-    out println "}"
+        out println "static unsigned int index = 0;"
+        out println "unsigned long long __VERIFIER_next_nondet(unsigned int sign, unsigned int bits, const char *fn) {"
+        out println "    return trace[index++];"
+        out println "}"
 
-    out.println()
+        out.println()
 
-    out.flush()
-    out.close()
+        out.flush()
+        out.close()
 
-    val bin = "./confirm"
-    compile(bin, file, cex, "__VERIFIER.c")
-    val (_, res, _, proc) = pipe(bin)
+        val bin = "./confirm"
+        compile(bin, file, cex, "__VERIFIER.c")
+        val (_, res, _, proc) = pipe(bin)
 
-    res.readLine() match {
-      case "unsat" =>
-        Incorrect(trace)
-      case line =>
-        Result.unknown
+        res.readLine() match {
+          case "unsat" =>
+            Incorrect(trace)
+          case line =>
+            Result.unknown
+        }
+
+      case _ =>
+        result
     }
   }
 

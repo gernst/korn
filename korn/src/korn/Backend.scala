@@ -15,7 +15,7 @@ object Backend {
 
       case "unsat" =>
         var trace = Backend.counterexample(in)
-        Tool.confirm(file, trace)
+        Incorrect(trace)
 
       case _ =>
         Unknown(status)
