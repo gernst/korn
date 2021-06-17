@@ -181,10 +181,10 @@ stmt
     | ENUM         LBRACE consts.cs RBRACE SEMICOLON    {: return s(new EnumDef(cs));      :}
     | ENUM    ID.n LBRACE consts.cs RBRACE SEMICOLON    {: return s(new EnumDef(n, cs));   :}
 
-    | type.t ptrs.x fun.n LPAREN RPAREN SEMICOLON             {: return s(new FunDecl(Parsing.wrap(t, x), n));    :}
-    | type.t ptrs.x fun.n LPAREN RPAREN block.b               {: return s(new FunDef(Parsing.wrap(t, x), n, b));  :}
-    | type.t ptrs.x fun.n LPAREN params.ps RPAREN SEMICOLON   {: return s(new FunDecl(Parsing.wrap(t, x), n, Parsing.params(ps)));   :}
-    | type.t ptrs.x fun.n LPAREN params.ps RPAREN block.b     {: return s(new FunDef(Parsing.wrap(t, x), n, Parsing.formals(ps), b));:}
+    | type.t ptrs.x fun.n LPAREN RPAREN SEMICOLON             {: return s(_symbol_n, new FunDecl(Parsing.wrap(t, x), n));    :}
+    | type.t ptrs.x fun.n LPAREN RPAREN block.b               {: return s(_symbol_n, new FunDef(Parsing.wrap(t, x), n, b));  :}
+    | type.t ptrs.x fun.n LPAREN params.ps RPAREN SEMICOLON   {: return s(_symbol_n, new FunDecl(Parsing.wrap(t, x), n, Parsing.params(ps)));   :}
+    | type.t ptrs.x fun.n LPAREN params.ps RPAREN block.b     {: return s(_symbol_n, new FunDef(Parsing.wrap(t, x), n, Parsing.formals(ps), b));:}
     
     | type.t vars.vs SEMICOLON                          {: return s(new Group(Parsing.vars(t, vs)));          :}
 

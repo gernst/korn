@@ -17,7 +17,7 @@ class Eval(unit: Unit) {
     val pred = CEX(fun)
     preds += pred
     val c = pred(x)
-    goal(st, c, "counterexample trace")
+    clause(st, c, "counterexample trace")
 
     korn.avoid(st.path contains False, "nondet choice in unreachable state")
 

@@ -106,31 +106,40 @@ object Witness {
   def proof(df: Def, unit: Unit, out: PrintStream) {
     val Def(name, args, ret, body) = df
 
-    if ((name contains "inv") && (unit.witness contains name)) {
-      val (proc, loc, pred, msg) = unit witness name
+    if (unit.witness contains name) {
+      val (proc, loc, pred, to, msg) = unit witness name
+
       val from = args map (_.x.toString)
-      val to = pred.names
+      // val to = pred.names
       korn.ensure(from.length == to.length, "parameter length mismatch: " + from + " and " + to)
       val env = Map(from zip to: _*)
 
-      quant = Main.witness_quant
-      escape = true
-      val inv = c(body, env, neg = false)
-
-      val nd = "N-" + loc.line + "-" + loc.column
-
-      out println graph.enter(N0, nd, loc)
-      out println graph.loop(nd, inv)
-      out println graph.leave(nd, N0)
-
       if (Main.debug) {
-
         quant = true
         escape = false
         val inv = c(body, env, neg = false)
 
         println(msg + " for " + proc.name + " at " + loc.line + ":" + loc.column)
         println("  " + inv)
+      }
+
+      msg match {
+        case "invariant" =>
+          quant = Main.witness_quant
+          escape = true
+          val inv = c(body, env, neg = false)
+
+          val nd = "N-" + loc.line + "-" + loc.column
+
+          out println graph.enter(N0, nd, loc)
+          out println graph.loop(nd, inv)
+          out println graph.leave(nd, N0)
+        case "summary" =>
+        // ignore
+
+        case "precondition" =>
+
+        case "postcondition" =>
       }
     }
   }
