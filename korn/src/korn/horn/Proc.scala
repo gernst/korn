@@ -32,17 +32,18 @@ class Proc(
 
   def run() {
     val st0 = state
-    val (pre_, st1) = contract.enter(st0, this)
+    val st1 = contract.enter(st0, this)
     val ctx = Context.init(st1)
     
-    val st2 = local(body, st1, st1, ctx)
-    val post_ = contract.leave(st1, st2, None, this) // implicit return without value
+    for(st2 <- local(body, st1, st1, ctx)) {
+      contract.leave(st1, st2, None, this) // implicit return without value
+    }
 
-    for (pre <- pre_) {
+    for (pre <- pres get name) {
       witness += pre.name -> (this, ploc, pre, external.names, "precondition")
     }
 
-    for (post <- post_) {
+    for (post <- posts get name) {
       witness += post.name -> (this, ploc, post, external.names ++ List("\\result"), "postcondition")
     }
   }
@@ -106,13 +107,13 @@ class Proc(
 
       case Return(None) =>
         val st2 = loop.return_(st1, ctx.hyps, this)
-        contract.leave(ctx.entry, List(st2), None, this)
+        contract.leave(ctx.entry, st2, None, this)
         Nil
 
       case Return(Some(res)) =>
         val st2 = loop.return_(st1, ctx.hyps, this)
         for ((_res, st3) <- rval(res, st2))
-          contract.leave(ctx.entry, List(st3), Some(_res), this)
+          contract.leave(ctx.entry, st3, Some(_res), this)
         Nil
 
       case Break =>
