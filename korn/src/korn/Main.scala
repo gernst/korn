@@ -30,6 +30,7 @@ object Main {
   var witness_quant = false
   var write = false
   var confirm = false
+  var hoist = false
   var timeout = 900 // SV-COMP default
   var tools = mutable.Buffer[Tool]()
 
@@ -80,6 +81,10 @@ object Main {
         model = true
         confirm = true
         witness = true
+        configure(rest)
+
+      case ("-H" | "-hoist") :: rest =>
+        hoist = true
         configure(rest)
 
       case ("-p" | "-parse") :: rest =>
@@ -198,9 +203,9 @@ object Main {
           val to = smt(file)
           val out = new PrintStream(new File(to))
           info("clauses:      " + to)
-          Tool.horn(file, model, expect, out)
+          Tool.horn(file, model, hoist, expect, out)
         } else {
-          Tool.horn(file, model, expect, out)
+          Tool.horn(file, model, hoist, expect, out)
         }
       }
 
@@ -216,9 +221,9 @@ object Main {
           var (unit, result: Result) = if (write) {
             val to = smt(file)
             info("clauses:      " + to)
-            Tool.solve(file, model, expect, Some(to), cmd)
+            Tool.solve(file, model, hoist, expect, Some(to), cmd)
           } else {
-            Tool.solve(file, model, expect, None, cmd)
+            Tool.solve(file, model, hoist, expect, None, cmd)
           }
 
           if(confirm) {

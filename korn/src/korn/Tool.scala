@@ -134,20 +134,20 @@ object Tool {
     val stmts = korn.c.parse(file)
   }
 
-  def translate(file: String) = {
+  def translate(file: String, hoist: Boolean) = {
     val stmts = korn.c.parse(file)
-    object unit extends korn.horn.Unit(file, stmts)
+    object unit extends korn.horn.Unit(file, hoist, stmts)
     unit.run()
     unit
   }
 
-  def horn(file: String, model: Boolean, expect: Option[String], out: PrintStream) = {
-    val unit = translate(file)
+  def horn(file: String, model: Boolean, hoist: Boolean, expect: Option[String], out: PrintStream) = {
+    val unit = translate(file, hoist)
     Backend.write(unit, model, expect, out)
   }
 
-  def solve(file: String, model: Boolean, expect: Option[String], write: Option[String], cmd: Seq[String]) = {
-    val unit = translate(file)
+  def solve(file: String, model: Boolean, hoist: Boolean, expect: Option[String], write: Option[String], cmd: Seq[String]) = {
+    val unit = translate(file, hoist)
 
     write match {
       case None =>

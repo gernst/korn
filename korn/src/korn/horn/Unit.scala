@@ -6,7 +6,7 @@ import korn.c._
 import korn.smt._
 import korn.Loc
 
-class Unit(val source: String, stmts: List[Stmt]) {
+class Unit(val source: String, hoist: Boolean, stmts: List[Stmt]) {
 
   /** global data types */
   val typedefs = mutable.Map[String, Type]()
@@ -155,7 +155,11 @@ class Unit(val source: String, stmts: List[Stmt]) {
   def define(loc: Loc, name: String, params: List[Formal], body: Stmt) {
     import sig._
 
-    val (locals, stmt) = Stmt.norm(body)
+    val (locals, stmt) = if(hoist) {
+      Stmt.norm(body)
+    } else {
+      (Nil, body)
+    }
 
     val contract = Contract(name)
     val config = Config(korn.Main.config)

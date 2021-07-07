@@ -14,7 +14,7 @@ void main() {
 
     int k;
     assume(n > 0);
-    // assume(0 <= k && k < n);
+    assume(0 <= k && k < n);
     assert(i == n);
     assert(a[k] == b[k]);
 }
