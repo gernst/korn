@@ -310,7 +310,7 @@ case class Var(name: String, index: Option[Int]) extends Pure with Pure.x {
   override def toString = {
     index match {
       case None        => name
-      case Some(index) => name + index
+      case Some(index) => name + "!" + index
     }
   }
 }

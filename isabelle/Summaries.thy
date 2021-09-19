@@ -1,8 +1,15 @@
 theory Summaries
-  imports Hoare
+  imports Preliminaries
 begin
 
-(* Definition 4: Loop Summaries *)
+(* Definition 5: (Correct) Loop Contracts:
+   Deferred to Correspondence.thy *)
+
+
+(* Definition 6: (Correct) Loop Summaries
+
+   Again, we do not split out the two properties
+   stated in the definition in the paper for simplicity. *)
 inductive summary_correct :: "'a cond \<Rightarrow> 'a cond \<Rightarrow> 'a prog \<Rightarrow> 'a rel \<Rightarrow> 'a cond \<Rightarrow> bool" where
 summary_correctI[intro!]:
 "\<lbrakk>\<And> s.       \<lbrakk>\<not> t s\<rbrakk> \<Longrightarrow> R s s;
@@ -13,6 +20,10 @@ summary_correctI[intro!]:
 
 inductive_cases summary_correctE[elim!]: "summary_correct P t B R Q"
 
+(* Theorem 3: Soundness of Summaries
+
+   The lemma below states the inductive property,
+   the claim is proved afterwards *)
 lemma summary_post:
   assumes "while t B s r"
   assumes "r = Ok s'"
@@ -26,7 +37,6 @@ proof -
     by blast
 qed
 
-(* Theorem 3: Soundness of Loop Summaries *)
 theorem summary_correct:
   assumes "summary_correct P t B R Q"
   shows   "correct P (while t B) Q"
@@ -55,7 +65,7 @@ next
     by induction auto
 qed
 
-(* Theorem 4: Completeness of Loop Summaries wrt. Safe Invariants *)
+(* Theorem 4: Completeness of Loop Summaries *)
 theorem summary_complete:
   assumes "correct P (while t B) Q"
   obtains R where "summary_correct P t B R Q"
@@ -65,5 +75,7 @@ proof -
   then show ?thesis ..
 qed
 
+(* Corollary 1: Adequacy of Loop Contracts:
+   Deferred to Correspondence.thy *)
 
 end
