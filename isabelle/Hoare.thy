@@ -1,81 +1,96 @@
 theory Hoare
-  imports Main
+  imports Preliminaries
 begin
 
-(* result of executing a loop body,
-   runtime errors are represented as None *)
-datatype 'a res
-  = Ok  'a
-  | Brk 'a
-  | Err
+(* We formalize the results of Sec 6 without
+   referring to syntactic formulas/variables,
+   i.e., remain a little more abstract here. *)
 
-type_synonym 'a cond = "'a \<Rightarrow> bool"
-type_synonym 'a rel  = "'a \<Rightarrow> 'a \<Rightarrow> bool"
-type_synonym 'a prog = "'a \<Rightarrow> 'a res \<Rightarrow> bool"
+fun skip :: "'S prog" where
+"skip s r = (r = Ok s)"
 
-(* Definition 1: Semantics of Loops *)
-inductive while :: "'a cond \<Rightarrow> 'a prog \<Rightarrow> 'a prog" where
-while_baseI[intro]:
-  "\<lbrakk>\<not> t s\<rbrakk> \<Longrightarrow> while t B s (Ok s)" |
-while_errI[intro]:
-  "\<lbrakk>t s; B s Err\<rbrakk> \<Longrightarrow> while t B s Err" |
-while_breakI[intro]:
-  "\<lbrakk>t s; B s (Brk s')\<rbrakk> \<Longrightarrow> while t B s (Ok s')" |
-while_stepI[intro]:
-  "\<lbrakk>t s; B s (Ok s'); while t B s' s''\<rbrakk> \<Longrightarrow> while t B s s''"
+fun spec :: "'S cond \<Rightarrow> 'S rel \<Rightarrow> 'S prog" where
+"spec P Q s r = (if P s then \<exists> s'. r = Ok s' \<and> Q s s' else r = Err)"
 
-(* Definition 2: Validity of Hoare-Triples (partial correctness *)
-inductive hoare :: "'a cond \<Rightarrow> 'a prog \<Rightarrow> 'a cond \<Rightarrow> bool" where
-hoareI[intro!]:
-"\<lbrakk>\<And> s r. P s \<Longrightarrow> c s r \<Longrightarrow> \<exists> s'. r = Ok s' \<and> Q s'\<rbrakk>
-  \<Longrightarrow> hoare P c Q"
+inductive seq :: "'S prog \<Rightarrow> 'S prog \<Rightarrow> 'S prog" where
+seq_Err[intro]: "c1 s Err \<Longrightarrow> seq c1 c2 s Err" |
+seq_Brk[intro]: "c1 s (Brk s') \<Longrightarrow> seq c1 c2 s (Brk s')" |
+seq_Ok[intro]:  "c1 s (Ok  s') \<Longrightarrow> c2 s' r \<Longrightarrow> seq c1 c2 s r"
 
-lemma hoareE[elim]:
-  assumes "hoare P c Q"
-  assumes "P s" "c s r"
-  obtains s' where "r = Ok s'" "Q s'"
-  using assms by (blast elim: hoare.cases)
+inductive_cases seqE: "seq c1 c2 s r"
 
-(* Only safety of Hoare Triples *)
+lemma hoare_seqE:
+  assumes "hoare P (seq c1 c2) Q"
+  assumes "P s" "c1 s (Ok s')"
+  shows   "\<And> s''. c2 s' (Ok s'') \<Longrightarrow> Q s''"
+  using assms by (auto elim!: hoareE seqE)
 
-inductive safe :: "'a cond \<Rightarrow> 'a prog \<Rightarrow> bool" where
-safeI[intro!]:
-"\<lbrakk>\<And> s r. P s \<Longrightarrow> c s r \<Longrightarrow> \<exists> s'. r = Ok s'\<rbrakk>
-  \<Longrightarrow> safe P c"
+(* Rule SPEC *)
+lemma hoare_spec:
+  "hoare P (spec P Q) (\<lambda> s. \<exists> s0. Q s0 s)"
+  by rule auto
 
-lemma safeE[elim]:
-  assumes "safe P c"
-  assumes "P s" "c s r"
-  obtains s' where "r = Ok s'"
-  using assms by (blast elim: safe.cases)
+(* Stronger variant that keeps information about the pre-state *)
+lemma hoare_spec':
+  "hoare P (spec P Q) (\<lambda> s. \<exists> s0. P s0 \<and> Q s0 s)"
+  by rule auto
 
-(* Weak variant of Hoare-Triples where runtime errors are not considered *)
 
-inductive correct :: "'a cond \<Rightarrow> 'a prog \<Rightarrow> 'a cond \<Rightarrow> bool" where
-correctI[intro!]:
-"\<lbrakk>\<And> s s'. P s \<Longrightarrow> c s (Ok s' ) \<Longrightarrow> Q s'\<rbrakk>
-  \<Longrightarrow> correct P c Q"
-
-lemma correctE[elim]:
-  assumes "correct P c Q"
-  assumes "P s" "c s (Ok s' )"
-  shows "Q s'"
-  using assms by (blast elim: correct.cases)
-
-lemma hoare_split:
-  "hoare P c Q \<longleftrightarrow> correct P c Q \<and> safe P c"
+lemma hoare_loop_invariant:
+  assumes "\<And> s. P s \<Longrightarrow> I s"
+  assumes "hoare (\<lambda> s. t s \<and> I s) B I"
+  assumes "\<And> s. I s \<Longrightarrow> \<not> t s \<Longrightarrow> Q s"
+  shows "hoare P (while t B) Q"
 proof (rule, goal_cases)
-  case 1
-  then show ?case by auto
-next
-  case 2
-  show ?case proof (rule hoareI)
-    fix s r
-    assume c: "P s" "c s r"
-    from 2 c obtain s' where r: "r = Ok s'" by blast (* need to make this explicit for Isabelle *)
-    from 2 c r show "\<exists>s'. r = Ok s' \<and> Q s'"
+  case (1 s r)
+  from 1(1) assms(1) have "I s"
+    by blast
+  from 1(2) this assms(2,3) show ?case
+    by induction auto
+qed
+
+lemma hoare_loop_contract:
+  assumes "hoare P (spec I R) Q"
+  assumes "\<And> sn. hoare (\<lambda> s. I s \<and> \<not> t s \<and> s = sn) skip (\<lambda> s. R sn s)"
+  assumes "\<And> si. hoare (\<lambda> s. I s \<and>   t s \<and> s = si) (seq B (spec I R)) (\<lambda> s. R si s)"
+  assumes "\<And> s s'. \<not> B s (Brk s')" (* assume absence of breaks *)
+  shows   "hoare P (while t B) Q"
+proof (rule, goal_cases)
+  case (1 s r)
+  from 1(1) assms(1) have I: "I s"
+    by auto
+  from 1(2) I assms(2,3,4) have "\<exists> s'. r = Ok s' \<and> R s s'"
+  proof (induction)
+    case (while_baseI t s B)
+    from this(1,2,3) show ?case
       by auto
+  next
+    case (while_errI t s B)
+    from this(1,2,3,5) show ?case
+      by auto
+  next
+    case (while_breakI t s B s')
+    from this(2,6) show ?case
+      by simp
+  next
+    case (while_stepI t s B s' r)
+    (* Taking apart the sequential composition
+       in the premise is somewhat annoying,
+       we didn't bother to automate this better here. *)
+    note t = while_stepI(1,2,5)
+    note B = while_stepI(7)
+    note H = while_stepI(6,7,8)
+    from t B[of s]
+    have I': "I s'" by (auto elim!: hoareE seqE)
+    from while_stepI.IH[OF this H]
+    obtain sn where r: "r = Ok sn" and R': "R s' sn" by blast
+    from t B[of s] I' R' have "R s sn"
+      by (auto elim!: hoare_seqE)
+    with r show ?case
+      by simp
   qed
+  with 1(1) I assms(1) show ?case
+    by (auto elim!: hoareE)
 qed
 
 end
