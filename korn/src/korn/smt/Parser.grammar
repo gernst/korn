@@ -32,6 +32,7 @@
 
 model
     = defs.ds              {: return s(new Model(ds)); :}
+    | LP defs.ds RP        {: return s(new Model(ds)); :}
     | LP MODEL defs.ds RP  {: return s(new Model(ds)); :}
     ;
 
