@@ -12,7 +12,7 @@
 
 %terminals INT, REAL, BOOL, ARRAY, POINTER;
 
-%terminals MODEL, DEFINE_FUN;
+%terminals MODEL, DEFINE_FUN, DEFINE;
 %terminals LET, EXISTS, FORALL;
 
 %typeof ID      = "String";
@@ -32,6 +32,7 @@
 
 model
     = defs.ds              {: return s(new Model(ds)); :}
+    | LP defs.ds RP        {: return s(new Model(ds)); :}
     | LP MODEL defs.ds RP  {: return s(new Model(ds)); :}
     ;
 
@@ -43,6 +44,8 @@ pairs  = pair  *;
 def
     = LP DEFINE_FUN ID.n LP params.ps RP sort.s expr.b RP
       {: return s(new Def(n, ps, s, b)); :}
+    | LP DEFINE LP ID.n params.ps RP expr.b RP
+      {: return s(new Def(n, ps, b)); :}
     ;
 
 param

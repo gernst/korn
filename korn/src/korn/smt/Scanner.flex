@@ -95,6 +95,8 @@ kw      = ":" {symbol}
 
 "define-fun"
     { return newToken(Terminals.DEFINE_FUN);   }
+"define"
+    { return newToken(Terminals.DEFINE);   }
 
 /* {any} ({printable} - {ws})
             { throw new RuntimeException("unexpected character '" + yytext() + "'"); } */

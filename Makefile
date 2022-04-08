@@ -1,6 +1,6 @@
 .PHONY: all test clean mrproper parser check-dependencies archives-2021
 
-MILL = ./mill
+MILL = mill
 
 KORN_JAVA 	= korn/src/korn/c/Parser.java   \
               korn/src/korn/c/Scanner.java  \
@@ -21,7 +21,7 @@ KORN_LAUNCHER = out/korn/launcher/dest/run
 KORN_SH  = ./korn.sh
 KORN_FLAGS ?=
 
-ARCHIVES = ../sv-comp/archives-2021/2021
+ARCHIVES = ../svcomp-archives-2022/2022
 KORN_DIST = run korn.jar z3 eld eld.jar README.md $(wildcard LICENSE*) __VERIFIER.c __VERIFIER_random.c
 
 all: $(KORN_JAR) $(KORN_ASSEMBLY) $(KORN_SH)
@@ -32,7 +32,7 @@ plots: quantile.gp.pdf
 
 parser: $(KORN_JAVA)
 
-archives-2021: $(ARCHIVES)/korn.zip
+archives-2022: $(ARCHIVES)/korn.zip
 
 $(ARCHIVES)/korn.zip: $(KORN_DIST)
 	@echo $@

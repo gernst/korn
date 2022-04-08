@@ -1,15 +1,18 @@
 <?xml version="1.0"?>
 <!DOCTYPE benchmark PUBLIC "+//IDN sosy-lab.org//DTD BenchExec benchmark 1.9//EN" "https://www.sosy-lab.org/benchexec/benchmark-2.3.dtd">
-<benchmark tool="korn" timelimit="15 min" hardtimelimit="15 min" memlimit="15 GB" cpuCores="8">
+<benchmark tool="korn" timelimit="15 min" hardtimelimit="15 min" memlimit="15 GB" cpuCores="1">
 
-<require cpuModel="Intel Xeon E3-1230 v5 @ 3.40 GHz" cpuCores="8"/>
+<require cpuModel="Intel Xeon E3-1230 v5 @ 3.40 GHz" cpuCores="1"/>
 
   <resultfiles>**.graphml</resultfiles>
 
-  <option name="-quiet"/>
   <option name="-model"/>
   <option name="-witness">witness.graphml</option>
-  <option name="-timeout">900</option>
+  <option name="-write" />
+  <option name="-random">10</option>
+  <option name="-timeout">10</option>
+  <option name="-z3"/>
+  <option name="-timeout">60</option>
   <option name="-eld"/>
 
 <rundefinition name="SV-COMP21_unreach-call">
@@ -100,4 +103,7 @@
   </tasks> -->
 </rundefinition>
 
+  <columns>
+    <column title="backend">backend:</column>
+  </columns>
 </benchmark>

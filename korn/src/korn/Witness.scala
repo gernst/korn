@@ -111,7 +111,7 @@ object Witness {
 
       val from = args map (_.x.toString)
       // val to = pred.names
-      korn.ensure(from.length == to.length, "parameter length mismatch: " + from + " and " + to)
+      korn.ensure(from.length == to.length, "parameter length mismatch for " + proc.name + ": " + from + " and " + to)
       val env = Map(from zip to: _*)
 
       if (Main.debug) {
@@ -121,6 +121,7 @@ object Witness {
 
         println(msg + " for " + proc.name + " at " + loc.line + ":" + loc.column)
         println("  " + inv)
+        println()
       }
 
       msg match {
