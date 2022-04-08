@@ -166,7 +166,9 @@ object Main {
             note("unsat")
             info("status:       incorrect")
             info("backend:      random")
-            debug("trace:        " + trace)
+            debug("trace:")
+            for ((fun, arg) <- trace)
+              debug("  " + fun + "() = " + arg)
 
             if (witness) {
               val dest = witness_graphml getOrElse graphml(file)
@@ -226,6 +228,8 @@ object Main {
                   debug("model:")
                 for (df <- _model.defs)
                   debug("  " + df)
+                if (_model.defs.nonEmpty)
+                  debug("")
 
                 if (witness) {
                   val dest = witness_graphml getOrElse graphml(file)
@@ -241,7 +245,9 @@ object Main {
 
                 info("status:       incorrect")
                 info("backend:      " + cmd.mkString(" "))
-                debug("trace:        " + trace)
+                debug("trace:")
+                for ((fun, arg) <- trace)
+                  debug("  " + fun + "() = " + arg)
 
                 if (witness) {
                   val dest = witness_graphml getOrElse graphml(file)

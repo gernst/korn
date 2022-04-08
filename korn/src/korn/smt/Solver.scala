@@ -6,6 +6,7 @@ package korn.smt
 // case object Unknown extends Status { def self = this }
 
 case class Def(name: String, args: List[Param], ret: Sort, body: Pure) {
+    def this(name: String, args: Array[Param], body: Pure) = this(name, args.toList, Sort.bool, body)
     def this(name: String, args: Array[Param], ret: Sort, body: Pure) = this(name, args.toList, ret, body)
     override def toString = sexpr("define-fun", name, sexpr(args), ret, body)
 }

@@ -60,8 +60,8 @@ public class Scanner extends beaver.Scanner {
     "\1\0\1\1\1\2\1\3\1\4\1\3\1\4\3\1"+
     "\1\5\1\6\1\7\12\4\1\0\1\10\1\11\1\0"+
     "\2\2\14\4\1\12\1\4\1\13\10\4\1\14\1\15"+
-    "\2\4\1\16\3\4\1\17\2\4\1\20\1\21\2\4"+
-    "\1\22\2\4\1\23";
+    "\2\4\1\16\3\4\1\17\1\4\1\20\1\21\1\22"+
+    "\2\4\1\23\2\4\1\24";
 
   private static int [] zzUnpackAction() {
     int [] result = new int[71];
@@ -675,97 +675,102 @@ public class Scanner extends beaver.Scanner {
             { throw new RuntimeException("unexpected character '" + yytext() + "' at " + yyline + ":" + yycolumn);
             } 
             // fall through
-          case 20: break;
+          case 21: break;
           case 2: 
             { 
             } 
             // fall through
-          case 21: break;
+          case 22: break;
           case 3: 
             { return newToken(Terminals.NUM, yytext());
             } 
             // fall through
-          case 22: break;
+          case 23: break;
           case 4: 
             { return newToken(Terminals.ID, yytext());
             } 
             // fall through
-          case 23: break;
+          case 24: break;
           case 5: 
             { return newToken(Terminals.LP);
             } 
             // fall through
-          case 24: break;
+          case 25: break;
           case 6: 
             { return newToken(Terminals.RP);
             } 
             // fall through
-          case 25: break;
+          case 26: break;
           case 7: 
             { return newToken(Terminals.BANG);
             } 
             // fall through
-          case 26: break;
+          case 27: break;
           case 8: 
             { return newToken(Terminals.ID, yytext(+1,-1));
             } 
             // fall through
-          case 27: break;
+          case 28: break;
           case 9: 
             { return newToken(Terminals.KW, yytext(+1,0));
             } 
             // fall through
-          case 28: break;
+          case 29: break;
           case 10: 
             { return newToken(Terminals.LET);
             } 
             // fall through
-          case 29: break;
+          case 30: break;
           case 11: 
             { return newToken(Terminals.INT);
             } 
             // fall through
-          case 30: break;
+          case 31: break;
           case 12: 
             { return newToken(Terminals.REAL);
             } 
             // fall through
-          case 31: break;
+          case 32: break;
           case 13: 
             { return newToken(Terminals.BOOL);
             } 
             // fall through
-          case 32: break;
+          case 33: break;
           case 14: 
             { return newToken(Terminals.MODEL);
             } 
             // fall through
-          case 33: break;
+          case 34: break;
           case 15: 
             { return newToken(Terminals.ARRAY);
             } 
             // fall through
-          case 34: break;
-          case 16: 
-            { return newToken(Terminals.EXISTS);
-            } 
-            // fall through
           case 35: break;
-          case 17: 
-            { return newToken(Terminals.FORALL);
+          case 16: 
+            { return newToken(Terminals.DEFINE);
             } 
             // fall through
           case 36: break;
-          case 18: 
-            { return newToken(Terminals.POINTER);
+          case 17: 
+            { return newToken(Terminals.EXISTS);
             } 
             // fall through
           case 37: break;
-          case 19: 
-            { return newToken(Terminals.DEFINE_FUN);
+          case 18: 
+            { return newToken(Terminals.FORALL);
             } 
             // fall through
           case 38: break;
+          case 19: 
+            { return newToken(Terminals.POINTER);
+            } 
+            // fall through
+          case 39: break;
+          case 20: 
+            { return newToken(Terminals.DEFINE_FUN);
+            } 
+            // fall through
+          case 40: break;
           default:
             zzScanError(ZZ_NO_MATCH);
         }

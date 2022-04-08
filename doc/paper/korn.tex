@@ -38,6 +38,10 @@
     The novel aspect is that it uses not only loop invariants but also loop summaries~\cite{hehner1999refinement,hehner2005specified,tuerk2010local}.
     More details about the approach can be found in~\cite{ernst:arxiv2020:summaries}.
     The tool is available at \url{https://github.com/gernst/korn}
+    
+    \todo[inline]{This is the unpublished competition report from 2021 as a preliminary
+                  tool documentation for the qualification phase for 2022.
+                  Some details are expected to change.}
 
 \end{abstract}
     \keywords{Software Verification \and Horn clauses \and Loop Specifications}
@@ -52,7 +56,7 @@ or relations between states, together with additional constraints that encode th
 
 Traditionally, loops are abstracted by invariants, which need to hold in the states
 encounteded throughout the execution of a loop, and which characterize the work done by the loop so far.
-\Korn additionally supports a second verification approach (not used in SV-COMP 2021, cf \cref{sec:project}), relying on loop summaries that instead characterize
+\Korn additionally supports a second verification approach (not used in SV-COMP, cf \cref{sec:project}), relying on loop summaries that instead characterize
 the work that remains to be done until completion of the loop~\cite{hehner1999refinement,tuerk2010local,hehner2005specified}
 (also called loop postconditions).
 As shown in~\cite{ernst:arxiv2020:summaries}, summaries are a fundamental and principled technique dual to invariants,
@@ -164,7 +168,7 @@ notably in \texttt{ControlFlow} and other categories where \Korn does not partic
 
 The implementation of \Korn is available at
     \url{https://github.com/gernst/korn} under the MIT license,
-the version running in SV-COMP 2020 was packaged from commit
+the version running in SV-COMP 2021 was packaged from commit
 \href{https://github.com/gernst/korn/commit/767eca718edf7f04e995142b679762242c68eef5}{\tt 767eca7}
 and shows version number \texttt{0.3}.
 
@@ -177,7 +181,7 @@ A pre-built, ready-to-run
 \href{https://gitlab.com/gernst/svcomp-archives-2021/-/blob/master/2021/korn.zip}{archive}
 is with the competition version is available in the official repository.
 
-\textbf{Participation.} \Korn participates in four categories
+\textbf{Participation.} In 2021, \Korn participated in four categories
 \texttt{ControlFlow},
 \texttt{Loops},
 \texttt{Recursive},
@@ -226,7 +230,7 @@ The arguments to the backend solver are shown in the command line output.
 The source code is available via \url{https://github.com/gernst/korn} under the MIT license.
 Gregor Alexandru~\cite{alexandru2019} and Johannes Blau have contributed
 key insights to the methodology outlined in \cref{sec:approach}.
-    \todo{to be squeezed onto 4 pages including references}
+% \todo{to be squeezed onto 4 pages including references}
 
 \bibliographystyle{splncs04}
 \bibliography{korn.bib}
