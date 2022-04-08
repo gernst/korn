@@ -37,6 +37,7 @@ model
     ;
 
 defs   = def   *;
+vars   = var  *;
 params = param *;
 exprs  = expr  *;
 pairs  = pair  *;
@@ -44,8 +45,10 @@ pairs  = pair  *;
 def
     = LP DEFINE_FUN ID.n LP params.ps RP sort.s expr.b RP
       {: return s(new Def(n, ps, s, b)); :}
-    | LP DEFINE LP ID.n params.ps RP expr.b RP
-      {: return s(new Def(n, ps, b)); :}
+    | LP DEFINE LP ID.n vars.vs RP expr.b RP
+      {: return s(new Def(n, vs, b)); :}
+    | LP DEFINE ID.n expr.b RP
+      {: return s(new Def(n, b)); :}
     ;
 
 param

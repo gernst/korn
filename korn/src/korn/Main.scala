@@ -112,6 +112,14 @@ object Main {
         tools += Tool(false, true, "eld", "-t:" + timeout)
         configure(rest)
 
+      case "-golem" :: rest if model =>
+        tools += Tool(false, true, "golem", "-l", "QF_LIA", "-e", "spacer", "--print-witness")
+        configure(rest)
+
+      case "-golem" :: rest =>
+        tools += Tool(false, true, "golem", "-l", "QF_LIA", "-e", "spacer")
+        configure(rest)
+
       case "-float" :: rest =>
         float = true
         configure(rest)
