@@ -22,6 +22,11 @@ object Backend {
     }
   }
 
+  def readWithTimeout(timeout: Int, in: BufferedReader, file: String) = {
+    val unknown: Result = Unknown("timeout")
+    Util.withTimeout(timeout * 1000, unknown) { read(in, file) }
+  }
+
   def model(in: BufferedReader): Model = {
     val scanner = new Scanner(in)
     val parser = new Parser()

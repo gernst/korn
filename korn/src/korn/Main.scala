@@ -23,6 +23,7 @@ object Main {
   var quiet = false
   var model = false
   var float = false
+  var pointers = true
   var random = 0
   var expect = None: Option[String]
   var witness = false
@@ -101,23 +102,29 @@ object Main {
 
       case "-z3" :: rest =>
         // somehow piping is not working
-        tools += Tool(model, true, "z3", "-t:" + (timeout * 1000))
+        tools += Tool(timeout, model, true, "z3", "-t:" + (timeout * 1000))
         configure(rest)
 
       case "-eld" :: rest if model =>
-        tools += Tool(false, true, "eld", "-t:" + timeout, "-ssol", "-cex")
+        tools += Tool(timeout, false, true, "eld", "-t:" + timeout, "-ssol", "-cex")
         configure(rest)
 
       case "-eld" :: rest =>
-        tools += Tool(false, true, "eld", "-t:" + timeout)
+        tools += Tool(timeout, false, true, "eld", "-t:" + timeout)
         configure(rest)
 
       case "-golem" :: rest if model =>
-        tools += Tool(false, true, "golem", "-l", "QF_LIA", "-e", "spacer", "--print-witness")
+        pointers = false
+        tools += Tool(timeout, false, true, "golem", "-l", "QF_LIA", "-e", "spacer", "--print-witness")
         configure(rest)
 
       case "-golem" :: rest =>
-        tools += Tool(false, true, "golem", "-l", "QF_LIA", "-e", "spacer")
+        pointers = false
+        tools += Tool(timeout, false, true, "golem", "-l", "QF_LIA", "-e", "spacer")
+        configure(rest)
+
+      case "-no-pointers" :: rest =>
+        pointers = false
         configure(rest)
 
       case "-float" :: rest =>
@@ -141,7 +148,7 @@ object Main {
         configure(rest)
 
       case "--" :: rest =>
-        tools += Tool(model, write, rest: _*)
+        tools += Tool(timeout, model, write, rest: _*)
 
       case file :: rest =>
         files += file
@@ -208,16 +215,16 @@ object Main {
       breakable {
         for (tool <- tools) {
           // Note: local variables shadow class attribute
-          val Tool(model, write, cmd @ _*) = tool
+          val Tool(timeout, model, write, cmd @ _*) = tool
 
           debug("running:      " + cmd.mkString(" "))
 
           val (unit, result) = if (write) {
             val to = smt(file)
             info("clauses:      " + to)
-            Tool.solve(file, model, expect, Some(to), cmd)
+            Tool.solve(file, timeout, model, expect, Some(to), cmd)
           } else {
-            Tool.solve(file, model, expect, None, cmd)
+            Tool.solve(file, timeout, model, expect, None, cmd)
           }
 
           try {
