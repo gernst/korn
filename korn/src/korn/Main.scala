@@ -27,6 +27,7 @@ object Main {
   var random = 0
   var expect = None: Option[String]
   var witness = false
+  var confirm = false
   var witness_graphml = None: Option[String]
   var witness_quant = false
   var write = false
@@ -133,6 +134,10 @@ object Main {
 
       case "-witness" :: file :: rest =>
         witness_graphml = Some(file)
+        configure(rest)
+
+      case "-confirm" :: file :: rest =>
+        confirm = true
         configure(rest)
 
       case "-status" :: status :: rest =>

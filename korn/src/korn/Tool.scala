@@ -152,18 +152,24 @@ object Tool {
     write match {
       case None =>
         val (out, in, err, proc) = pipe(cmd: _*)
-        val result = Backend.readWithTimeout(timeout, in, file)
-        proc.destroy()
-        unit -> result
+        try {
+          val result = Backend.readWithTimeout(timeout, in, file)
+          unit -> result
+        } finally {
+          proc.destroy()
+        }
 
       case Some(smt) =>
         val out = new PrintStream(new File(smt))
         // Note: do not refactor the two cases into one, need to write before calling the solver
         Backend.write(unit, model, expect, out)
         val (_, in, err, proc) = pipe(cmd ++ Seq(smt): _*)
-        val result = Backend.readWithTimeout(timeout, in, file)
-        proc.destroy()
-        unit -> result
+        try {
+          val result = Backend.readWithTimeout(timeout, in, file)
+          unit -> result
+        } finally {
+          proc.destroy()
+        }
     }
   }
 }

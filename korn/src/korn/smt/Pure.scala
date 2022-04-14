@@ -103,7 +103,6 @@ object Sort {
   }
 
   case class pointer(elem: Sort) extends Sort {
-    assert(false)
     override def toString = sexpr("Pointer", elem)
   }
 
