@@ -114,14 +114,44 @@ object Main {
         tools += Tool(timeout, false, true, "eld", "-t:" + timeout)
         configure(rest)
 
-      case "-golem" :: rest if model =>
+      case "-golem:spacer" :: rest if model =>
         pointers = false
         tools += Tool(timeout, false, true, "golem", "-l", "QF_LIA", "-e", "spacer", "--print-witness")
         configure(rest)
 
-      case "-golem" :: rest =>
+      case "-golem:spacer" :: rest =>
         pointers = false
         tools += Tool(timeout, false, true, "golem", "-l", "QF_LIA", "-e", "spacer")
+        configure(rest)
+
+      case "-golem:lawi" :: rest if model =>
+        pointers = false
+        tools += Tool(timeout, false, true, "golem", "-l", "QF_LIA", "-e", "lawi", "--print-witness")
+        configure(rest)
+
+      case "-golem:lawi" :: rest =>
+        pointers = false
+        tools += Tool(timeout, false, true, "golem", "-l", "QF_LIA", "-e", "lawi")
+        configure(rest)
+
+      case "-golem:tpa" :: rest if model =>
+        pointers = false
+        tools += Tool(timeout, false, true, "golem", "-l", "QF_LIA", "-e", "tpa", "--print-witness")
+        configure(rest)
+
+      case "-golem:tpa" :: rest =>
+        pointers = false
+        tools += Tool(timeout, false, true, "golem", "-l", "QF_LIA", "-e", "tpa")
+        configure(rest)
+
+      case "-golem:bmc" :: rest if model =>
+        pointers = false
+        tools += Tool(timeout, false, true, "golem", "-l", "QF_LIA", "-e", "bmc", "--print-witness")
+        configure(rest)
+
+      case "-golem:bmc" :: rest =>
+        pointers = false
+        tools += Tool(timeout, false, true, "golem", "-l", "QF_LIA", "-e", "bmc")
         configure(rest)
 
       case "-no-pointers" :: rest =>
