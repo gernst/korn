@@ -15,11 +15,22 @@ object Backend {
 
       case "unsat" =>
         var trace = Backend.counterexample(in)
-        Incorrect(trace)
+        val result = Incorrect(trace)
+        
+        if(Main.confirm) {
+          Tool.confirm(file, result)
+        } else {
+          result
+        }
 
       case _ =>
         Unknown(status)
     }
+  }
+
+  def readWithTimeout(timeout: Int, in: BufferedReader, file: String) = {
+    val unknown: Result = Unknown("timeout")
+    Util.withTimeout(timeout * 1000, unknown) { read(in, file) }
   }
 
   def model(in: BufferedReader): Model = {

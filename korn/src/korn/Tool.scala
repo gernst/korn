@@ -16,7 +16,7 @@ object Result {
   val unknown = Unknown("unknown")
 }
 
-case class Tool(model: Boolean, write: Boolean, cmd: String*)
+case class Tool(timeout: Int, model: Boolean, write: Boolean, cmd: String*)
 
 object Tool {
   def run(cmd: String*) = {
@@ -146,20 +146,37 @@ object Tool {
     Backend.write(unit, model, expect, out)
   }
 
-  def solve(file: String, model: Boolean, hoist: Boolean, expect: Option[String], write: Option[String], cmd: Seq[String]) = {
+  def solve(
+      file: String,
+      timeout: Int,
+      model: Boolean,
+      hoist: Boolean, 
+      expect: Option[String],
+      write: Option[String],
+      cmd: Seq[String]) = {
     val unit = translate(file, hoist)
 
     write match {
       case None =>
         val (out, in, err, proc) = pipe(cmd: _*)
-        Backend.write(unit, model, expect, out)
-        unit -> Backend.read(in, file)
+        try {
+          val result = Backend.readWithTimeout(timeout, in, file)
+          unit -> result
+        } finally {
+          proc.destroy()
+        }
 
       case Some(smt) =>
         val out = new PrintStream(new File(smt))
+        // Note: do not refactor the two cases into one, need to write before calling the solver
         Backend.write(unit, model, expect, out)
         val (_, in, err, proc) = pipe(cmd ++ Seq(smt): _*)
-        unit -> Backend.read(in, file)
+        try {
+          val result = Backend.readWithTimeout(timeout, in, file)
+          unit -> result
+        } finally {
+          proc.destroy()
+        }
     }
   }
 }

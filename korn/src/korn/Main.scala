@@ -23,13 +23,14 @@ object Main {
   var quiet = false
   var model = false
   var float = false
+  var pointers = true
   var random = 0
   var expect = None: Option[String]
   var witness = false
+  var confirm = false
   var witness_graphml = None: Option[String]
   var witness_quant = false
   var write = false
-  var confirm = false
   var hoist = false
   var timeout = 900 // SV-COMP default
   var tools = mutable.Buffer[Tool]()
@@ -113,15 +114,59 @@ object Main {
 
       case "-z3" :: rest =>
         // somehow piping is not working
-        tools += Tool(model, true, "z3", "-t:" + (timeout * 1000))
+        tools += Tool(timeout, model, true, "z3", "-t:" + (timeout * 1000))
         configure(rest)
 
       case "-eld" :: rest if model =>
-        tools += Tool(false, true, "eld", "-t:" + timeout, "-ssol", "-cex")
+        tools += Tool(timeout, false, true, "eld", "-t:" + timeout, "-ssol", "-cex")
         configure(rest)
 
       case "-eld" :: rest =>
-        tools += Tool(false, true, "eld", "-t:" + timeout)
+        tools += Tool(timeout, false, true, "eld", "-t:" + timeout)
+        configure(rest)
+
+      case "-golem:spacer" :: rest if model =>
+        pointers = false
+        tools += Tool(timeout, false, true, "golem", "-l", "QF_LIA", "-e", "spacer", "--print-witness")
+        configure(rest)
+
+      case "-golem:spacer" :: rest =>
+        pointers = false
+        tools += Tool(timeout, false, true, "golem", "-l", "QF_LIA", "-e", "spacer")
+        configure(rest)
+
+      case "-golem:lawi" :: rest if model =>
+        pointers = false
+        tools += Tool(timeout, false, true, "golem", "-l", "QF_LIA", "-e", "lawi", "--print-witness")
+        configure(rest)
+
+      case "-golem:lawi" :: rest =>
+        pointers = false
+        tools += Tool(timeout, false, true, "golem", "-l", "QF_LIA", "-e", "lawi")
+        configure(rest)
+
+      case "-golem:tpa" :: rest if model =>
+        pointers = false
+        tools += Tool(timeout, false, true, "golem", "-l", "QF_LIA", "-e", "tpa", "--print-witness")
+        configure(rest)
+
+      case "-golem:tpa" :: rest =>
+        pointers = false
+        tools += Tool(timeout, false, true, "golem", "-l", "QF_LIA", "-e", "tpa")
+        configure(rest)
+
+      case "-golem:bmc" :: rest if model =>
+        pointers = false
+        tools += Tool(timeout, false, true, "golem", "-l", "QF_LIA", "-e", "bmc", "--print-witness")
+        configure(rest)
+
+      case "-golem:bmc" :: rest =>
+        pointers = false
+        tools += Tool(timeout, false, true, "golem", "-l", "QF_LIA", "-e", "bmc")
+        configure(rest)
+
+      case "-no-pointers" :: rest =>
+        pointers = false
         configure(rest)
 
       case "-float" :: rest =>
@@ -145,7 +190,7 @@ object Main {
         configure(rest)
 
       case "--" :: rest =>
-        tools += Tool(model, write, rest: _*)
+        tools += Tool(timeout, model, write, rest: _*)
 
       case file :: rest =>
         files += file
@@ -216,20 +261,16 @@ object Main {
       breakable {
         for (tool <- tools) {
           // Note: local variables shadow class attribute
-          val Tool(model, write, cmd @ _*) = tool
+          val Tool(timeout, model, write, cmd @ _*) = tool
 
           debug("running:      " + cmd.mkString(" "))
 
           var (unit, result: Result) = if (write) {
             val to = smt(file)
             info("clauses:      " + to)
-            Tool.solve(file, model, hoist, expect, Some(to), cmd)
+            Tool.solve(file, timeout, hoist, model, expect, Some(to), cmd)
           } else {
-            Tool.solve(file, model, hoist, expect, None, cmd)
-          }
-
-          if(confirm) {
-            result = Tool.confirm(file, result)
+            Tool.solve(file, timeout, hoist, model, expect, None, cmd)
           }
 
           try {

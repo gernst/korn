@@ -18,7 +18,10 @@ object Parsing {
   }
 
   def pointerSort(elem: Sort) = {
-    Sort.pointer(elem)
+    if (korn.Main.pointers)
+      Sort.pointer(elem)
+    else
+      Sort.int
   }
 
   def pair[A, B](a: A, b: B) = {

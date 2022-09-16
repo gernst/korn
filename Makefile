@@ -58,7 +58,7 @@ $(KORN_JAR): $(KORN_JAVA) $(KORN_SCALA)
 $(KORN_ASSEMBLY): $(KORN_JAVA) $(KORN_SCALA)
 	@echo $@
 	$(MILL) korn.assembly
-	@cp out/korn/assembly/dest/out-tmp.jar $(KORN_ASSEMBLY)
+	@cp out/korn/assembly.dest/out.jar $(KORN_ASSEMBLY)
 
 $(KORN_SH): $(KORN_LAUNCHER)
 	@echo "[echo]  $@"

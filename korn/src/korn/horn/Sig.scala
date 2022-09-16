@@ -121,8 +121,12 @@ class Sig(unit: Unit) {
       case _: Unsigned           => Sort.int
       case TypedefName("size_t") => Sort.int
 
-      case PtrType(elem) =>
+      case PtrType(elem) if korn.Main.pointers =>
         pointers = true; Sort.pointer(resolve(elem))
+
+      case PtrType(elem) =>
+        Sort.int
+
       case ArrayType(elem, dim) =>
         Sort.array(Sort.int, resolve(elem))
 
@@ -183,8 +187,13 @@ class Sig(unit: Unit) {
         val x = fresh(name, s)
         (x, s, Val(x, typ))
 
-      case PtrType(elem) =>
+      case PtrType(elem) if korn.Main.pointers =>
         val s = Sort.pointer(resolve(typ))
+        val x = fresh(name, s)
+        (x, s, Val(x, typ))
+
+      case PtrType(elem) =>
+        val s = Sort.int
         val x = fresh(name, s)
         (x, s, Val(x, typ))
 
