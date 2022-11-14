@@ -19,6 +19,18 @@ object Result {
 case class Tool(timeout: Int, model: Boolean, write: Boolean, cmd: String*)
 
 object Tool {
+
+  object killall extends Thread {
+    var procs: Set[Process] = Set()
+
+    override def run() {
+      for (proc <- procs)
+        proc.destroyForcibly()
+    }
+  }
+
+  Runtime.getRuntime().addShutdownHook(killall)
+
   def run(cmd: String*) = {
     val process = new ProcessBuilder(cmd: _*)
     val status = process.start.waitFor()
@@ -28,6 +40,8 @@ object Tool {
   def pipe(cmd: String*) = {
     val builder = new ProcessBuilder(cmd: _*)
     val proc = builder.start()
+    killall.procs += proc
+
     val in = new PrintStream(proc.getOutputStream())
     val out = new BufferedReader(new InputStreamReader(proc.getInputStream()))
     val err = proc.getErrorStream()
