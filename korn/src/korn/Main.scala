@@ -125,6 +125,14 @@ object Main {
         tools += Tool(timeout, false, true, "eld", "-t:" + timeout)
         configure(rest)
 
+      case "-eld:portfolio" :: rest if model =>
+        tools += Tool(timeout, false, true, "eld", "-t:" + timeout, "-portfolio", "-ssol", "-cex")
+        configure(rest)
+
+      case "-eld:portfolio" :: rest =>
+        tools += Tool(timeout, false, true, "eld", "-t:" + timeout, "-portfolio")
+        configure(rest)
+
       case "-golem:spacer" :: rest if model =>
         pointers = false
         tools += Tool(timeout, false, true, "golem", "-l", "QF_LIA", "-e", "spacer", "--print-witness")
@@ -268,9 +276,9 @@ object Main {
           var (unit, result: Result) = if (write) {
             val to = smt(file)
             info("clauses:      " + to)
-            Tool.solve(file, timeout, hoist, model, expect, Some(to), cmd)
+            Tool.solve(file, timeout, model, hoist, expect, Some(to), cmd)
           } else {
-            Tool.solve(file, timeout, hoist, model, expect, None, cmd)
+            Tool.solve(file, timeout, model, hoist, expect, None, cmd)
           }
 
           try {

@@ -7,7 +7,6 @@ import korn.smt._
 import korn.Loc
 
 class Unit(val source: String, hoist: Boolean, stmts: List[Stmt]) {
-
   /** global data types */
   val typedefs = mutable.Map[String, Type]()
   val structs = mutable.Map[String, Option[List[Field]]]()
