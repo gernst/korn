@@ -15,7 +15,7 @@ import java.io.BufferedReader
 import java.io.FileWriter
 
 object Main {
-  val version = "0.3"
+  val version = "0.4"
 
   var dry = false
   var config = "default"
@@ -30,6 +30,7 @@ object Main {
   var confirm = false
   var witness_graphml = None: Option[String]
   var witness_quant = false
+  var write_smt2 = None: Option[String]
   var write = false
   var hoist = false
   var timeout = 900 // SV-COMP default
@@ -64,6 +65,10 @@ object Main {
   def configure(args: List[String]) {
     args match {
       case Nil =>
+
+      case ("-ir" | "-invariants-prepost") :: rest =>
+        config = "relational"
+        configure(rest)
 
       case ("-s" | "-summaries") :: rest =>
         config = "summaries"
@@ -185,6 +190,14 @@ object Main {
         witness_graphml = Some(file)
         configure(rest)
 
+      case "-smt2" :: file :: rest =>
+        write_smt2 = Some(file)
+        configure(rest)
+
+      case ("-c" | "-confirm") :: rest =>
+        confirm = true
+        configure(rest)
+
       case "-status" :: status :: rest =>
         expect = Some(status)
         configure(rest)
@@ -206,7 +219,7 @@ object Main {
     }
   }
 
-  def smt(path: String) = {
+  def smt2(path: String) = {
     ensure((path endsWith ".c") || (path endsWith ".i"), "unrecognized file ending: " + path)
     (path dropRight 2) + ".smt2"
   }
@@ -223,7 +236,7 @@ object Main {
       Tool.parse(file)
     } else {
       if (random > 0) {
-        debug("running:      random (" + random + "s)")
+        info("running:      random (" + random + "s)")
         var result = Tool.fuzz(file, random)
 
         if(confirm) {
@@ -255,7 +268,7 @@ object Main {
 
       if (tools.isEmpty) {
         if (write) {
-          val to = smt(file)
+          val to = write_smt2 getOrElse smt2(file)
           val out = new PrintStream(new File(to))
           info("clauses:      " + to)
           Tool.horn(file, model, hoist, expect, out)
@@ -271,10 +284,10 @@ object Main {
           // Note: local variables shadow class attribute
           val Tool(timeout, model, write, cmd @ _*) = tool
 
-          debug("running:      " + cmd.mkString(" "))
+          info("running:      " + cmd.mkString(" "))
 
-          var (unit, result: Result) = if (write) {
-            val to = smt(file)
+          val (unit, result) = if (write) {
+            val to = write_smt2 getOrElse smt2(file)
             info("clauses:      " + to)
             Tool.solve(file, timeout, model, hoist, expect, Some(to), cmd)
           } else {

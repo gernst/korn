@@ -11,6 +11,7 @@ class Proc(
     val ploc: Loc,
     val name: String,
     val params: List[Formal],
+    val ret: Type,
     val locals: List[Formal],
     val body: Stmt,
     val contract: Contract,
@@ -44,7 +45,10 @@ class Proc(
     }
 
     for (post <- posts get name) {
-      witness += post.name -> (this, ploc, post, external.names ++ List("\\result"), "postcondition")
+      if(ret != Type._void)
+        witness += post.name -> (this, ploc, post, external.names ++ List("\\result"), "postcondition")
+      else
+        witness += post.name -> (this, ploc, post, external.names, "postcondition")
     }
   }
 

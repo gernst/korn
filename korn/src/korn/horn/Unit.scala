@@ -145,13 +145,13 @@ class Unit(val source: String, hoist: Boolean, stmts: List[Stmt]) {
         // built-in
       case stmt@FunDef(ret, name, formals, body) =>
         val loc = korn.unpack(stmt.loc, "no location for while loop")
-        define(loc, name, formals, body)
+        define(loc, name, formals, ret, body)
       case _ =>
         // nothing to do
     }
   }
 
-  def define(loc: Loc, name: String, params: List[Formal], body: Stmt) {
+  def define(loc: Loc, name: String, params: List[Formal], ret: Type, body: Stmt) {
     import sig._
 
     val (locals, stmt) = if(hoist) {
@@ -162,7 +162,7 @@ class Unit(val source: String, hoist: Boolean, stmts: List[Stmt]) {
 
     val contract = Contract(name)
     val config = Config(korn.Main.config)
-    object proc extends Proc(this, loc, name, params, locals, stmt, contract, config)
+    object proc extends Proc(this, loc, name, params, ret, locals, stmt, contract, config)
 
     proc.run()
   }

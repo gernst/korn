@@ -232,6 +232,8 @@ class Sig(unit: Unit) {
     val _args = resolve(args)
     val _ret = resolve(ret)
 
+    // println("function: " + name + " " + _args + " " + _ret)
+
     if (!known(name)) {
       if (_ret != null) {
         pres += (name -> Pre(Fun(pre, _globals ++ _args, Sort.bool)))

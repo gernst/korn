@@ -3,6 +3,10 @@ void main() {
     int a[n];
     int b[n];
     int i=0;
+    int k;
+    assume(0 <= k && k < n);
+    
+    assume(0 <= n);
 
     while(i<n)
       // invariant $main_inv1
@@ -11,10 +15,6 @@ void main() {
         i++;
     }
     // assert $main_sum1
-
-    int k;
-    assume(n > 0);
-    assume(0 <= k && k < n);
     assert(i == n);
     assert(a[k] == b[k]);
 }
