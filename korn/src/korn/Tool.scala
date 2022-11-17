@@ -53,12 +53,12 @@ object Tool {
     val cmd = gcc ++ files
     val status = run(cmd: _*)
     Main.debug(cmd.mkString(" "))
-    if(status != 0)
+    if (status != 0)
       Main.info("compilation failed: " + cmd.mkString(" "))
     status == 0
   }
 
-  def confirm(file: String, result: Result) = {
+  def confirm(file: String, result: Result): Result = {
     result match {
       case Incorrect(trace) =>
         Main.debug("confirming " + trace)
@@ -110,7 +110,7 @@ object Tool {
         val bin = "./confirm"
         val ok = compile(bin, file, cex, "__VERIFIER.c")
 
-        if(ok) {
+        if (ok) {
           val (_, res, _, proc) = pipe(bin)
 
           res.readLine() match {
@@ -122,7 +122,10 @@ object Tool {
         } else {
           Result.unknown
         }
-      }
+
+      case _ =>
+        Result.unknown
+    }
   }
 
   def fuzz(file: String, timeout: Int): Result = {
@@ -182,7 +185,7 @@ object Tool {
       file: String,
       timeout: Int,
       model: Boolean,
-      hoist: Boolean, 
+      hoist: Boolean,
       expect: Option[String],
       write: Option[String],
       cmd: Seq[String]) = {

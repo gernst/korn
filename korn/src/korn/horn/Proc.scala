@@ -165,8 +165,6 @@ class Proc(
             loop.iter(si2, hyp, loc, this)
 
           loop.leave(hyp, this)
-
-          sin
         }
 
       case _ =>
