@@ -39,3 +39,8 @@ unsigned int        __VERIFIER_nondet_unsigned_int()
     { return (unsigned int)        __VERIFIER_next_nondet( 0, 32, "__VERIFIER_nondet_unsigned_int"); }
 unsigned long       __VERIFIER_nondet_unsigned_long()
     { return (unsigned long)       __VERIFIER_next_nondet( 0, 64, "__VERIFIER_nondet_unsigned_long"); } /* approx */
+
+float               __VERIFIER_nondet_float()
+    { return (float)               __VERIFIER_next_nondet( 1, 32, "__VERIFIER_nondet_float"); }
+double              __VERIFIER_nondet_double()
+    { return (double)              __VERIFIER_next_nondet( 1, 64, "__VERIFIER_nondet_double"); } /* approx */

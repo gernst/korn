@@ -10,6 +10,8 @@ object Config {
     which match {
       case "default" =>
         Config(Branch.relational, Loop.invariants(rel = false))
+      case "relational" =>
+        Config(Branch.relational, Loop.invariants(rel = true))
       case "summaries" =>
         Config(Branch.relational, Loop.summaries(rel = false, only = false, strong = false))
       case "summaries-only" =>

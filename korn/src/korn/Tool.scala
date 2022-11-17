@@ -48,12 +48,14 @@ object Tool {
     (in, out, err, proc)
   }
 
-  def compile(bin: String, files: String*) {
+  def compile(bin: String, files: String*) = {
     val gcc = List("gcc", "-m" + c.bits, "-o", bin, "-lm")
     val cmd = gcc ++ files
     val status = run(cmd: _*)
     Main.debug(cmd.mkString(" "))
-    korn.ensure(status == 0, "compilation failed: " + cmd.mkString(" "))
+    if(status != 0)
+      Main.info("compilation failed: " + cmd.mkString(" "))
+    status == 0
   }
 
   def confirm(file: String, trace: List[(String, BigInt)]) = {
@@ -64,6 +66,20 @@ object Tool {
 
     out println "#include <stdio.h>"
     out.println()
+
+    out println "void assume(int cond) {"
+    out println "    if(!cond) {"
+    out println "        printf(\"unknown\\n\");"
+    out println "        exit(0);"
+    out println "    }"
+    out println "}"
+
+    out println "void assert(int cond) {"
+    out println "    if(!cond) {"
+    out println "        printf(\"unsat\\n\");"
+    out println "        exit(0);"
+    out println "    }"
+    out println "}"
 
     out println "void __assert_fail(const char * assertion, const char * file, unsigned int line, const char * function) {"
     out println "    printf(\"unsat\\n\");"
@@ -90,14 +106,19 @@ object Tool {
     out.close()
 
     val bin = "./confirm"
-    compile(bin, file, cex, "__VERIFIER.c")
-    val (_, res, _, proc) = pipe(bin)
+    val ok = compile(bin, file, cex, "__VERIFIER.c")
 
-    res.readLine() match {
-      case "unsat" =>
-        Incorrect(trace)
-      case line =>
-        Result.unknown
+    if(ok) {
+      val (_, res, _, proc) = pipe(bin)
+
+      res.readLine() match {
+        case "unsat" =>
+          Incorrect(trace)
+        case line =>
+          Result.unknown
+      }
+    } else {
+      Result.unknown
     }
   }
 
@@ -106,9 +127,9 @@ object Tool {
     val start = System.currentTimeMillis()
 
     val bin = "./fuzz"
-    compile(bin, file, "__VERIFIER.c", "__VERIFIER_random.c")
+    val ok = compile(bin, file, "__VERIFIER.c", "__VERIFIER_random.c")
 
-    while (true) {
+    while (ok) {
       val now = System.currentTimeMillis()
       val remaining = now - start
 

@@ -4,9 +4,9 @@ void main() {
     int b[n];
     int i=0;
     int k;
+    assume(0 <= k && k < n);
     
     assume(0 <= n);
-    assume(0 <= k && k < n);
 
     while(i<n)
       // invariant $main_inv1

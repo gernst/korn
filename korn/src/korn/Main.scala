@@ -15,7 +15,7 @@ import java.io.BufferedReader
 import java.io.FileWriter
 
 object Main {
-  val version = "0.3"
+  val version = "0.4"
 
   var dry = false
   var config = "default"
@@ -30,6 +30,7 @@ object Main {
   var confirm = false
   var witness_graphml = None: Option[String]
   var witness_quant = false
+  var write_smt2 = None: Option[String]
   var write = false
   var timeout = 900 // SV-COMP default
   var tools = mutable.Buffer[Tool]()
@@ -63,6 +64,10 @@ object Main {
   def configure(args: List[String]) {
     args match {
       case Nil =>
+
+      case ("-ir" | "-invariants-prepost") :: rest =>
+        config = "relational"
+        configure(rest)
 
       case ("-s" | "-summaries") :: rest =>
         config = "summaries"
@@ -112,6 +117,14 @@ object Main {
 
       case "-eld" :: rest =>
         tools += Tool(timeout, false, true, "eld", "-t:" + timeout)
+        configure(rest)
+
+      case "-eld:portfolio" :: rest if model =>
+        tools += Tool(timeout, false, true, "eld", "-t:" + timeout, "-ssol", "-cex", "-portfolio")
+        configure(rest)
+
+      case "-eld:portfolio" :: rest =>
+        tools += Tool(timeout, false, true, "eld", "-t:" + timeout, "-portfolio")
         configure(rest)
 
       case "-golem:spacer" :: rest if model =>
@@ -166,7 +179,11 @@ object Main {
         witness_graphml = Some(file)
         configure(rest)
 
-      case "-confirm" :: file :: rest =>
+      case "-smt2" :: file :: rest =>
+        write_smt2 = Some(file)
+        configure(rest)
+
+      case ("-c" | "-confirm") :: rest =>
         confirm = true
         configure(rest)
 
@@ -191,7 +208,7 @@ object Main {
     }
   }
 
-  def smt(path: String) = {
+  def smt2(path: String) = {
     ensure((path endsWith ".c") || (path endsWith ".i"), "unrecognized file ending: " + path)
     (path dropRight 2) + ".smt2"
   }
@@ -208,7 +225,7 @@ object Main {
       Tool.parse(file)
     } else {
       if (random > 0) {
-        debug("running:      random (" + random + "s)")
+        info("running:      random (" + random + "s)")
         val result = Tool.fuzz(file, random)
 
         result match {
@@ -236,7 +253,7 @@ object Main {
 
       if (tools.isEmpty) {
         if (write) {
-          val to = smt(file)
+          val to = write_smt2 getOrElse smt2(file)
           val out = new PrintStream(new File(to))
           info("clauses:      " + to)
           Tool.horn(file, model, expect, out)
@@ -252,10 +269,10 @@ object Main {
           // Note: local variables shadow class attribute
           val Tool(timeout, model, write, cmd @ _*) = tool
 
-          debug("running:      " + cmd.mkString(" "))
+          info("running:      " + cmd.mkString(" "))
 
           val (unit, result) = if (write) {
-            val to = smt(file)
+            val to = write_smt2 getOrElse smt2(file)
             info("clauses:      " + to)
             Tool.solve(file, timeout, model, expect, Some(to), cmd)
           } else {
