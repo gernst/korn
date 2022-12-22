@@ -35,8 +35,8 @@ class Proc(
     val st0 = state
     val st1 = contract.enter(st0, this)
     val ctx = Context.init(st1)
-    
-    for(st2 <- local(body, st1, st1, ctx)) {
+
+    for (st2 <- local(body, st1, st1, ctx)) {
       contract.leave(st1, st2, None, this) // implicit return without value
     }
 
@@ -45,7 +45,7 @@ class Proc(
     }
 
     for (post <- posts get name) {
-      if(ret != Type._void)
+      if (ret != Type._void)
         witness += post.name -> (this, ploc, post, external.names ++ List("\\result"), "postcondition")
       else
         witness += post.name -> (this, ploc, post, external.names, "postcondition")
@@ -63,18 +63,38 @@ class Proc(
   }
 
   def local(stmts: List[Stmt], st0: State, st1: State, ctx: Context): List[State] = {
-    stmts match {
-      case Nil =>
-        List(st1)
-      case first :: rest =>
-        for (
-          st2 <- local(first, st0, st1, ctx);
-          st3 <- local(rest, st0, st2, ctx)
-        )
-          yield st3
-    }
-  }
+    // stmts match {
+    //   case Nil =>
+    //     List(st1)
+    //   case first :: rest =>
+    //     for (
+    //       st2 <- local(first, st0, st1, ctx);
+    //       st3 <- local(rest, st0, st2, ctx)
+    //     )
+    //       yield st3
+    // }
 
+    // do not use recursion for large benchmarks
+
+    var todo = List((st1, stmts))
+    var done: List[State] = Nil
+
+    while (todo.nonEmpty) {
+      val (st1, stmts) :: cont = todo
+      todo = cont
+
+      stmts match {
+        case Nil =>
+          done = st1 :: done
+
+        case first :: rest =>
+          for (st2 <- local(first, st0, st1, ctx))
+            todo = (st2, rest) :: todo
+      }
+    }
+
+    done
+  }
 
   def local(stmt: Stmt, st0: State, st1: State, ctx: Context): List[State] = {
     stmt match {
@@ -151,7 +171,7 @@ class Proc(
 
         val (inv, sum, si0) = loop.enter(st0, st1, loc, this)
 
-        for((_test, si1) <- rval_test(test, si0)) yield {
+        for ((_test, si1) <- rval_test(test, si0)) yield {
           val sin = si1 and !_test
           val siy = si1 and _test
 
@@ -161,7 +181,7 @@ class Proc(
 
           loop.term(hyp, loc, this)
 
-          for(si2 <- local(body, si0, siy, hyp :: ctx))
+          for (si2 <- local(body, si0, siy, hyp :: ctx))
             loop.iter(si2, hyp, loc, this)
 
           loop.leave(hyp, this)

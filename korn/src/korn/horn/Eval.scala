@@ -485,7 +485,8 @@ class Eval(unit: Unit) {
             }
 
         case Cast(typ, expr) =>
-          rval(expr, st1)
+          for ((_pure, st2) <- rval(expr, st1))
+            yield (Val.cast(_pure, typ), st2)
 
         case _ =>
           korn.error("cannot compute: " + expr)

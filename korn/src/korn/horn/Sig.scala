@@ -119,7 +119,7 @@ class Sig(unit: Unit) {
       case Type._Bool            => Sort.int
       case _: Signed             => Sort.int
       case _: Unsigned           => Sort.int
-      case TypedefName("size_t") => Sort.int
+      // case TypedefName("size_t") => Sort.int
 
       case PtrType(elem) if korn.Main.pointers =>
         pointers = true; Sort.pointer(resolve(elem))
@@ -134,6 +134,15 @@ class Sig(unit: Unit) {
         Sort.real
       case Type._double if korn.Main.float =>
         Sort.real
+
+      case TypedefName(name) =>
+        resolve(typedefs(name))
+
+      case StructName(name) => 
+        Sort.base(name)
+
+      case UnionName(name) => 
+        Sort.base(name)
 
       case _ =>
         korn.error("cannot resolve: " + typ)
@@ -159,6 +168,9 @@ class Sig(unit: Unit) {
         val min = Pure.zero
         val max = bound - 1
         (min <= pure) and (pure <= max)
+
+      case TypedefName(name) => 
+        bounds(pure, typedefs(name))
 
       case _ =>
         korn.error("unsupported type: " + typ + " " + pure)
@@ -201,6 +213,9 @@ class Sig(unit: Unit) {
         val s = Sort.array(Sort.int, resolve(elem))
         val x = fresh(name, s)
         (x, s, Val(x, typ))
+
+      case TypedefName(name) => 
+        nondet(name, typedefs(name))
 
       case _ =>
         korn.error("unsupported type: " + typ + " " + name)

@@ -14,6 +14,12 @@ object Val {
   def to(v: Option[Val]) = v map (_.pure)
   def to(v: List[Val]) = v map (_.pure)
 
+  // XXX: massively unsound cast
+  def cast(arg: Val, typ: Type) = {
+    val Val(pure, _) = arg
+    Val(pure, typ)
+  }
+
   def truth(arg: Val): Pure = {
     val Val(pure, typ) = arg
     truth(pure)

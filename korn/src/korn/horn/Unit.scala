@@ -73,6 +73,8 @@ class Unit(val source: String, hoist: Boolean, stmts: List[Stmt]) {
     import eval._
 
     stmt match {
+      case Atomic(None) => 
+        
       case Group(stmts) =>
         // use case: groups of variable declarations
         run(stmts, static)
@@ -136,9 +138,9 @@ class Unit(val source: String, hoist: Boolean, stmts: List[Stmt]) {
       case VarDef(formal @ Formal(typ, name), None) =>
         var (_, _, x) = nondet(name, typ)
         state += name -> x
-      case VarDef(formal @ Formal(typ, name), Some(init)) =>
+      case VarDef(formal @ Formal(typ, name), Some(Left(init))) =>
         var (_, _, x) = nondet(name, typ)
-        state += name -> x
+        state += name -> x // for weird recursive initializers
         val y = value(init, state)
         state += name -> y
       case FunDef(ret, "reach_error", formals, body) =>

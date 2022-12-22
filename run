@@ -1,6 +1,6 @@
 #!/bin/sh
 
-export JAVA_OPTS="$JAVA_OPTS -Xss4M"
+export JAVA_OPTS="$JAVA_OPTS -Xss128M"
 export PATH=".:$PATH"
 exec java -cp korn.jar korn.Main $@
 

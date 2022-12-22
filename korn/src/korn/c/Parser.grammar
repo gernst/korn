@@ -118,7 +118,7 @@ params
 var
     = ptrs.x ID.n dims.ds            {: return s(new VarSpec(x, n, ds));     :}
     | ptrs.x ID.n dims.ds ASG expr.i {: return s(new VarSpec(x, n, ds, i));  :}
-    // | ptrs.x ID.n dims.ds ASG LBRACE exprs.es RBRACE {: return s(new VarSpec(x, n, ds));  :}
+    | ptrs.x ID.n dims.ds ASG LBRACE exprs.es RBRACE {: return s(new VarSpec(x, n, ds, es));  :}
     ;
 
 vars
@@ -157,22 +157,29 @@ fun = ID.n | LPAREN ID.n RPAREN;
 
 stmts = stmt *;
 
+
+/* need to execute the action before semicolon is consumed
+   such that the scanner is not ahead too far */
+stmt_typedef
+    = TYPEDEF type.t ptrs.x ID.n dims.ds
+        {: types.add(n);
+           return s(new TypeDef(Parsing.wrap(t.withDims(ds), x), n));    :}
+    | TYPEDEF STRUCT ID.m LBRACE fields.fs RBRACE ptrs.x ID.n
+        {: types.add(n);
+           return s(new Group(new StructDef(m, Parsing.members(fs)),
+                              new TypeDef(Parsing.wrap(new StructName(m), x), n))); :}
+    | TYPEDEF UNION ID.m LBRACE fields.fs RBRACE ptrs.x ID.n
+        {: types.add(n);
+           return s(new Group(new UnionDef(m, Parsing.members(fs)),
+                              new TypeDef(Parsing.wrap(new UnionName(m), x), n))); :}
+    ;
+
 stmt
     = block
-
-    | TYPEDEF type.t ptrs.x ID.n dims.ds SEMICOLON      {: types.add(n);
-                                                           return s(new TypeDef(Parsing.wrap(t.withDims(ds), x), n));    :}
+    | stmt_typedef.s SEMICOLON
     | TYPEDEF type.t ptrs.x LPAREN STAR ID.n RPAREN LPAREN params.ps RPAREN
                                                         {: types.add(n);
                                                            return s(new TypeDef(new FunPtrType(Parsing.wrap(t, x), Parsing.params(ps)), n)); :}
-    | TYPEDEF STRUCT ID.m LBRACE fields.fs RBRACE ID.n SEMICOLON
-                                                        {: types.add(n);
-                                                           return s(new Group(new StructDef(m, Parsing.members(fs)),
-                                                                              new TypeDef(new StructName(m), n))); :}
-    | TYPEDEF UNION ID.m LBRACE fields.fs RBRACE ID.n SEMICOLON
-                                                        {: types.add(n);
-                                                           return s(new Group(new UnionDef(m, Parsing.members(fs)),
-                                                                              new TypeDef(new UnionName(m), n))); :}
     | STRUCT  ID.n SEMICOLON                            {: return s(new StructDecl(n));    :}
     | UNION   ID.n SEMICOLON                            {: return s(new UnionDecl(n));     :}
     | ENUM    ID.n SEMICOLON                            {: return s(new EnumDecl(n));      :}

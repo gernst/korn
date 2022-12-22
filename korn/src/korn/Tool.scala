@@ -69,19 +69,21 @@ object Tool {
         out println "#include <stdio.h>"
         out.println()
 
-        out println "void assume(int cond) {"
-        out println "    if(!cond) {"
-        out println "        printf(\"unknown\\n\");"
-        out println "        exit(0);"
-        out println "    }"
-        out println "}"
+        if (false) {
+          out println "void assume(int cond) {"
+          out println "    if(!cond) {"
+          out println "        printf(\"unknown\\n\");"
+          out println "        exit(0);"
+          out println "    }"
+          out println "}"
 
-        out println "void assert(int cond) {"
-        out println "    if(!cond) {"
-        out println "        printf(\"unsat\\n\");"
-        out println "        exit(0);"
-        out println "    }"
-        out println "}"
+          out println "void assert(int cond) {"
+          out println "    if(!cond) {"
+          out println "        printf(\"unsat\\n\");"
+          out println "        exit(0);"
+          out println "    }"
+          out println "}"
+        }
 
         out println "void __assert_fail(const char * assertion, const char * file, unsigned int line, const char * function) {"
         out println "    printf(\"unsat\\n\");"

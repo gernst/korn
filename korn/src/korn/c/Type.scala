@@ -13,6 +13,15 @@ sealed trait Type {
       bounds.foldLeft(this)(ArrayType)
   }
 
+  def <=(that: Type): Boolean = {
+    (this, that) match {
+      case (Signed(name1, bytes1), Signed(name2, bytes2)) =>
+        bytes1 <= bytes2
+      case (Unsigned(name1, bytes1), Unsigned(name2, bytes2)) =>
+        bytes1 <= bytes2
+    }
+  }
+
   def |(that: Type): Type = {
     (this, that) match {
       // If both operands have the same type, then no further conversion is needed.

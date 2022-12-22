@@ -14,9 +14,10 @@ case class ParamSpec(typ: Type, name: Option[String], dims: Dims) {
   def this(typ: Type, name: String, dims: Dims) = this(typ, Some(name), dims)
 }
 
-case class VarSpec(ptrs: Int, name: String, dims: Dims, init: Option[Expr]) {
+case class VarSpec(ptrs: Int, name: String, dims: Dims, init: Option[Either[Expr,List[Expr]]]) {
   def this(ptrs: Int, name: String, dims: Dims) = this(ptrs, name, dims, None)
-  def this(ptrs: Int, name: String, dims: Dims, init: Expr) = this(ptrs, name, dims, Some(init))
+  def this(ptrs: Int, name: String, dims: Dims, init: Expr) = this(ptrs, name, dims, Some(Left(init)))
+  def this(ptrs: Int, name: String, dims: Dims, init: Array[Expr]) = this(ptrs, name, dims, Some(Right(init.toList)))
 }
 
 case class FieldSpec(ptrs: Int, name: String, dims: Dims) {
@@ -301,12 +302,19 @@ object Stmt {
         val name_ = Id.fresh(name)
         val id_ = Id(name_)
         val formal_ = Formal(typ, name_)
-        val init_ = init map (_ rename re0)
+        val init_ = init map {
+          case Left(expr) => expr rename re0
+          case _ => ???
+        }
+
         (List(formal_), Assume(id_, init_, typ), re0 + (name -> name_))
 
       case VarDef(formal@Formal(typ, name), init) =>
         val id = Id(name)
-        val init_ = init map (_ rename re0)
+        val init_ = init map {
+          case Left(expr) => expr rename re0
+          case Right(exprs) => ??? // exprs map (_ rename re0)
+        }
         (List(formal), Assume(id, init_, typ), re0)
 
       case _ =>
@@ -402,9 +410,9 @@ case class EnumDecl(name: String) extends Stmt
 
 case class Switch(expr: Expr, body: Stmt) extends Stmt {}
 
-case class VarDef(formal: Formal, init: Option[Expr]) extends Stmt {
+case class VarDef(formal: Formal, init: Option[Either[Expr, List[Expr]]]) extends Stmt {
   def this(formal: Formal) = this(formal, None)
-  def this(formal: Formal, init: Expr) = this(formal, Some(init))
+  def this(formal: Formal, init: Expr) = this(formal, Some(Left(init)))
 }
 
 case class FunDecl(ret: Type, name: String, types: List[Type]) extends Stmt {

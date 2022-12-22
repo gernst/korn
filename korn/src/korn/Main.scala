@@ -194,10 +194,6 @@ object Main {
         write_smt2 = Some(file)
         configure(rest)
 
-      case ("-c" | "-confirm") :: rest =>
-        confirm = true
-        configure(rest)
-
       case "-status" :: status :: rest =>
         expect = Some(status)
         configure(rest)
@@ -372,6 +368,9 @@ object Main {
           note("error")
           info("error:        " + e.msg)
           if (debug) e.printStackTrace()
+        case e: StackOverflowError =>
+          note("error")
+          info("error:        stack overflow")
         case e: Throwable =>
           note("error")
           info("error:        " + e.getMessage())

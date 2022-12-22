@@ -150,6 +150,11 @@ object FunCall {
   }
 }
 
-case class Init(values: Array[(Option[String], Expr)]) extends Expr { // { .field = value } or { value }
-  def rename(re: Map[String, String]) = ???
+case class Init(values: List[(Option[String], Expr)]) extends Expr { // { .field = value } or { value }
+  def this() = this(Nil)
+
+  def rename(re: Map[String, String]) =
+    Init(values map {
+      case (name, arg) => (name, arg rename re)
+    })
 }
