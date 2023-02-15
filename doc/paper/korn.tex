@@ -136,47 +136,79 @@ When a counterexample is found, a test harness is compiled confirm whether \text
 \section{Discussion: Strengths and Weaknesses}
 \label{sec:discussion}
 
+\paragraph{General Capabilities.}
+\Korn supports a substantial fraction of the C~language, with the greatest limitation
+being the lack of support for dynamic data structures (see website for a detailed account),
+which means that currently, any task which requires a memory model is out of scope.
+% That said, the implementation is staight-forward and modular in the specifics of the translation
+% to clauses, so that \Korn is a nice basis for experiments.
+The translation supports most control structures, including \texttt{goto} and labels.
+With respect to solving verification tasks,
+\Korn inherits most of the strenths and limitations of the underlying solvers.
+Tasks that require invariants or procedure contracts in the fragment of linear integer arithmetic
+are typically proved quickly by the solvers.
+\Korn implements a trick similar to~\cite{monniaux2016cell}
+to reduce the need for quantifiers in invariants over arrays,
+but solvers do typically perform badly on such tasks.
+Due to its limitations, \Korn participated only in four categories,
+\texttt{ControlFlow},
+\texttt{Loops},
+\texttt{Recursive},
+\texttt{XCSP}
+for property \texttt{ReachSafety}.
+
+\paragraph{Soundness Guarantees.}
+The theroetical approach used by \Korn is sound and complete
+relative to the solver capabilities.
+However, the current implementation does not capture all~C behavior adequately:
+\begin{itemize}
+\item Integer types are treated as unbounded and arithmetic overflows are not modeled at all.
+ This occurs in a single task, \texttt{nla-digbench/geo1-u.c},
+ which contains an error caused by an unsigned integer overflow.
+ \Korn would wrongly prove this task safe incorrectly,
+ but in the competition the bug is quickly discovered by the random sampler,
+ thereby working around this issue.
+ We aim to experiment with a bitvector encoding eventually,
+ which would allow \Korn to tackle tasks involving bitwise operations, too.
+\item Arrays are currently modeled as value types.
+ Benchmarks in which tracking aliases is relevant to correctness
+ may not be solved correctly, but that does not occur in the categories in which \Korn participates.
+\item \Korn can confirm counterexample traces reported by Eldarica by compiling and running a test harness.
+ This means that each bug reported is a true bug.
+ The original intention was to catch two incorrect error verdicts,
+ but it also prevents \Korn to report 50 error verdicts correctly in category \texttt{XCSP},
+ because Z3 does not show counterexamples at all,
+ and Eldarica's traces are too short for some reason that is yet unclear.
+\item
+ \Korn fixes the evaluation order to be right-to-left to match
+ the order used by C compilers (cf. previous point).
+ This is not sound wrt.~C semantics and moreover different from most other SV-COMP tools.
+\end{itemize}
+
+\paragraph{Effectiveness of Random Sampling.}
+
+
+\paragraph{Modular Verification.}
+Horn clause encodings are inherently modular:
+Loops are never unrolled explicitly,
+albeit the solvers typically do internally so to construct counterexamples.
+C~functions are always abstracted in terms of contracts,
+consisting of a pre-/postcondition pair.
+
+
 \begin{itemize}
 \item No incorrect results within the assumptions
 \item High-quality witnesses
 \end{itemize}
 
-\Korn supports a substantial fraction of the C~language, with the greatest limitation
-being the lack of support for dynamic data structures (see website for a detailed account).
-% That said, the implementation is staight-forward and modular in the specifics of the translation
-% to clauses, so that \Korn is a nice basis for experiments.
-The translation supports most control structures, including \texttt{goto} and labels.
-\Korn is lation su
-
-\Korn inherits most of the strenths and limitations of the underlying solvers.
-Tasks that require invariants or procedure contracts in the fragment of linear integer arithmetic
-are typically proved quickly by the solvers.
-However, as soon as arrays are involved, the solvers typically perform badly,
-as can be seen on many tasks in category \texttt{Loops}.
-Still, some loop invariants can be found over arrays.
-\Korn never unrolls any loop explicitly (albeit the solvers may do so internally),
-it may not perform well on
-tasks with a fixed loop bound and which can be solved efficiently by exploration of the state space.
-Currently, any task which requires a memory model is out of scope.
 
 The random sampler is a key success factor for \Korn in the competition.
-It quickly find many errors, including one in \texttt{nla-digbench/geo1-u.c} caused by an unsigned integer overflow.
-This masks an unsound verdict by \Korn, which does not model overflow arithmetic currently, and therefore deems the program safe.
+
 Having ground truth to confirm counterexamples by native execution conversely prevents a few false results.
 % An example is \texttt{recursive/Primes.c}, which for unknown reasons
 % currently produces a spurious counterexample (possibly because it requires a \emph{recursive} predicate in the model).
 % 
-\Korn employs a trick similar to~\cite{monniaux2016cell} but less sophisticated
-to reduce the need for quantifiers in invariants over arrays.
-It targets the pattern typically used as means to specify property $P$ over individual array elements $a[k]$,
-occurring after a loop:
-\verb|int k; if(0 <= k && k < n) assert(P(a[k]));|
-The idea is to lift all local variables like $k$ to the top-level of the procedure,
-such that the invariant only needs to regard this specific value of $k$, not all of them.
-The benefit of this encoding has been observed in a few instances,
-but as it cannot be turned off entirely, the overall impact is not entirely clear.
-Note that presence of such a $k$ in the invariant is not actually syntactically correct,
-but fortunately it does not seem to happen often in the competition.
+
 Finally, the current parser is somewhat limited and fails on some portion of tasks,
 notably in \texttt{ControlFlow} and other categories where \Korn does not participate in.
 
