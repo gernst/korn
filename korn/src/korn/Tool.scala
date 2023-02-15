@@ -53,7 +53,7 @@ object Tool {
     val cmd = gcc ++ files
     val status = run(cmd: _*)
     Main.debug(cmd.mkString(" "))
-    if(status != 0)
+    if (status != 0)
       Main.info("compilation failed: " + cmd.mkString(" "))
     status == 0
   }
@@ -65,21 +65,22 @@ object Tool {
     val out = new PrintStream(new File(cex))
 
     out println "#include <stdio.h>"
+    out println "#include <stdlib.h>"
     out.println()
 
-    out println "void assume(int cond) {"
-    out println "    if(!cond) {"
-    out println "        printf(\"unknown\\n\");"
-    out println "        exit(0);"
-    out println "    }"
-    out println "}"
+    // out println "void assume(int cond) {"
+    // out println "    if(!cond) {"
+    // out println "        printf(\"unknown\\n\");"
+    // out println "        exit(0);"
+    // out println "    }"
+    // out println "}"
 
-    out println "void assert(int cond) {"
-    out println "    if(!cond) {"
-    out println "        printf(\"unsat\\n\");"
-    out println "        exit(0);"
-    out println "    }"
-    out println "}"
+    // out println "void assert(int cond) {"
+    // out println "    if(!cond) {"
+    // out println "        printf(\"unsat\\n\");"
+    // out println "        exit(0);"
+    // out println "    }"
+    // out println "}"
 
     out println "void __assert_fail(const char * assertion, const char * file, unsigned int line, const char * function) {"
     out println "    printf(\"unsat\\n\");"
@@ -108,7 +109,7 @@ object Tool {
     val bin = "./confirm"
     val ok = compile(bin, file, cex, "__VERIFIER.c")
 
-    if(ok) {
+    if (ok) {
       val (_, res, _, proc) = pipe(bin)
 
       res.readLine() match {
@@ -122,20 +123,14 @@ object Tool {
     }
   }
 
-  def fuzz(file: String, timeout: Int): Result = {
+  def check(file: String): Result = {
     /* random sampling for given number of seconds */
     val start = System.currentTimeMillis()
 
     val bin = "./fuzz"
-    val ok = compile(bin, file, "__VERIFIER.c", "__VERIFIER_random.c")
+    val ok = compile(bin, file, "__VERIFIER.c", "__VERIFIER_zero.c")
 
-    while (ok) {
-      val now = System.currentTimeMillis()
-      val remaining = now - start
-
-      if (remaining > timeout * 1000)
-        return Result.unknown
-
+    if (ok) {
       val (in, out, err, proc) = pipe(bin)
       val status = proc.waitFor()
 
@@ -149,6 +144,38 @@ object Tool {
     }
 
     return Result.unknown
+  }
+
+  def fuzz(file: String, timeout: Int): (Int, Result) = {
+    /* random sampling for given number of seconds */
+    val start = System.currentTimeMillis()
+
+    val bin = "./fuzz"
+    val ok = compile(bin, file, "__VERIFIER.c", "__VERIFIER_random.c")
+
+    var rounds: Int = 0
+
+    while (ok) {
+      val now = System.currentTimeMillis()
+      val remaining = now - start
+
+      if (remaining > timeout * 1000)
+        return (rounds, Result.unknown)
+
+      rounds += 1
+      val (in, out, err, proc) = pipe(bin)
+      val status = proc.waitFor()
+
+      val result = Backend.read(out, file)
+
+      result match {
+        case _: Incorrect =>
+          return (rounds, result)
+        case _ =>
+      }
+    }
+
+    return (rounds, Result.unknown)
   }
 
   def hash(file: String) = {

@@ -70,7 +70,7 @@
 
 %typeof ASG_OP  = "String";
 
-%typeof const   = "String";
+%typeof const   = "Const";
 
 %typeof type    = "Type";
 %typeof expr    = "Expr";
@@ -144,7 +144,10 @@ fields__
 fields
     = fields__ *;
 
-const  = ID.n;
+const  = ID.n             {: return s(new Const(n));    :}
+       | ID.n ASG CONST.i {: return s(new Const(n, i)); :}
+       ;
+
 consts = const | consts COMMA const;
 exprs  = expr @ASG | exprs COMMA expr;
 

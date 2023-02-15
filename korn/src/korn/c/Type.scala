@@ -1,5 +1,19 @@
 package korn.c
 
+case class Const(name: String, index: Option[Int]) extends beaver.Symbol {
+  def this(name: String) = this(name, None)
+  def this(name: String, index: AnyRef) = this(name, Some(index match {
+    case i: Integer => i.toInt
+    case i: java.lang.Long => i.toInt
+    case _ => korn.error("not a number: " + index + ": " + index.getClass().getSimpleName())
+  }))
+  
+  override def toString = index match {
+    case None => name
+    case Some(index) => name + " = " + index
+  }
+}
+
 case class Field(typ: Type, name: String) {
   override def toString = typ + " " + name
 }
@@ -143,6 +157,6 @@ case class AnonUnion(fields: List[Field]) extends CompoundType {
   def this(fields: Array[Field]) = this(fields.toList)
 }
 
-case class AnonEnum(consts: List[String]) extends CompoundType {
-  def this(consts: Array[String]) = this(consts.toList)
+case class AnonEnum(consts: List[Const]) extends CompoundType {
+  def this(consts: Array[Const]) = this(consts.toList)
 }

@@ -25,6 +25,7 @@ object Main {
   var float = false
   var pointers = true
   var random = 0
+  var zero = 0
   var expect = None: Option[String]
   var witness = false
   var confirm = false
@@ -92,6 +93,10 @@ object Main {
 
       case ("-r" | "-random") :: n :: rest =>
         random = n.toInt
+        configure(rest)
+
+      case ("-z" | "-zero") :: rest =>
+        zero = 1
         configure(rest)
 
       case ("-d" | "-debug") :: rest =>
@@ -224,15 +229,15 @@ object Main {
     if (dry) {
       Tool.parse(file)
     } else {
-      if (random > 0) {
-        info("running:      random (" + random + "s)")
-        val result = Tool.fuzz(file, random)
+      if (zero > 0) {
+        info("running:      zero")
+        val result = Tool.check(file)
 
         result match {
           case Incorrect(trace) =>
             note("unsat")
             info("status:       incorrect")
-            info("backend:      random")
+            info("backend:      zero")
             debug("trace:")
             for ((fun, arg) <- trace)
               debug("  " + fun + "() = " + arg)
@@ -251,7 +256,36 @@ object Main {
         }
       }
 
-      if (tools.isEmpty) {
+      if (random > 0) {
+        info("running:      random (" + random + "s)")
+        val (rounds, result) = Tool.fuzz(file, random)
+
+        result match {
+          case Incorrect(trace) =>
+            note("unsat")
+            info("status:       incorrect")
+            info("backend:      random (" + rounds + " rounds)")
+            debug("trace:")
+            for ((fun, arg) <- trace)
+              debug("  " + fun + "() = " + arg)
+
+            if (witness) {
+              val dest = witness_graphml getOrElse graphml(file)
+              val out = new PrintStream(new File(dest))
+              Witness.cex(file, trace, out)
+              info("witness:      " + dest)
+            }
+
+            return
+
+          case _ =>
+            info("status:       unknown")
+            info("backend:      random (" + rounds + " rounds)")
+          // continue
+        }
+      }
+
+      if (tools.isEmpty && random == 0 && zero == 0) {
         if (write) {
           val to = write_smt2 getOrElse smt2(file)
           val out = new PrintStream(new File(to))

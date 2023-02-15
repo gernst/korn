@@ -391,9 +391,9 @@ case class UnionDef(name: String, fields: List[Field]) extends Stmt {
   def this(name: String, fields: Array[Field]) = this(name, fields.toList)
 }
 
-case class EnumDef(name: Option[String], consts: List[String]) extends Stmt {
-  def this(consts: Array[String]) = this(None, consts.toList)
-  def this(name: String, consts: Array[String]) = this(Some(name), consts.toList)
+case class EnumDef(name: Option[String], consts: List[Const]) extends Stmt {
+  def this(consts: Array[Const]) = this(None, consts.toList)
+  def this(name: String, consts: Array[Const]) = this(Some(name), consts.toList)
 }
 
 case class StructDecl(name: String) extends Stmt

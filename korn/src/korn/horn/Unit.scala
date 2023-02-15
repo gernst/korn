@@ -12,7 +12,7 @@ class Unit(val source: String, stmts: List[Stmt]) {
   val typedefs = mutable.Map[String, Type]()
   val structs = mutable.Map[String, Option[List[Field]]]()
   val unions = mutable.Map[String, Option[List[Field]]]()
-  val enums = mutable.Map[String, Option[List[String]]]()
+  val enums = mutable.Map[String, Option[List[Const]]]()
 
   /** global C variables and functions */
   var globals: List[Formal] = Nil
@@ -53,9 +53,19 @@ class Unit(val source: String, stmts: List[Stmt]) {
     clause(st and !phi, False, reason)
   }
 
-  def enum(cases: List[String]) = {
-    for ((name, index) <- cases.zipWithIndex)
-      consts += name -> Val(Pure.const(index), Signed._int)
+  def enum(cases: List[Const]) = {
+    var index = 0
+
+    cases foreach {
+      case Const(name, None) =>
+        consts += name -> Val(Pure.const(index), Signed._int)
+        index += 1
+
+      case Const(name, Some(next)) =>
+        index = next
+        consts += name -> Val(Pure.const(index), Signed._int)
+        index += 1
+    }
   }
 
   def run() {
@@ -116,12 +126,12 @@ class Unit(val source: String, stmts: List[Stmt]) {
       case FunDecl(ret, name, types) =>
         declare(name, ret, types)
       case FunDef(ret, "reach_error", formals, body) =>
-        // built-in
+      // built-in
       case FunDef(ret, name, formals, body) =>
         val types = formals map (_.typ)
         declare(name, ret, types)
       case _ =>
-        // nothing to do
+      // nothing to do
     }
   }
 
@@ -143,12 +153,12 @@ class Unit(val source: String, stmts: List[Stmt]) {
         val y = value(init, state)
         state += name -> y
       case FunDef(ret, "reach_error", formals, body) =>
-        // built-in
-      case stmt@FunDef(ret, name, formals, body) =>
+      // built-in
+      case stmt @ FunDef(ret, name, formals, body) =>
         val loc = korn.unpack(stmt.loc, "no location for while loop")
         define(loc, name, formals, ret, body)
       case _ =>
-        // nothing to do
+      // nothing to do
     }
   }
 

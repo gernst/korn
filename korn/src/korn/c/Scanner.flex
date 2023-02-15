@@ -184,7 +184,7 @@ IS = (u|U|l|L)*
 L?'(\\.|[^\'\\])+'      { return newToken(Terminals.CONST, Parsing.ch(yytext()));         }
 L?\"(\\.|[^\"\\])*\"    { return newToken(Terminals.CONST, Parsing.str(yytext()));        }
 
-// [0-9]+      { return newToken(Terminals.NUM, Integer.parseInt(yytext())); }
+// [0-9]+                  { return newToken(Terminals.NUM, Integer.parseInt(yytext())); }
 
 [^]         { throw new Scanner.Exception("unexpected character '" + yytext() + "'"); }
 
