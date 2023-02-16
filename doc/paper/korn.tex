@@ -75,21 +75,18 @@ specifically for SV-COMP Z3~\cite{bjorner2013solving} and Eldarica~\cite{hojjat2
 Both solvers generate evidence for correctness of a given program in terms of models that describe how the unknown predicates need to be instantiated.
 Moreover, Eldarica can generate counterexample traces, and \Korn instruments the Horn clause system to get
 the concrete values returned by the \texttt{\_\_VERIFIER\_nondet\_*()} functions on an error path.
-These solvers have different strengths and weaknesses.
+For these reasons, \Korn tends to produce detailed correctness and violation witnesses.
+
+Different solvers have different strengths and weaknesses.
 To that end, \Korn implements a portfolio approach with several sequential stages.
 The configuration for SV-COMP is as follows:
 \begin{enumerate}
     \item Initially, 10s of random sampling with small values is performed.
           It picks for each input value uniformly between number 0, and values of 2, 5, and 10 bits respectively, possibly with a sign.
-          This turned out to be enormeously effective,
-          finding all 210 violations that \Korn reported, most in under 2 seconds
-          (cf. \cref{sec:discussion}).
-          There is no particular justification for the concrete sampling scheme,
-          except that it seems to work fine on the competition benchmarks.
-          Choosing 0 always solves 57 tasks only as evidence that some variation is beneficial,
-          and absense of too large values avoids very long running loops
+          Absense of too large values avoids very long running loops
           when the counter is nondeterministic.
-
+          There is no particular justification for the concrete sampling scheme,
+          but it is extremely effective in the competition (cf. \cref{sec:discussion}).
     \item Next, Z3 is executed on the verification problem, translated from C to Horn clauses for 20s. Usually, Z3 finds solutions very quickly if it succeeds at all,
           specifically on those benchmarks where Z3 succeeds but not Eldarica.
     \item Finally, Eldarica is executed for the remaining time.
@@ -136,85 +133,76 @@ When a counterexample is found, a test harness is compiled confirm whether \text
 \section{Discussion: Strengths and Weaknesses}
 \label{sec:discussion}
 
-\paragraph{General Capabilities.}
+%\paragraph{General Capabilities.}
 \Korn supports a substantial fraction of the C~language, with the greatest limitation
 being the lack of support for dynamic data structures (see website for a detailed account),
-which means that currently, any task which requires a memory model is out of scope.
+which means that currently any task which requires a memory model is out of scope.
 % That said, the implementation is staight-forward and modular in the specifics of the translation
 % to clauses, so that \Korn is a nice basis for experiments.
 The translation supports most control structures, including \texttt{goto} and labels.
 With respect to solving verification tasks,
-\Korn inherits most of the strenths and limitations of the underlying solvers.
+\Korn inherits the strenths and limitations of the underlying solvers.
 Tasks that require invariants or procedure contracts in the fragment of linear integer arithmetic
 are typically proved quickly by the solvers.
 \Korn implements a trick similar to~\cite{monniaux2016cell}
 to reduce the need for quantifiers in invariants over arrays,
-but solvers do typically perform badly on such tasks.
-Due to its limitations, \Korn participated only in four categories,
+but even then solvers typically perform badly on such tasks.
+Honoring these points, \Korn participated in four categories,
 \texttt{ControlFlow},
 \texttt{Loops},
 \texttt{Recursive},
 \texttt{XCSP}
 for property \texttt{ReachSafety}.
 
-\paragraph{Soundness Guarantees.}
-The theroetical approach used by \Korn is sound and complete
+%\paragraph{Soundness.}
+The theoretical approach used by \Korn is sound and complete
 relative to the solver capabilities.
-However, the current implementation does not capture all~C behavior adequately:
+\Korn produced no incorrect result in SV-COMP 2023.
+With respect to C~semantics, \Korn currently takes the following trade-offs:
 \begin{itemize}
 \item Integer types are treated as unbounded and arithmetic overflows are not modeled at all.
  This occurs in a single task, \texttt{nla-digbench/geo1-u.c},
  which contains an error caused by an unsigned integer overflow.
- \Korn would wrongly prove this task safe incorrectly,
+ \Korn would wrongly prove this task safe,
  but in the competition the bug is quickly discovered by the random sampler,
  thereby working around this issue.
  We aim to experiment with a bitvector encoding eventually,
- which would allow \Korn to tackle tasks involving bitwise operations, too.
+ which would allow \Korn to tackle tasks involving bitwise operations in category \texttt{BitVectors}, too.
 \item Arrays are currently modeled as value types.
- Benchmarks in which tracking aliases is relevant to correctness
+ Benchmarks in which tracking aliases is relevant
  may not be solved correctly, but that does not occur in the categories in which \Korn participates.
 \item \Korn can confirm counterexample traces reported by Eldarica by compiling and running a test harness.
  This means that each bug reported is a true bug.
  The original intention was to catch two incorrect error verdicts,
- but it also prevents \Korn to report 50 error verdicts correctly in category \texttt{XCSP},
- because Z3 does not show counterexamples at all,
- and Eldarica's traces are too short for some reason that is yet unclear.
+ but it prevented \Korn to report 50 correct error verdicts in category \texttt{XCSP}.
+ The traces did not provide all necessary inputs (the reason is currently unknown).
 \item
- \Korn fixes the evaluation order to be right-to-left to match
- the order used by C compilers (cf. previous point).
- This is not sound wrt.~C semantics and moreover different from most other SV-COMP tools.
+ \Korn fixes the evaluation order of function arguments to be right-to-left (differently to most other SV-COMP tools)
+ to match the order used by C compilers (cf. previous point).
+ This is not faithful to~C semantics if bugs may occur due to side-effects
+ for some specific evaluation order.
 \end{itemize}
 
-\paragraph{Effectiveness of Random Sampling.}
+% \paragraph{Effectiveness of Random Sampling.}
+The random sampler is very effective---in SV-COMP 2023 it discovered
+all 210 violations reported by \Korn, all but 6 if these are found within 2 seconds.
+Inclusion of small non-zero values is crucial, e.g., \texttt{Ackermann02.c}
+falsifies with input vector \texttt{[2,0]};
+always using all zero inputs still finds 57 of the 210 violations.
 
-
-\paragraph{Modular Verification.}
-Horn clause encodings are inherently modular:
-Loops are never unrolled explicitly,
-albeit the solvers typically do internally so to construct counterexamples.
-C~functions are always abstracted in terms of contracts,
-consisting of a pre-/postcondition pair.
-
-
-\begin{itemize}
-\item No incorrect results within the assumptions
-\item High-quality witnesses
-\end{itemize}
-
-
-The random sampler is a key success factor for \Korn in the competition.
-
-Having ground truth to confirm counterexamples by native execution conversely prevents a few false results.
-% An example is \texttt{recursive/Primes.c}, which for unknown reasons
-% currently produces a spurious counterexample (possibly because it requires a \emph{recursive} predicate in the model).
-% 
-
-Finally, the current parser is somewhat limited and fails on some portion of tasks,
-notably in \texttt{ControlFlow} and other categories where \Korn does not participate in.
-
-
-For further experiments on random sampling should
-take into account the actual violation traces produced by the Horn backends.
+A key strength of Horn clause encodings is that they are inherently modular.
+This means that loops and recursion are never unrolled,
+but instead abstracted by invariants resp. pre-/postcondition pairs.
+The latter enables \Korn to significantly outperform all other tools in category \texttt{Recursive}.
+A plausible explanation is that classic state-space exploration techniques
+struggle to abstract call stacks or maybe that techniques developed for loops
+like $k$-induction have simply not been adapted to recursive procedures.
+Horn clause encodings on the other hand are largely agnostic
+to whether the predicates abstract loops or procedures.
+As a downside of enforcing modular proofs,
+\Korn is currently unable to compete in category \texttt{Arrays},
+where finding invariants is very hard but state-space exploration succeeds
+on many tasks with constant loop bounds.
 
 \section{Software Project, Configuration \& Participation}
 \label{sec:project}
