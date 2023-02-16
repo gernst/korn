@@ -230,7 +230,7 @@ on tasks with fixed loop bounds.
      \cmidrule(l){6-6}
      \texttt{ControlFlow}   &     22     &    12 &     7 &    12 &     7 \\
      \texttt{Loops}         &    685     &    80 &   178 &\bf288 &   178 \\
-     \texttt{Recursive}     &     59     &    27 &    25 &    27 &\bf 26 \\
+     \texttt{Recursive}     &     59     &    27 &    25 &    27 &    25 \\
      \texttt{XCSP}          &    114     &    46 &     0 &    46 &$\dagger$ \bf 50 \\
      \bottomrule
      \end{tabular}
@@ -245,9 +245,9 @@ such that \Korn terminated way too early and missed out on many results.
 This produces 208 additional proofs from Eldarica
 in category \texttt{Loops} with a hypothetical score of~755
 wrt.~323 in SV-COMP 2023, albeit the actual score could be lower than 755 if not all witnesses would be confirmed.
-The additional violation in \texttt{Recursive} is found after 8.6s CPU time
-by 60 rounds of random sampling in \texttt{recursive/Fibonacci04.c},
-this difference is likely not statistically meaningful.
+% The additional violation in \texttt{Recursive} is found after 8.6s CPU time
+% by 60 rounds of random sampling in \texttt{recursive/Fibonacci04.c},
+% this difference is likely not statistically meaningful.
 
 
 \section{Software Project, Configuration \& Participation}
@@ -335,12 +335,13 @@ insights to approach of loop contracts~\cite{ernst:vmcai2022}.
 
 \smallskip
 
-\textbf{Data Availability Statement.}
+\noindent \textbf{Data Availability Statement.}
 The tool archive packaged for SV-COMP 2023 is available at:
-\url{TODO}.
+\url{https://doi.org/10.5281/zenodo.7647511}.
+
 The results from the post-competition evaluation are
 based on commit \href{https://github.com/gernst/korn/commit/92e6732645d488a8a7036435f5336d7181c18689}{\tt 92e6732} and are available at:
-\url{TODO}
+\url{https://doi.org/10.5281/zenodo.7647533}.
 
 \bibliographystyle{splncs04}
 \bibliography{korn.bib}
