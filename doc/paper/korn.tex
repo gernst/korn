@@ -27,7 +27,7 @@
 \newcommand{\True}{\mathit{true}}
 
 \author{Gidon Ernst\thanks{Jury Member}}
-\title{\Korn---Software Verification with Horn clauses \\ (Competition Contribution)}
+\title{\Korn---Software Verification with Horn Clauses \\ (Competition Contribution)}
 \institute{LMU Munich \\ \mailto{gidon.ernst@lmu.de}}
 \pagestyle{plain}
 
@@ -36,52 +36,43 @@
 \maketitle
 
 \begin{abstract}
-    \Korn is a software verifier that infers correctness certificates automatically using state-of-the-art Horn-clause solvers, such as Z3 and Eldarica,
-    which are used in a portfolio together with cheap random sampling.
-    The tool is available at \url{https://github.com/gernst/korn}.
+    \Korn is a software verifier that infers correctness certificates
+    and violation witnesses
+    sutomatically using state-of-the-art Horn-clause solvers, such as Z3 and Eldarica.
+    The solvers are used in a portfolio together with cheap random sampling
+    where the latter can be very effective at finding counterexamples.
+    \Korn perfomend best in the \texttt{Recursive} sub-category of SV-COMP 2023.
+    % It is available at \url{https://github.com/gernst/korn}.
 
     % {\color{red} With the intention to be published as competition contribution.}
-    \keywords{Software Verification \and Horn clauses \and Loop Contracts}
+    \keywords{Software Verification \and Horn Clauses \and Loop Contracts}
 \end{abstract}
 
 \section{Verification Approach}
 \label{sec:approach}
 
-\Korn is a verifier for C programs that is based on a translation into systems of Horn clauses
+\Korn is a verifier for C programs that is based on a translation into systems of constrained Horn clauses
 \cite{bjorner2015horn,gurfinkel2019science}.
 Therein, each program location is abstracted by a second-order predicate
 over the program variables which are active at that point.
 The system of Horn clauses has a (second-order) solution if and only if the program is correct.
-Horn clauses are an attractive encoding that is linear in the size of the program.
-Moreover, Horn clauses are inherently modular,
-such that loops, procedure contracts, and non-local control flow like \texttt{goto}s and labels can be easily abstracted (cf. discussion of category \texttt{Recursive}).
-As usual, loops are verified by invariants, which need to hold in the states
-encountered throughout the execution of a loop.
-\Korn is therefore similar to SeaHorn~\cite{gurfinkel2015seahorn} but it operates on the C source level instead of LLVM.
-While similarly being based on Horn clause translations,
-\Korn aims at a rather different design point, namely to favor simplicity over features, therefore offering a good platform for experiments.
-Eldarica has its own C frontend that supports a different set of features,
-recently published as \textsc{TriCera}~\cite{esen2022tricera}.
-Here the main distinction is that \Korn uses a large block encoding,
-such that the verification conditions closely reflect the structure of the program.
-
-\Korn offers a second verification approach with loop contracts~\cite{hehner1999refinement,tuerk2010local,hehner2005specified,ernst:vmcai2022}.
-This was the original motivation to develop the tool, and neither
-SeaHorn nor \textsc{TriCera} supports this feature,
-albeit it was not used for SV-COMP because
-it offers no advantages~\cite{ernst:arxiv2020:summaries}
-and because the encoding of loop contracts into loop invariants would require quantifiers in the witnesses format.
+Horn clauses encodings are a convenient intermediate representation
+that is linear in the size of the program
+and that is inherently modular,
+such that loops, procedure contracts, and non-local control flow like \texttt{goto}s and labels can be easily abstracted (see \cref{sec:discussion} wrt. category \texttt{Recursive}).
+% As usual, loops are verified by invariants, which need to hold in the states
+% encountered throughout the execution of a loop.
 
 \Korn uses state-of-the-art solvers to determine the satisfiability of the generated Horn clause system (cf. \cref{sec:architecture}),
-specifically for SV-COMP Z3~\cite{bjorner2013solving} and Eldarica~\cite{hojjat2018eldarica}.
+specifically for SV-COMP it uses Z3~\cite{bjorner2013solving} and Eldarica~\cite{hojjat2018eldarica}.
 Both solvers generate evidence for correctness of a given program in terms of models that describe how the unknown predicates need to be instantiated.
 Moreover, Eldarica can generate counterexample traces, and \Korn instruments the Horn clause system to get
 the concrete values returned by the \texttt{\_\_VERIFIER\_nondet\_*()} functions on an error path.
 For these reasons, \Korn tends to produce detailed correctness and violation witnesses.
-%
+
 The different solvers have different strengths and weaknesses.
 To that end, \Korn implements a portfolio approach with several sequential stages.
-The configuration for SV-COMP is as follows,
+The configuration for SV-COMP 2023~\cite{SVCOMP23} is as follows,
 where the specific timeouts for the individual tools are chosen heuristically based
 on prior experiments:
 \begin{enumerate}
@@ -89,8 +80,8 @@ on prior experiments:
           It picks for each input value uniformly between number 0, and values of 2, 5, and 10 bits respectively, possibly with a sign.
           Absense of too large values avoids very long running loops
           when the counter is nondeterministic.
-          There is no particular justification for the concrete sampling scheme,
-          but it is effective in the competition (cf. \cref{sec:discussion}).
+          There is no particular justification for the sampling scheme,
+          but it is very effective.
     \item Next, Z3 is executed on the verification problem, translated from C to Horn clauses for 20s. Usually, Z3 finds solutions very quickly if it succeeds at all,
           specifically on those benchmarks where Z3 succeeds but not Eldarica.
     \item Finally, Eldarica is executed for the remaining time.
@@ -100,12 +91,25 @@ on prior experiments:
     To prevent spurious counterexamples,
     \Korn reports a violations only if it can be confirmed by executing the program natively.
 \end{enumerate}
+\Korn is overall similar to SeaHorn~\cite{gurfinkel2015seahorn} but it operates on the C source level instead of LLVM.
+\Korn aims at a rather different design point, namely to favor simplicity over features, therefore offering a good platform for experiments.
+Eldarica has its own C frontend that supports a different set of features,
+recently published as \textsc{TriCera}~\cite{esen2022tricera}.
+Here the main distinction is that \Korn uses a large block encoding,
+such that the verification conditions closely reflect the structure of the program.
+\Korn offers a second verification approach with loop contracts~\cite{hehner1999refinement,tuerk2010local,hehner2005specified,ernst:vmcai2022}.
+This was the original motivation to develop the tool, and neither
+SeaHorn nor \textsc{TriCera} supports this feature,
+albeit it was not used for SV-COMP because
+it offers no advantages~\cite{ernst:arxiv2020:summaries}
+and because the encoding of loop contracts into loop invariants would require quantifiers in the witnesses format.
+
 
 \section{Software Architecture}
 \label{sec:architecture}
 
-\Korn is mainly written in the JVM language Scala
-    \footnote{\url{https://scala-lang.org}}.
+\Korn is mainly written in the JVM language Scala.%
+    \footnote{\url{https://scala-lang.org}}
 The front-end uses a custom parser, generated with jFlex and Beaver.
 The random sampler relies on native execution which links
 the benchmark task with a C file \verb!__VERIFIER_random.c!
@@ -113,7 +117,7 @@ that implements the \verb!_VERIFIER_nondet_*! functions.
 Verification conditions are generated in the fragment of SMT-LIB of the \texttt{HORN} logic.%
     \footnote{\url{https://chc-comp.github.io/format.html}}
 \Korn can invoke any compliant solver as a backend either using its standard input or a file to communicate the verification task.
-There is explicit support for Z3~\cite{gurfinkel2019science}, Eldarica~\cite{hojjat2018eldarica}% , and recently also for Golem~\cite{blicha2022split}%
+There is explicit support for Z3~\cite{gurfinkel2019science}, Eldarica~\cite{hojjat2018eldarica} % , and recently also for Golem~\cite{blicha2022split}%
   %   \footnote{Golem performs fairly similar to Z3 but was not as mature at the time.}
 to pass e.g. timeouts with tool-specific options or to produce models resp. counterexamples.
 Currently, \Korn use the theories of integers and arrays.
@@ -137,7 +141,7 @@ which means that currently any task which requires a memory model is out of scop
 The translation supports most control structures, including \texttt{goto} and labels.
 With respect to solving verification tasks,
 \Korn inherits the strenths and limitations of the underlying solvers.
-Tasks that require invariants or procedure contracts in the fragment of linear integer arithmetic
+Tasks that for which invariants and procedure contracts are expressible in linear integer arithmetic
 are typically proved quickly by the solvers.
 \Korn implements a trick similar to~\cite{monniaux2016cell}
 to reduce the need for quantifiers in invariants over arrays,
@@ -153,30 +157,32 @@ for property \texttt{ReachSafety}.
 The theoretical approach used by \Korn is sound and complete
 relative to the solver capabilities.
 \Korn produced no incorrect result in SV-COMP 2023,
-but it should be emphasized wrong verdicts can happen in principle as discusse below.
+but there are circumstances which could lead to wrong verdicts.
 With respect to C~semantics, \Korn currently makes the following trade-offs:
 \begin{itemize}
 \item Integer types are treated as unbounded and arithmetic overflows are not modeled at all.
  This affects a single task, \texttt{nla-digbench/geo1-u.c},
- which contains an error caused by an unsigned integer overflow
- that is caught by random sampling first---
+ which contains an error caused by an unsigned integer overflow.
+ This error is fortunately caught by random sampling---
  \Korn would otherwise wrongly prove this task safe.
  We aim to experiment with a bitvector encoding eventually,
  which would allow \Korn to tackle tasks involving bitwise operations.
 \item Arrays are currently modeled as value types.
  Benchmarks in which tracking aliases is relevant
  may not be solved correctly, but that does not occur in the categories in which \Korn participates.
-\item By confirm counterexamples via native execution,
+\item By confirming counterexamples via native execution,
  each bug reported is necessarily a true bug.
- This safety net catches two incorrect error verdicts due to bad encodings
- (\texttt{loops-crafted/theatreSquare.c} and \texttt{recursive/Primes.c}).
- It also prevents \Korn from reporting 50 error verdicts found by Z3 in category \texttt{XCSP}
- which are missed Eldarica ($\dagger$ in \cref{fig:results}).
- It is currently unclear how to get usable counterexample traces from Z3 to resolve this dilemma.
+ This safety net catches two incorrect error verdicts
+ on
+ \texttt{loops-crafted/theatreSquare.c} and \texttt{recursive/Primes.c},
+ the reason for this unsoundness is under investigation.
+ However, counterexample confirmation prevents \Korn from rightfully reporting 50 error verdicts found by Z3 in category \texttt{XCSP}
+ which are missed by Eldarica ($\dagger$ in \cref{fig:results}).
+ It is unclear how to get usable counterexample traces from Z3 to resolve this dilemma.
 \item
  Differently from most other SV-COMP tools, \Korn fixes the evaluation order of function arguments to be right-to-left
  which matches the order typically used by C~compilers.
- This is not faithful to C~semantics as potentially misses bugs due to side-effects
+ This is not faithful to C~semantics as \Korn potentially misses bugs due to side-effects
  for some specific evaluation order.
 \end{itemize}
 
@@ -336,14 +342,14 @@ insights to approach of loop contracts~\cite{ernst:vmcai2022}.
 \smallskip
 
 \noindent \textbf{Data Availability Statement.}
-The tool archive packaged for SV-COMP 2023 is available at:
-\url{https://doi.org/10.5281/zenodo.7647511}.
-
-The results from the post-competition evaluation are
-based on commit \href{https://github.com/gernst/korn/commit/92e6732645d488a8a7036435f5336d7181c18689}{\tt 92e6732} and are available at:
-\url{https://doi.org/10.5281/zenodo.7647533}.
+The tool archive packaged for SV-COMP 2023~\cite{SVCOMP23}
+is part of the official tools artifact~\cite{SVCOMP23-TOOLS-artifact}
+and also available separately~\cite{ernst:korn2023}.
+The official competition results~\cite{SVCOMP23-RESULTS-artifact}
+are complemented with our post-competition evaluation,
+based on commit \href{https://github.com/gernst/korn/commit/92e6732645d488a8a7036435f5336d7181c18689}{\tt 92e6732} and are available at~\cite{ernst:korn2023-results}.
 
 \bibliographystyle{splncs04}
-\bibliography{korn.bib}
+\bibliography{korn.bib,svcomp.bib,svcomp-artifacts.bib}
 
 \end{document}
