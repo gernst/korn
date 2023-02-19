@@ -81,7 +81,7 @@ on prior experiments:
           Absense of too large values avoids very long running loops
           when the counter is nondeterministic.
           There is no particular justification for the sampling scheme,
-          but it is very effective.
+          but it is effective.
     \item Next, Z3 is executed on the verification problem, translated from C to Horn clauses for 20s. Usually, Z3 finds solutions very quickly if it succeeds at all,
           specifically on those benchmarks where Z3 succeeds but not Eldarica.
     \item Finally, Eldarica is executed for the remaining time.
@@ -208,36 +208,53 @@ where finding the quantified invariants is hard but state-space exploration succ
 on tasks with fixed loop bounds.
 
 \begin{table}[t]
-    \setlength{\tabcolsep}{6pt}
+    \setlength{\tabcolsep}{5pt}
     \centering
-    \caption{Comparison of official results
-           with post-competition experiments after fixing
+    \caption{Comparison of official results (number of tasks solved)
+           in comparison to result of the best-scoring other tool in that category
+           and post-competition experiments after fixing
            an issue with the submitted \Korn verifier archive
            which did not run Eldarica at all.
-           The result marked by~$\dagger$ is without counterexample confirmation. }
+           \# Tasks is the number of tasks supported by \Korn
+           vs. category size.
+           % Numbers in parentheses are best result of any other tool.
+           The result marked by~$\dagger$ is without counterexample confirmation.
+           The official results can be found at
+           \url{https://sv-comp.sosy-lab.org/2023/results/results-verified/} }
     \label{fig:results}
-     \begin{tabular}{lrrrrr}
+     \begin{tabular}{lrlrrrrrr}
      \toprule
      &&
-     \multicolumn{2}{c}{\textbf{SV-COMP 2023}} &
-     \multicolumn{2}{c}{\textbf{Post-Competition}}
+     \multicolumn{5}{c}{\textbf{SV-COMP 2023}} &
+     \multicolumn{2}{c}{\textbf{Post-Comp.}} \\
+     \cmidrule(lr){3-7}
+     &
+     \multicolumn{1}{c}{\# tasks} &
+     \multicolumn{3}{c}{best scoring competitor} &
+     \multicolumn{2}{c}{\Korn} &
      \\
-     \cmidrule(lr){3-4}
-     \cmidrule(l){5-6}
+     \cmidrule(lr){3-5}
+     \cmidrule(lr){6-7}
+     \cmidrule(l){8-9}
      \multicolumn{1}{l}{\textbf{Category}} &
-     \#Tasks &
-     correct & violation &
-     correct & violation \\
+     supp./all &
+     \multicolumn{1}{c}{tool} &
+     true & false &
+     true & false &
+     true & false \\
      \cmidrule(r){1-1}
      \cmidrule(lr){2-2}
      \cmidrule(lr){3-3}
      \cmidrule(lr){4-4}
      \cmidrule(lr){5-5}
-     \cmidrule(l){6-6}
-     \texttt{ControlFlow}   &     22     &    12 &     7 &    12 &     7 \\
-     \texttt{Loops}         &    685     &    80 &   178 &\bf288 &   178 \\
-     \texttt{Recursive}     &     59     &    27 &    25 &    27 &    25 \\
-     \texttt{XCSP}          &    114     &    46 &     0 &    46 &$\dagger$ \bf 50 \\
+     \cmidrule(lr){6-6}
+     \cmidrule(lr){7-7}
+     \cmidrule(lr){8-8}
+     \cmidrule(l){9-9}
+     \texttt{ControlFlow} &  19/\phantom{0}22 & CVT-ParPort & 15 & 7 &    12 &     7 &    12 &     7 \\
+     \texttt{Loops}       & 641/          685 & VeriAbs         & 386 & 185 &    80 &   178 &\bf288 &   178 \\
+     \texttt{Recursive}   &  57/\phantom{0}59 & UAutomizer & 20 & 18 &   27 &    25 &    27 &    25 \\
+     \texttt{XCSP}        & 109/          114 & CBMC & 54 & 50 & 46 &     0 &    46 &$\dagger$ \bf 50 \\
      \bottomrule
      \end{tabular}
 \end{table}
@@ -249,8 +266,9 @@ such that \Korn terminated way too early and missed out on many results.
 % (in 2022 it was converse due to a parsing problem of Z3 models).
 \Cref{fig:results} presents results from re-running the evaluation on the competition hardware.
 This produces 208 additional proofs from Eldarica
-in category \texttt{Loops} with a hypothetical score of~755
-wrt.~323 in SV-COMP 2023, albeit the actual score could be lower than 755 if not all witnesses would be confirmed.
+in category \texttt{Loops} with a hypothetical score of~755 wrt.~323 in SV-COMP 2023,
+albeit the actual score would be lower than that because usually not all witnesses are confirmed.
+
 % The additional violation in \texttt{Recursive} is found after 8.6s CPU time
 % by 60 rounds of random sampling in \texttt{recursive/Fibonacci04.c},
 % this difference is likely not statistically meaningful.
@@ -339,10 +357,9 @@ The command line in SV-COMP 2023 is
 G. Alexandru~\cite{alexandru2019} and J. Blau have contributed
 insights to approach of loop contracts~\cite{ernst:vmcai2022}.
 
-\smallskip
+\section*{Data Availability Statement}
 
-\noindent \textbf{Data Availability Statement.}
-The tool archive packaged for SV-COMP 2023~\cite{SVCOMP23}
+The tool archive packaged for SV-COMP 2023
 is part of the official tools artifact~\cite{SVCOMP23-TOOLS-artifact}
 and also available separately~\cite{ernst:korn2023}.
 The official competition results~\cite{SVCOMP23-RESULTS-artifact}
