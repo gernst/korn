@@ -1,7 +1,10 @@
 \documentclass{llncs}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
-\usepackage[scaled=0.8]{beramono}
+
+% PLEASE DO NOT CHANGE THE TYPEWRITER FONT!!
+\usepackage[scaled=0.8]{beramono} 
+
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{stmaryrd}
@@ -16,7 +19,7 @@
 \usepackage{hyperref}
 \hypersetup{allcolors=blue,colorlinks=true}
 
-\usepackage{cleveref}
+% \usepackage{cleveref}
 % \usepackage[numbers,sort&compress]{natbib}
 \newcommand{\mailto}[1]{\href{mailto:#1}{\ttfamily #1}}
 
@@ -26,10 +29,10 @@
 \newcommand{\False}{\mathit{false}}
 \newcommand{\True}{\mathit{true}}
 
-\author{Gidon Ernst\thanks{Jury Member}}
+\author{Gidon Ernst\thanks{Jury Member} \quad \mailto{gidon.ernst@lmu.de}}
 \title{\Korn---Software Verification with Horn Clauses \\ (Competition Contribution)}
-\institute{LMU Munich \\ \mailto{gidon.ernst@lmu.de}}
-\pagestyle{plain}
+\institute{LMU Munich, Munich, Germany}
+% \pagestyle{plain}
 
 \begin{document}
 
@@ -59,11 +62,11 @@ The system of Horn clauses has a (second-order) solution if and only if the prog
 Horn clauses encodings are a convenient intermediate representation
 that is linear in the size of the program
 and that is inherently modular,
-such that loops, procedure contracts, and non-local control flow like \texttt{goto}s and labels can be easily abstracted (see \cref{sec:discussion} wrt. category \texttt{Recursive}).
+such that loops, procedure contracts, and non-local control flow like \texttt{goto}s and labels can be easily abstracted (see Sect.~\ref{sec:discussion} wrt. category \texttt{Recursive}).
 % As usual, loops are verified by invariants, which need to hold in the states
 % encountered throughout the execution of a loop.
 
-\Korn uses state-of-the-art solvers to determine the satisfiability of the generated Horn clause system (cf. \cref{sec:architecture}),
+\Korn uses state-of-the-art solvers to determine the satisfiability of the generated Horn clause system (cf. Sect.~\ref{sec:architecture}),
 specifically for SV-COMP it uses Z3~\cite{bjorner2013solving} and Eldarica~\cite{hojjat2018eldarica}.
 Both solvers generate evidence for correctness of a given program in terms of models that describe how the unknown predicates need to be instantiated.
 Moreover, Eldarica can generate counterexample traces, and \Korn instruments the Horn clause system to get
@@ -97,7 +100,7 @@ Eldarica has its own C frontend that supports a different set of features,
 recently published as \textsc{TriCera}~\cite{esen2022tricera}.
 Here the main distinction is that \Korn uses a large block encoding,
 such that the verification conditions closely reflect the structure of the program.
-\Korn offers a second verification approach with loop contracts~\cite{hehner1999refinement,tuerk2010local,hehner2005specified,ernst:vmcai2022}.
+\Korn offers a second verification approach with loop contracts~\cite{tuerk2010local,hehner2005specified,ernst:vmcai2022}.
 This was the original motivation to develop the tool, and neither
 SeaHorn nor \textsc{TriCera} supports this feature,
 albeit it was not used for SV-COMP because
@@ -142,10 +145,11 @@ The translation supports most control structures, including \texttt{goto} and la
 With respect to solving verification tasks,
 \Korn inherits the strenths and limitations of the underlying solvers.
 Tasks that for which invariants and procedure contracts are expressible in linear integer arithmetic
-are typically proved quickly by the solvers.
-\Korn implements a trick similar to~\cite{monniaux2016cell}
-to reduce the need for quantifiers in invariants over arrays,
-but even then solvers typically perform badly on such tasks.
+are typically proved quickly by the solvers,
+whereas they struggle on tasks with arrays and quantified invariants.
+% \Korn implements a trick similar to~\cite{monniaux2016cell}
+% to reduce the need for quantifiers in invariants over arrays,
+% but even then solvers typically perform badly on such tasks.
 Honoring these aspects, \Korn participated in four categories,
 \texttt{ControlFlow},
 \texttt{Loops},
@@ -177,7 +181,7 @@ With respect to C~semantics, \Korn currently makes the following trade-offs:
  \texttt{loops-crafted/theatreSquare.c} and \texttt{recursive/Primes.c},
  the reason for this unsoundness is under investigation.
  However, counterexample confirmation prevents \Korn from rightfully reporting 50 error verdicts found by Z3 in category \texttt{XCSP}
- which are missed by Eldarica ($\dagger$ in \cref{fig:results}).
+ which are missed by Eldarica ($\dagger$ in Sect.~\ref{fig:results}).
  It is unclear how to get usable counterexample traces from Z3 to resolve this dilemma.
 \item
  Differently from most other SV-COMP tools, \Korn fixes the evaluation order of function arguments to be right-to-left
@@ -264,7 +268,7 @@ Unfortunately, in the 2023 competition,
 Eldarica did not run at all due to some unknown problem with the verifier archive,
 such that \Korn terminated way too early and missed out on many results.
 % (in 2022 it was converse due to a parsing problem of Z3 models).
-\Cref{fig:results} presents results from re-running the evaluation on the competition hardware.
+Table~\ref{fig:results} presents results from re-running the evaluation on the competition hardware.
 This produces 208 additional proofs from Eldarica
 in category \texttt{Loops} with a hypothetical score of~755 wrt.~323 in SV-COMP 2023,
 albeit the actual score would be lower than that because usually not all witnesses are confirmed.
