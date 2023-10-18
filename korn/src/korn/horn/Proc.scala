@@ -21,6 +21,7 @@ class Proc(
 
   val branch = config.branch
   val loop = config.loop
+  val call = config.call
 
   /** collect identifiers in scope and their types */
   object toplevel extends Scope(globals)

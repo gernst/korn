@@ -70,6 +70,10 @@ object Main {
         config = "relational"
         configure(rest)
 
+      case ("-l" | "-linear") :: rest =>
+        config = "linear"
+        configure(rest)
+
       case ("-s" | "-summaries") :: rest =>
         config = "summaries"
         configure(rest)

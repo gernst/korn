@@ -103,7 +103,6 @@ inductive_cases summaryE[elim]: "summary P t R B Q"
 lemma summary_correct:
   assumes "while t B s s'"
   assumes "summary P t B R Q"
-  assumes "R s' s'"
   shows   "R s  s'"
   using assms
   by induction auto

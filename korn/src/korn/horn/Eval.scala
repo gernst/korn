@@ -415,15 +415,10 @@ class Eval(unit: Unit) {
               (x, Some(x))
           }
 
-          val st3 = st2 ++ toplevel.havoc
+          call.pre(st0, st2, name, pre, _in, proc)
+          val st3 = call.post(st0, st2, name, post, _in, _out, proc)
 
-          // XXX: need to return the modifed heap
-          val _pre = pre(st2, toplevel.names, _in)
-          val _call = post(st2, st3, toplevel.names, _in, _out)
-
-          clause(st2, _pre, "pre " + name)
-
-          (_ret, st3 and _call)
+          (_ret, st3)
 
         case Cast(typ, expr) =>
           rval(expr, st0, st1)

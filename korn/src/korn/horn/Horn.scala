@@ -3,13 +3,15 @@ package korn.horn
 import korn.smt._
 import korn.Loc
 
-case class Config(branch: Branch, loop: Loop)
+case class Config(branch: Branch, loop: Loop, call: Call = Call.nonlinear)
 
 object Config {
   def apply(which: String): Config = {
     which match {
       case "default" =>
         Config(Branch.relational, Loop.invariants(rel = false))
+      case "linear" =>
+        Config(Branch.relational, Loop.invariants(rel = false), Call.linear)
       case "relational" =>
         Config(Branch.relational, Loop.invariants(rel = true))
       case "summaries" =>
@@ -23,6 +25,11 @@ object Config {
 sealed trait Contract {
   def enter(st0: State, proc: Proc): (Option[Pre], State)
   def leave(st0: State, st1: State, res: Option[Val], proc: Proc): Option[Post]
+}
+
+sealed trait Call {
+  def pre(st0: State, st1: State, callee: String, pre: Pre, args: List[Val], proc: Proc)
+  def post(st0: State, st1: State, callee: String, post: Post, args: List[Val], res: Option[Val], proc: Proc): State
 }
 
 sealed trait Branch {
@@ -80,6 +87,69 @@ object Contract {
       val prop = post.eval(st0, st1, toplevel.names, external.names, res)
       clause(st1, prop, "post " + name)
       Some(post)
+    }
+  }
+}
+
+object Call {
+  object $call extends korn.Counter {
+    def newLabel(prefix: String, callee: String) = "$" + prefix + "_" + callee + "_call" + next
+  }
+
+  object linear extends Call {
+    def pre(st0: State, st1: State, callee: String, pre: Pre, args: List[Val], proc: Proc) = {
+      import proc._
+      import proc.unit._
+
+      val _pre = pre(st1, toplevel.names, args)
+      clause(st1, _pre, "pre " + callee)
+    }
+
+    def post(
+        st0: State,
+        st1: State,
+        callee: String,
+        post: Post,
+        args: List[Val],
+        res: Option[Val],
+        proc: Proc): State = {
+      import proc._
+      import proc.unit._
+
+      val st2 = st1 ++ toplevel.havoc
+      val _call = post(st1, st2, toplevel.names, args, res)
+
+      val pred = combined.step($call newLabel (name, callee))
+      now(pred, st0, st1, "call " + callee)
+
+      from(pred, st0, combined.arbitrary)
+    }
+  }
+
+  object nonlinear extends Call {
+    def pre(st0: State, st1: State, callee: String, pre: Pre, args: List[Val], proc: Proc) = {
+      import proc._
+      import proc.unit._
+
+      val _pre = pre(st1, toplevel.names, args)
+      clause(st1, _pre, "pre " + name)
+    }
+
+    def post(
+        st0: State,
+        st1: State,
+        callee: String,
+        post: Post,
+        args: List[Val],
+        res: Option[Val],
+        proc: Proc): State = {
+      import proc._
+      import proc.unit._
+
+      val st2 = st1 ++ toplevel.havoc
+      val _call = post(st1, st2, toplevel.names, args, res)
+
+      st2 and _call
     }
   }
 }
