@@ -6,7 +6,7 @@ import korn.c._
 import korn.smt._
 import korn.Loc
 
-class Unit(val source: String, stmts: List[Stmt]) {
+class Unit(val file: String, stmts: List[Stmt]) {
 
   /** global data types */
   val typedefs = mutable.Map[String, Type]()

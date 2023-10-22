@@ -5,6 +5,7 @@ import java.io.File
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
+import korn.horn.Unit
 import korn.smt.Model
 
 sealed trait Result
@@ -16,7 +17,9 @@ object Result {
   val unknown = Unknown("unknown")
 }
 
-case class Tool(timeout: Int, model: Boolean, write: Boolean, cmd: String*)
+case class Tool(timeout: Int, model: Boolean, write: Boolean, cmd: String*) {
+  override def toString = cmd.mkString(" ")
+}
 
 object Tool {
 
@@ -192,7 +195,7 @@ object Tool {
 
   def translate(file: String) = {
     val stmts = korn.c.parse(file)
-    object unit extends korn.horn.Unit(file, stmts)
+    object unit extends Unit(file, stmts)
     unit.run()
     unit
   }
@@ -202,21 +205,29 @@ object Tool {
     Backend.write(unit, model, expect, out)
   }
 
+  def solve(file: String, tool: Tool, expect: Option[String], write: Option[String]): Result = {
+    val unit = translate(file)
+    solve(unit, tool, expect, write)
+  }
+
+  def solve(unit: Unit, tool: Tool, expect: Option[String], write: Option[String]): Result = {
+    val Tool(timeout, model, _, cmd @ _*) = tool
+    solve(unit, timeout, model, expect, write, cmd)
+  }
+
   def solve(
-      file: String,
+      unit: Unit,
       timeout: Int,
       model: Boolean,
       expect: Option[String],
       write: Option[String],
-      cmd: Seq[String]) = {
-    val unit = translate(file)
+      cmd: Seq[String]): Result = {
 
     write match {
       case None =>
         val (out, in, err, proc) = pipe(cmd: _*)
         try {
-          val result = Backend.readWithTimeout(timeout, in, file)
-          unit -> result
+          Backend.readWithTimeout(timeout, in, unit.file)
         } finally {
           proc.destroy()
         }
@@ -227,8 +238,7 @@ object Tool {
         Backend.write(unit, model, expect, out)
         val (_, in, err, proc) = pipe(cmd ++ Seq(smt): _*)
         try {
-          val result = Backend.readWithTimeout(timeout, in, file)
-          unit -> result
+          Backend.readWithTimeout(timeout, in, unit.file)
         } finally {
           proc.destroy()
         }

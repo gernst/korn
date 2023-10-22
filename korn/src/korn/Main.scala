@@ -306,16 +306,18 @@ object Main {
       breakable {
         for (tool <- tools) {
           // Note: local variables shadow class attribute
-          val Tool(timeout, model, write, cmd @ _*) = tool
+          // val Tool(timeout, model, write, cmd @ _*) = tool
 
-          info("running:      " + cmd.mkString(" "))
+          info("running:      " + tool)
 
-          val (unit, result) = if (write) {
+          val unit = Tool.translate(file)
+
+          val result = if (tool.write) {
             val to = write_smt2 getOrElse smt2(file)
             info("clauses:      " + to)
-            Tool.solve(file, timeout, model, expect, Some(to), cmd)
+            Tool.solve(unit, tool, expect, Some(to))
           } else {
-            Tool.solve(file, timeout, model, expect, None, cmd)
+            Tool.solve(unit, tool, expect, None)
           }
 
           try {
@@ -328,7 +330,7 @@ object Main {
                 note("sat")
 
                 info("status:       correct")
-                info("backend:      " + cmd.mkString(" "))
+                info("backend:      " + tool)
 
                 if (_model.defs.nonEmpty)
                   debug("model:")
@@ -350,7 +352,7 @@ object Main {
                 note("unsat")
 
                 info("status:       incorrect")
-                info("backend:      " + cmd.mkString(" "))
+                info("backend:      " + tool)
                 debug("trace:")
                 for ((fun, arg) <- trace)
                   debug("  " + fun + "() = " + arg)
