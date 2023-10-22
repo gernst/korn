@@ -3,6 +3,10 @@ package korn.horn
 import korn.c._
 import korn.smt._
 
+object Eval {
+  var useVerifierAssert = false
+}
+
 class Eval(unit: Unit) {
   import unit._
   import unit.sig._
@@ -310,6 +314,11 @@ class Eval(unit: Unit) {
         case __VERIFIER.assume(cond) =>
           val (_cond, st2) = rval_test(cond, st0, st1)
           (Val.unit, st2 and _cond)
+
+        case __VERIFIER.assert(phi) if Eval.useVerifierAssert =>
+          val (_phi, st2) = rval_test(phi, st0, st1)
+          goal(st2, _phi, "VERIFIER_assert " + _phi)
+          (Val.unit, st2)
 
         case __VERIFIER.error() =>
           clause(st1, False, "error")

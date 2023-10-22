@@ -13,6 +13,7 @@ import java.io.FileOutputStream
 import java.io.InputStreamReader
 import java.io.BufferedReader
 import java.io.FileWriter
+import korn.horn.Eval
 
 object Main {
   val version = "0.4"
@@ -76,6 +77,10 @@ object Main {
 
       case ("-s0" | "-summaries-only") :: rest =>
         config = "summaries-only"
+        configure(rest)
+
+      case "-use:VERIFIER_assert" :: rest =>
+        Eval.useVerifierAssert = true
         configure(rest)
 
       case ("-m" | "-model") :: rest =>

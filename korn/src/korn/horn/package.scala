@@ -27,6 +27,7 @@ package object horn {
 
   object __VERIFIER {
     object assume extends FunCall.unary("__VERIFIER_assume")
+    object assert extends FunCall.unary("__VERIFIER_assert")
     object error extends FunCall.nullary("__VERIFIER_error")
     object reach_error extends FunCall.nullary("reach_error")
 
