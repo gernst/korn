@@ -67,7 +67,7 @@ object Backend {
     import korn.smt.sexpr
     out.println(sexpr("set-logic", "HORN"))
 
-    val benchmark = unit.source
+    val benchmark = unit.file
     val time = now()
 
     out.println("(set-info :source |")

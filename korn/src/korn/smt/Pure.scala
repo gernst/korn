@@ -91,6 +91,16 @@ sealed trait Sort {}
 case class Clause(path: List[Pure], head: Pure, reason: String) {
   def free = head.free ++ path.flatMap(_.free)
   override def toString = path.mkString(", ") + " ==> " + head + " # " + reason
+
+  def uninterpretedPremises(uninterpreted: Fun => Boolean) =
+    path collect {
+      case prem @ Pure.app(fun, _) if uninterpreted(fun) =>
+        prem
+    }
+
+  def isLinear(uninterpreted: Fun => Boolean) = {
+    uninterpretedPremises(uninterpreted).size <= 1
+  }
 }
 
 object Sort {

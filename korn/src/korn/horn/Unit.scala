@@ -41,6 +41,11 @@ class Unit(val file: String, stmts: List[Stmt]) {
   object sig extends Sig(this)
   object eval extends Eval(this)
 
+  def isLinear = {
+    val funs = preds map (_.fun)
+    clauses forall (_ isLinear funs)
+  }
+
   def clause(st: State, phi: Pure, reason: String) {
     val f = (st.path contains False)
     val t = (st.path contains phi) || (phi == True)
