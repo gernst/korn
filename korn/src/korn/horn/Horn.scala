@@ -10,8 +10,6 @@ object Config {
     which match {
       case "default" =>
         Config(Branch.relational, Loop.invariants(rel = false))
-      case "linear" =>
-        Config(Branch.relational, Loop.invariants(rel = false), Call.linear)
       case "relational" =>
         Config(Branch.relational, Loop.invariants(rel = true))
       case "summaries" =>
@@ -96,35 +94,36 @@ object Call {
     def newLabel(prefix: String, callee: String) = "$" + prefix + "_" + callee + "_call" + next
   }
 
-  object linear extends Call {
-    def pre(st0: State, st1: State, callee: String, pre: Pre, args: List[Val], proc: Proc) = {
-      import proc._
-      import proc.unit._
+  // XXX: do not use this code, it is fundamentally broken and won't fix
+  // object linear extends Call {
+  //   def pre(st0: State, st1: State, callee: String, pre: Pre, args: List[Val], proc: Proc) = {
+  //     import proc._
+  //     import proc.unit._
 
-      val _pre = pre(st1, toplevel.names, args)
-      clause(st1, _pre, "pre " + callee)
-    }
+  //     val _pre = pre(st1, toplevel.names, args)
+  //     clause(st1, _pre, "pre " + callee)
+  //   }
 
-    def post(
-        st0: State,
-        st1: State,
-        callee: String,
-        post: Post,
-        args: List[Val],
-        res: Option[Val],
-        proc: Proc): State = {
-      import proc._
-      import proc.unit._
+  //   def post(
+  //       st0: State,
+  //       st1: State,
+  //       callee: String,
+  //       post: Post,
+  //       args: List[Val],
+  //       res: Option[Val],
+  //       proc: Proc): State = {
+  //     import proc._
+  //     import proc.unit._
 
-      val st2 = st1 ++ toplevel.havoc
-      val _call = post(st1, st2, toplevel.names, args, res)
+  //     val st2 = st1 ++ toplevel.havoc
+  //     val _call = post(st1, st2, toplevel.names, args, res)
 
-      val pred = combined.step($call newLabel (name, callee))
-      now(pred, st0, st1, "call " + callee)
+  //     val pred = combined.step($call newLabel (name, callee))
+  //     now(pred, st0, st1, "call " + callee)
 
-      from(pred, st0, combined.arbitrary)
-    }
-  }
+  //     from(pred, st0, combined.arbitrary)
+  //   }
+  // }
 
   object nonlinear extends Call {
     def pre(st0: State, st1: State, callee: String, pre: Pre, args: List[Val], proc: Proc) = {
