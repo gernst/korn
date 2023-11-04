@@ -18,6 +18,7 @@ abstract class Solve extends Tool {
   def cmd: Seq[String]
 
   def how = cmd.mkString(" ")
+  def backend = how
 
   def readModel(in: BufferedReader, unit: Unit): Model = {
     Tool.model(in)

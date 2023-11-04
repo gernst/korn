@@ -7,6 +7,7 @@ import korn.horn.Unit
 
 case class Confirm(tool: Tool) extends Tool {
   def how = tool.how + " (with counterexample confirmation)"
+  def backend = tool.backend
   def write = tool.write
 
   def check(unit: Unit, smt2: String) = {

@@ -7,6 +7,7 @@ object Fuzz extends Tool {
   import Tool._
 
   def how = "fuzz (zeroes)"
+  def backend = how
   def write = false
 
   def check(unit: Unit, smt2: String): Result = {
@@ -39,6 +40,8 @@ case class Fuzz(timeout: Duration) extends Tool {
   import Tool._
 
   def how = "fuzz (" + timeout.toSeconds + "s)"
+  def backend = how
+  
   def write = false
 
   def check(unit: Unit, smt2: String): Result = {

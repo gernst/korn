@@ -22,6 +22,7 @@ object Result {
 trait Tool {
   def check(unit: Unit, smt2: String): Result
   def how: String
+  def backend: String
   def write: Boolean
 }
 
