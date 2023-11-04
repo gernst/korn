@@ -291,13 +291,16 @@ object Main {
       }
 
       if (tools.isEmpty && random == 0 && zero == 0) {
+        val unit = Tool.translate(file)
+
         if (write) {
           val to = write_smt2 getOrElse smt2(file)
           val out = new PrintStream(new File(to))
           info("clauses:      " + to)
-          Tool.horn(file, model, expect, out)
+          info("linear:       " + unit.isLinear)
+          Tool.horn(unit, model, expect, out)
         } else {
-          Tool.horn(file, model, expect, out)
+          Tool.horn(unit, model, expect, out)
         }
       }
 

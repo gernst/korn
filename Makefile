@@ -1,6 +1,6 @@
 .PHONY: all test clean mrproper parser check-dependencies archives-2021 archives-2022 archives-2023
 
-MILL = mill
+MILL = ./mill
 
 KORN_JAVA 	= korn/src/korn/c/Parser.java   \
               korn/src/korn/c/Scanner.java  \

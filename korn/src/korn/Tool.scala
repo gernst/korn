@@ -200,8 +200,7 @@ object Tool {
     unit
   }
 
-  def horn(file: String, model: Boolean, expect: Option[String], out: PrintStream) = {
-    val unit = translate(file)
+  def horn(unit: Unit, model: Boolean, expect: Option[String], out: PrintStream) = {
     Backend.write(unit, model, expect, out)
   }
 
@@ -226,6 +225,7 @@ object Tool {
     write match {
       case None =>
         val (out, in, err, proc) = pipe(cmd: _*)
+        Backend.write(unit, model, expect, out)
         try {
           Backend.readWithTimeout(timeout, in, unit.file)
         } finally {
