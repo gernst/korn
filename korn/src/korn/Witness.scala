@@ -151,7 +151,7 @@ object Witness {
     val time = now()
 
     try {
-      out println graph.header(file, time, Tool.hash(file), bits, "correctness_witness")
+      out println graph.header(file, time, Util.hash(file), bits, "correctness_witness")
       out println graph.entry(N0)
 
       for (df <- model.defs)
@@ -178,7 +178,7 @@ object Witness {
     val time = now()
 
     try {
-      out println graph.header(file, time, Tool.hash(file), bits, "violation_witness")
+      out println graph.header(file, time, Util.hash(file), bits, "violation_witness")
       out println graph.entry(N0)
 
       for (((call, arg), index) <- trace.zipWithIndex)

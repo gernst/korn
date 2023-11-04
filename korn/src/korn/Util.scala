@@ -18,23 +18,31 @@ class Counter {
 }
 
 object Util {
-  import scala.concurrent.ExecutionContext.Implicits.global
-  import scala.concurrent._
-  import scala.concurrent.duration._
-  import scala.util.Try
+  // import scala.concurrent.ExecutionContext.Implicits.global
+  // import scala.concurrent._
+  // import scala.concurrent.duration._
+  // import scala.util.Try
 
-  def withTimeout[A](ms: Long)(a: => A) = {
-    Try(Await.result(Future(a), ms.milliseconds)).toOption
+  // def withTimeout[A](ms: Long)(a: => A) = {
+  //   Try(Await.result(Future(a), ms.milliseconds)).toOption
+  // }
+
+  // def withTimeout[A](ms: Long, default: A)(a: => A) = {
+  //   Try(Await.result(Future(a), ms.milliseconds)).getOrElse(default)
+  // }
+
+  def hash(file: String) = {
+    import java.nio.file.Files
+    import java.nio.file.Paths
+    val md = java.security.MessageDigest.getInstance("SHA-256")
+    val hash = md.digest(Files.readAllBytes(Paths.get(file))).map("%02x".format(_)).mkString
+    hash
   }
 
-  def withTimeout[A](ms: Long, default: A)(a: => A) = {
-    Try(Await.result(Future(a), ms.milliseconds)).getOrElse(default)
-  }
-
-  def main(args: Array[String]) {
-    println(withTimeout(200) { Thread.sleep(100); "result" })
-    println(withTimeout(50) { Thread.sleep(100); "result" })
-  }
+  // def main(args: Array[String]) {
+  //   println(withTimeout(200) { Thread.sleep(100); "result" })
+  //   println(withTimeout(50) { Thread.sleep(100); "result" })
+  // }
 }
 
 object Digraph {

@@ -13,7 +13,10 @@ import java.io.FileOutputStream
 import java.io.InputStreamReader
 import java.io.BufferedReader
 import java.io.FileWriter
+
 import korn.horn.Eval
+import korn.tool._
+import scala.concurrent.duration._
 
 object Main {
   val version = "0.4"
@@ -25,8 +28,6 @@ object Main {
   var model = false
   var float = false
   var pointers = true
-  var random = 0
-  var zero = 0
   var expect = None: Option[String]
   var witness = false
   var confirm = false
@@ -34,7 +35,7 @@ object Main {
   var witness_quant = false
   var write_smt2 = None: Option[String]
   var write = false
-  var timeout = 900 // SV-COMP default
+  var timeout: Duration = 900.seconds // SV-COMP default
   var tools = mutable.Buffer[Tool]()
 
   var files = mutable.Buffer[String]()
@@ -60,6 +61,13 @@ object Main {
       err.println(line)
       err.flush()
     }
+  }
+
+  def add(tool: Tool) {
+    if (confirm)
+      tools += Confirm(tool)
+    else
+      tools += tool
   }
 
   @tailrec
@@ -96,12 +104,14 @@ object Main {
         write = true
         configure(rest)
 
-      case ("-r" | "-random") :: n :: rest =>
-        random = n.toInt
+      case ("-z" | "-zero") :: rest =>
+        add(Fuzz)
         configure(rest)
 
-      case ("-z" | "-zero") :: rest =>
-        zero = 1
+      // kept for compatibility with explicit timeout argument
+      case ("-r" | "-random") :: n :: rest =>
+        timeout = n.toInt.seconds
+        add(Fuzz(timeout))
         configure(rest)
 
       case ("-d" | "-debug") :: rest =>
@@ -113,68 +123,30 @@ object Main {
         configure(rest)
 
       case ("-t" | "-timeout") :: arg :: rest =>
-        timeout = arg.toInt
+        timeout = arg.toInt.seconds
         configure(rest)
 
       case "-z3" :: rest =>
-        // somehow piping is not working
-        tools += Tool(timeout, model, true, "z3", "-t:" + (timeout * 1000))
-        configure(rest)
-
-      case "-eld" :: rest if model =>
-        tools += Tool(timeout, false, true, "eld", "-t:" + timeout, "-ssol", "-cex")
+        add(Z3(timeout, model, write, expect))
         configure(rest)
 
       case "-eld" :: rest =>
-        tools += Tool(timeout, false, true, "eld", "-t:" + timeout)
-        configure(rest)
-
-      case "-eld:portfolio" :: rest if model =>
-        tools += Tool(timeout, false, true, "eld", "-t:" + timeout, "-ssol", "-cex", "-portfolio")
+        add(Eldarica(timeout, model, write, expect))
         configure(rest)
 
       case "-eld:portfolio" :: rest =>
-        tools += Tool(timeout, false, true, "eld", "-t:" + timeout, "-portfolio")
+        add(Eldarica(timeout, model, write, expect, Seq("-portfolio")))
         configure(rest)
 
-      case "-golem:spacer" :: rest if model =>
+      case "-golem" :: rest =>
         pointers = false
-        tools += Tool(timeout, false, true, "golem", "-l", "QF_LIA", "-e", "spacer", "--print-witness")
+        add(Golem(timeout, model, write, expect))
         configure(rest)
 
-      case "-golem:spacer" :: rest =>
+      case first :: rest if first.startsWith("-golem:") =>
         pointers = false
-        tools += Tool(timeout, false, true, "golem", "-l", "QF_LIA", "-e", "spacer")
-        configure(rest)
-
-      case "-golem:lawi" :: rest if model =>
-        pointers = false
-        tools += Tool(timeout, false, true, "golem", "-l", "QF_LIA", "-e", "lawi", "--print-witness")
-        configure(rest)
-
-      case "-golem:lawi" :: rest =>
-        pointers = false
-        tools += Tool(timeout, false, true, "golem", "-l", "QF_LIA", "-e", "lawi")
-        configure(rest)
-
-      case "-golem:tpa" :: rest if model =>
-        pointers = false
-        tools += Tool(timeout, false, true, "golem", "-l", "QF_LIA", "-e", "tpa", "--print-witness")
-        configure(rest)
-
-      case "-golem:tpa" :: rest =>
-        pointers = false
-        tools += Tool(timeout, false, true, "golem", "-l", "QF_LIA", "-e", "tpa")
-        configure(rest)
-
-      case "-golem:bmc" :: rest if model =>
-        pointers = false
-        tools += Tool(timeout, false, true, "golem", "-l", "QF_LIA", "-e", "bmc", "--print-witness")
-        configure(rest)
-
-      case "-golem:bmc" :: rest =>
-        pointers = false
-        tools += Tool(timeout, false, true, "golem", "-l", "QF_LIA", "-e", "bmc")
+        val engine = first drop "-golem:".length
+        add(Golem(timeout, model, write, expect, engine))
         configure(rest)
 
       case "-no-pointers" :: rest =>
@@ -210,7 +182,7 @@ object Main {
         configure(rest)
 
       case "--" :: rest =>
-        tools += Tool(timeout, model, write, rest: _*)
+        add(Tool.generic(timeout, model, write, expect, rest))
 
       case file :: rest =>
         files += file
@@ -233,77 +205,19 @@ object Main {
 
     if (dry) {
       Tool.parse(file)
+    } else if (tools.isEmpty) {
+      val unit = Tool.translate(file)
+
+      if (write) {
+        val to = write_smt2 getOrElse smt2(file)
+        val out = new PrintStream(new File(to))
+        info("clauses:      " + to)
+        info("linear:       " + unit.isLinear)
+        Backend.write(unit, model, expect, out)
+      } else {
+        Backend.write(unit, model, expect, out)
+      }
     } else {
-      if (zero > 0) {
-        info("running:      zero")
-        val result = Tool.check(file)
-
-        result match {
-          case Incorrect(trace) =>
-            note("unsat")
-            info("status:       incorrect")
-            info("backend:      zero")
-            debug("trace:")
-            for ((fun, arg) <- trace)
-              debug("  " + fun + "() = " + arg)
-
-            if (witness) {
-              val dest = witness_graphml getOrElse graphml(file)
-              val out = new PrintStream(new File(dest))
-              Witness.cex(file, trace, out)
-              info("witness:      " + dest)
-            }
-
-            return
-
-          case _ =>
-          // continue
-        }
-      }
-
-      if (random > 0) {
-        info("running:      random (" + random + "s)")
-        val (rounds, result) = Tool.fuzz(file, random)
-
-        result match {
-          case Incorrect(trace) =>
-            note("unsat")
-            info("status:       incorrect")
-            info("backend:      random (" + rounds + " rounds)")
-            debug("trace:")
-            for ((fun, arg) <- trace)
-              debug("  " + fun + "() = " + arg)
-
-            if (witness) {
-              val dest = witness_graphml getOrElse graphml(file)
-              val out = new PrintStream(new File(dest))
-              Witness.cex(file, trace, out)
-              info("witness:      " + dest)
-            }
-
-            return
-
-          case _ =>
-            info("status:       unknown")
-            info("backend:      random (" + rounds + " rounds)")
-          // continue
-        }
-      }
-
-      if (tools.isEmpty && random == 0 && zero == 0) {
-        val unit = Tool.translate(file)
-
-        if (write) {
-          val to = write_smt2 getOrElse smt2(file)
-          val out = new PrintStream(new File(to))
-          info("clauses:      " + to)
-          info("linear:       " + unit.isLinear)
-          Tool.horn(unit, model, expect, out)
-        } else {
-          Tool.horn(unit, model, expect, out)
-        }
-      }
-
       import scala.util.control.Breaks._
 
       breakable {
@@ -311,17 +225,15 @@ object Main {
           // Note: local variables shadow class attribute
           // val Tool(timeout, model, write, cmd @ _*) = tool
 
-          info("running:      " + tool)
+          info("running:      " + tool.how)
 
           val unit = Tool.translate(file)
 
-          val result = if (tool.write) {
-            val to = write_smt2 getOrElse smt2(file)
+          val to = write_smt2 getOrElse smt2(file)
+          if (tool.write)
             info("clauses:      " + to)
-            Tool.solve(unit, tool, expect, Some(to))
-          } else {
-            Tool.solve(unit, tool, expect, None)
-          }
+
+          val result = tool.check(unit, to)
 
           try {
             result match {
@@ -333,7 +245,7 @@ object Main {
                 note("sat")
 
                 info("status:       correct")
-                info("backend:      " + tool)
+                info("backend:      " + tool.how)
 
                 if (_model.defs.nonEmpty)
                   debug("model:")
@@ -355,7 +267,7 @@ object Main {
                 note("unsat")
 
                 info("status:       incorrect")
-                info("backend:      " + tool)
+                info("backend:      " + tool.how)
                 debug("trace:")
                 for ((fun, arg) <- trace)
                   debug("  " + fun + "() = " + arg)

@@ -3,12 +3,16 @@ package korn.tool
 import korn.Main
 import java.io.PrintStream
 import java.io.File
+import korn.horn.Unit
 
 case class Confirm(tool: Tool) extends Tool {
-  def check(file: String) = {
-    tool.check(file) match {
+  def how = tool.how + " (with counterexample confirmation)"
+  def write = tool.write
+
+  def check(unit: Unit, smt2: String) = {
+    tool.check(unit, smt2) match {
       case Incorrect(trace) =>
-        Confirm.confirm(file, trace)
+        Confirm.confirm(unit, trace)
 
       case result =>
         result
@@ -19,7 +23,7 @@ case class Confirm(tool: Tool) extends Tool {
 object Confirm {
   import Tool._
 
-  def confirm(file: String, trace: List[(String, BigInt)]) = {
+  def confirm(unit: Unit, trace: List[(String, BigInt)]) = {
     // Main.debug("confirming " + trace)
 
     val cex = "__VERIFIER_counterexample.c"
@@ -29,19 +33,23 @@ object Confirm {
     out println "#include <stdlib.h>"
     out.println()
 
-    // out println "void assume(int cond) {"
-    // out println "    if(!cond) {"
-    // out println "        printf(\"unknown\\n\");"
-    // out println "        exit(0);"
-    // out println "    }"
-    // out println "}"
+    if (!(unit.funs contains "assume")) {
+      out println "void assume(int cond) {"
+      out println "    if(!cond) {"
+      out println "        printf(\"unknown\\n\");"
+      out println "        exit(0);"
+      out println "    }"
+      out println "}"
+    }
 
-    // out println "void assert(int cond) {"
-    // out println "    if(!cond) {"
-    // out println "        printf(\"unsat\\n\");"
-    // out println "        exit(0);"
-    // out println "    }"
-    // out println "}"
+    if (!(unit.funs contains "assert")) {
+      out println "void assert(int cond) {"
+      out println "    if(!cond) {"
+      out println "        printf(\"unsat\\n\");"
+      out println "        exit(0);"
+      out println "    }"
+      out println "}"
+    }
 
     out println "void __assert_fail(const char * assertion, const char * file, unsigned int line, const char * function) {"
     out println "    printf(\"unsat\\n\");"
@@ -68,7 +76,7 @@ object Confirm {
     out.close()
 
     val bin = "./confirm"
-    val ok = compile(bin, file, cex, "__VERIFIER.c")
+    val ok = compile(bin, unit.file, cex, "__VERIFIER.c")
 
     if (ok) {
       val (_, res, _, proc) = pipe(bin)

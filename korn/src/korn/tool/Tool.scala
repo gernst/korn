@@ -5,8 +5,10 @@ import java.io.InputStreamReader
 import java.io.PrintStream
 import korn.Main
 import korn.smt.Model
-import korn.horn
 import scala.concurrent.duration.Duration
+import korn.smt.Scanner
+import korn.smt.Parser
+import korn.horn.Unit
 
 sealed trait Result
 case class Unknown(status: String) extends Result
@@ -18,7 +20,9 @@ object Result {
 }
 
 trait Tool {
-  def check(file: String): Result
+  def check(unit: Unit, smt2: String): Result
+  def how: String
+  def write: Boolean
 }
 
 object Tool {
@@ -36,7 +40,7 @@ object Tool {
 
   Runtime.getRuntime().addShutdownHook(killall)
 
-  case class generic(timeout: Duration, model: Boolean, expect: Option[String], write: Option[String], cmd: Seq[String])
+  case class generic(timeout: Duration, model: Boolean, write: Boolean, expect: Option[String], cmd: Seq[String])
       extends Solve
 
   def run(cmd: String*) = {
@@ -73,8 +77,16 @@ object Tool {
 
   def translate(file: String) = {
     val stmts = korn.c.parse(file)
-    object unit extends horn.Unit(file, stmts)
+    object unit extends Unit(file, stmts)
     unit.run()
     unit
+  }
+  
+  def model(in: BufferedReader): Model = {
+    val scanner = new Scanner(in)
+    val parser = new Parser()
+    val res = parser.parse(scanner)
+    val model = res.asInstanceOf[Model]
+    model
   }
 }

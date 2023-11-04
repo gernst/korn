@@ -9,59 +9,51 @@ import korn.Util
 import korn.now
 
 object Backend {
-  def read(in: BufferedReader, file: String) = {
-    val status = in.readLine()
+  // def read(in: BufferedReader, file: String) = {
+  //   val status = in.readLine()
 
-    status match {
-      case "sat" =>
-        val model = Backend.model(in)
-        Correct(model)
+  //   status match {
+  //     case "sat" =>
+  //       val model = Backend.model(in)
+  //       Correct(model)
 
-      case "unsat" =>
-        var trace = Backend.counterexample(in)
+  //     case "unsat" =>
+  //       var trace = Backend.counterexample(in)
         
-        if(Main.confirm) {
-          Confirm.confirm(file, trace)
-        } else {
-          Incorrect(trace)
-        }
+  //       if(Main.confirm) {
+  //         Confirm.confirm(file, trace)
+  //       } else {
+  //         Incorrect(trace)
+  //       }
 
-      case _ =>
-        Unknown(status)
-    }
-  }
+  //     case _ =>
+  //       Unknown(status)
+  //   }
+  // }
 
-  def readWithTimeout(timeout: Int, in: BufferedReader, file: String) = {
-    val unknown: Result = Unknown("timeout")
-    Util.withTimeout(timeout * 1000, unknown) { read(in, file) }
-  }
+  // def readWithTimeout(timeout: Int, in: BufferedReader, file: String) = {
+  //   val unknown: Result = Unknown("timeout")
+  //   Util.withTimeout(timeout * 1000, unknown) { read(in, file) }
+  // }
 
-  def model(in: BufferedReader): Model = {
-    val scanner = new Scanner(in)
-    val parser = new Parser()
-    val res = parser.parse(scanner)
-    val model = res.asInstanceOf[Model]
-    model
-  }
-
-  def counterexample(in: BufferedReader): List[(String, BigInt)] = {
-    var trace: List[(String, BigInt)] = Nil
-    var line = in.readLine()
-    while (line != null) {
-      println(line)
-      val pos = line indexOf "__VERIFIER_nondet_"
-      if (pos >= 0) {
-        line = line drop pos
-        val lp = line indexOf "("
-        val rp = line indexOf ")"
-        val fun = line take lp
-        val res = line drop (lp + 1) take (rp - lp - 1)
-        trace = (fun, BigInt(res)) :: trace
-      }
-      line = in.readLine()
-    }
-    trace
-  }
+  // def counterexample(in: BufferedReader): List[(String, BigInt)] = {
+  //   var trace: List[(String, BigInt)] = Nil
+  //   var line = in.readLine()
+  //   while (line != null) {
+  //     println(line)
+  //     val pos = line indexOf "__VERIFIER_nondet_"
+  //     if (pos >= 0) {
+  //       line = line drop pos
+  //       val lp = line indexOf "("
+  //       val rp = line indexOf ")"
+  //       val fun = line take lp
+  //       val res = line drop (lp + 1) take (rp - lp - 1)
+  //       trace = (fun, BigInt(res)) :: trace
+  //     }
+  //     line = in.readLine()
+  //   }
+  //   trace
+  // }
 
   def bind[V, T](vars: Iterable[V], typing: V => T): String = {
     import korn.smt.sexpr

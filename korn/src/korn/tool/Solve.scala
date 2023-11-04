@@ -13,12 +13,14 @@ abstract class Solve extends Tool {
 
   def timeout: Duration
   def model: Boolean
+  def write: Boolean
   def expect: Option[String]
-  def write: Option[String]
   def cmd: Seq[String]
 
+  def how = cmd.mkString(" ")
+
   def readModel(in: BufferedReader, unit: Unit): Model = {
-    Backend.model(in)
+    Tool.model(in)
   }
 
   def readTrace(in: BufferedReader, unit: Unit): List[(String, BigInt)] = {
@@ -59,39 +61,30 @@ abstract class Solve extends Tool {
     }
   }
 
-  def check(file: String) = {
-    val unit = Tool.translate(file)
-
-    write match {
-      case None =>
-        val (out, in, err, proc) = pipe(cmd: _*)
-        write(out, unit)
-        try {
-          readWithTimeout(in, unit)
-        } finally {
-          proc.destroy()
-        }
-
-      case Some(smt) =>
-        val out = new PrintStream(new File(smt))
-        // Note: do not refactor the two cases into one, need to write before calling the solver
-        write(out, unit)
-        val (_, in, err, proc) = pipe(cmd ++ Seq(smt): _*)
-        try {
-          readWithTimeout(in, unit)
-        } finally {
-          proc.destroy()
-        }
+  def check(unit: Unit, smt2: String) = {
+    if (!write) {
+      val (out, in, err, proc) = pipe(cmd: _*)
+      write(out, unit)
+      try {
+        readWithTimeout(in, unit)
+      } finally {
+        proc.destroy()
+      }
+    } else {
+      val out = new PrintStream(new File(smt2))
+      // Note: do not refactor the two cases into one, need to write before calling the solver
+      write(out, unit)
+      val (_, in, err, proc) = pipe(cmd ++ Seq(smt2): _*)
+      try {
+        readWithTimeout(in, unit)
+      } finally {
+        proc.destroy()
+      }
     }
   }
 }
 
-case class Z3(
-    timeout: Duration,
-    model: Boolean,
-    expect: Option[String],
-    write: Option[String],
-    options: Seq[String] = Nil)
+case class Z3(timeout: Duration, model: Boolean, write: Boolean, expect: Option[String], options: Seq[String] = Nil)
     extends Solve {
 
   val cmd = Seq("z3", "-t:" + timeout.toMillis) ++ options
@@ -100,10 +93,12 @@ case class Z3(
 case class Eldarica(
     timeout: Duration,
     model: Boolean,
+    _write: Boolean,
     expect: Option[String],
-    write: Option[String],
     options: Seq[String] = Nil)
     extends Solve {
+
+  def write = true
 
   val cmd =
     if (model)
@@ -119,7 +114,6 @@ case class Eldarica(
     var trace: List[(String, BigInt)] = Nil
     var line = in.readLine()
     while (line != null) {
-      println(line)
       val pos = line indexOf "__VERIFIER_nondet_"
       if (pos >= 0) {
         line = line drop pos
@@ -138,8 +132,8 @@ case class Eldarica(
 case class Golem(
     timeout: Duration,
     model: Boolean,
+    write: Boolean,
     expect: Option[String],
-    write: Option[String],
     engine: String = "spacer",
     options: Seq[String] = Nil)
     extends Solve {
@@ -150,19 +144,27 @@ case class Golem(
     else
       Seq("golem", "-l", "QF_LIA", "-e", engine) ++ options
 
+  def readInt(str: String) =
+    str.trim match {
+      case str if str.startsWith("(-") && str.endsWith(")") =>
+        val inner = str.substring(2, str.length - 1)
+        -BigInt(inner.trim)
+      case str =>
+        BigInt(str)
+    }
+
   override def readTrace(in: BufferedReader, unit: Unit) = {
     var trace: List[(String, BigInt)] = Nil
     var line = in.readLine()
     while (line != null) {
-      println(line)
-      val pos = line indexOf "(__VERIFIER_nondet_"
+      val pos = line indexOf "__VERIFIER_nondet_"
       if (pos >= 0) {
         line = line drop pos
         val lp = line indexOf " "
         val rp = line indexOf ")"
         val fun = line take lp
-        val res = line drop (lp + 1) take (rp - lp - 1)
-        trace = (fun, BigInt(res)) :: trace
+        val res = line drop (lp + 1) take (rp - lp)
+        trace = (fun, readInt(res)) :: trace
       }
       line = in.readLine()
     }
