@@ -121,6 +121,9 @@ class Sig(unit: Unit) {
       case _: Unsigned           => Sort.int
       case TypedefName("size_t") => Sort.int
 
+      case TypedefName(name) if unit.typedefs contains name =>
+        resolve(unit.typedefs(name))
+
       case PtrType(elem) if korn.Main.pointers =>
         pointers = true; Sort.pointer(resolve(elem))
 
@@ -159,6 +162,9 @@ class Sig(unit: Unit) {
         val min = Pure.zero
         val max = bound - 1
         (min <= pure) and (pure <= max)
+
+      case TypedefName(name) if unit.typedefs contains name =>
+        bounds(pure, unit.typedefs(name))
 
       case _ =>
         korn.error("unsupported type: " + typ + " " + pure)
@@ -202,6 +208,9 @@ class Sig(unit: Unit) {
         val x = fresh(name, s)
         (x, s, Val(x, typ))
 
+      case TypedefName(that) if unit.typedefs contains that =>
+        nondet(name, unit.typedefs(that))
+
       case _ =>
         korn.error("unsupported type: " + typ + " " + name)
     }
@@ -226,7 +235,7 @@ class Sig(unit: Unit) {
     funs += (name -> (ret, args))
 
     val pre = "$" + name + "_pre"
-    val post = name
+    val post = "%" + name
 
     val _globals = resolve(globals map (_.typ))
     val _args = resolve(args)

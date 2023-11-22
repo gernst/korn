@@ -17,22 +17,20 @@ object Fuzz extends Tool {
     val bin = "./fuzz"
     val ok = compile(bin, unit.file, "__VERIFIER.c", "__VERIFIER_zero.c")
 
-    ???
+    if (ok) {
+      val (in, out, err, proc) = pipe(bin)
+      val status = proc.waitFor()
 
-    // if (ok) {
-    //   val (in, out, err, proc) = pipe(bin)
-    //   val status = proc.waitFor()
+      val result = Backend.read(out, unit.file)
 
-    //   val result = Backend.read(out, file)
+      result match {
+        case _: Incorrect =>
+          return result
+        case _ =>
+      }
+    }
 
-    //   result match {
-    //     case _: Incorrect =>
-    //       return result
-    //     case _ =>
-    //   }
-    // }
-
-    // return Result.unknown
+    return Result.unknown
   }
 }
 
@@ -57,28 +55,27 @@ case class Fuzz(timeout: Duration) extends Tool {
     val ok = compile(bin, file, "__VERIFIER.c", "__VERIFIER_random.c")
 
     var rounds: Int = 0
-    ???
 
-    // while (ok) {
-    //   val now = System.currentTimeMillis()
-    //   val remaining = now - start
+    while (ok) {
+      val now = System.currentTimeMillis()
+      val remaining = now - start
 
-    //   if (remaining > timeout * 1000)
-    //     return (rounds, Result.unknown)
+      if (remaining > timeout.toMillis)
+        return (rounds, Result.unknown)
 
-    //   rounds += 1
-    //   val (in, out, err, proc) = pipe(bin)
-    //   val status = proc.waitFor()
+      rounds += 1
+      val (in, out, err, proc) = pipe(bin)
+      val status = proc.waitFor()
 
-    //   val result = Backend.read(out, file)
+      val result = Backend.read(out, file)
 
-    //   result match {
-    //     case _: Incorrect =>
-    //       return (rounds, result)
-    //     case _ =>
-    //   }
-    // }
+      result match {
+        case _: Incorrect =>
+          return (rounds, result)
+        case _ =>
+      }
+    }
 
-    // return (rounds, Result.unknown)
+    return (rounds, Result.unknown)
   }
 }

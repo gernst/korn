@@ -87,6 +87,9 @@ class Eval(unit: Unit) {
         val _right = value(right, st)
         Val.question(_test, _left, _right)
 
+      case Cast(typ, expr) =>
+        value(expr, st)
+
       case _ =>
         korn.error("cannot evaluate: " + expr)
     }

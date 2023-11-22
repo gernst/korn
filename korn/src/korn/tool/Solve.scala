@@ -7,6 +7,7 @@ import scala.concurrent.duration.Duration
 
 import korn.horn.Unit
 import korn.smt.Model
+import java.util.concurrent.TimeUnit
 
 abstract class Solve extends Tool {
   import Tool._
@@ -63,22 +64,31 @@ abstract class Solve extends Tool {
   }
 
   def check(unit: Unit, smt2: String) = {
-    if (!write) {
-      val (out, in, err, proc) = pipe(cmd: _*)
-      write(out, unit)
-      try {
-        readWithTimeout(in, unit)
-      } finally {
-        proc.destroy()
-      }
-    } else {
+    val (in, err, proc) = if (write) {
       val out = new PrintStream(new File(smt2))
-      // Note: do not refactor the two cases into one, need to write before calling the solver
       write(out, unit)
       val (_, in, err, proc) = pipe(cmd ++ Seq(smt2): _*)
-      try {
-        readWithTimeout(in, unit)
-      } finally {
+      (in, err, proc)
+    } else {
+      val (out, in, err, proc) = pipe(cmd: _*)
+      write(out, unit)
+      (in, err, proc)
+    }
+
+    try {
+      readWithTimeout(in, unit)
+    } finally {
+      import korn.Main.info
+      import korn.Main.debug
+
+      if (!proc.isAlive()) {
+        val exit = proc.exitValue()
+        if (exit != 0) {
+          info("exit code:    " + exit)
+          val txt = new String(err.readAllBytes(), "UTF-8")
+          debug(txt)
+        }
+      } else {
         proc.destroy()
       }
     }
@@ -145,7 +155,7 @@ case class Golem(
     else
       Seq("golem", "-l", "QF_LIA", "-e", engine) ++ options
 
-  def readInt(str: String) =
+  def readInt(str: String) = {
     str.trim match {
       case str if str.startsWith("(-") && str.endsWith(")") =>
         val inner = str.substring(2, str.length - 1)
@@ -153,6 +163,7 @@ case class Golem(
       case str =>
         BigInt(str)
     }
+  }
 
   override def readTrace(in: BufferedReader, unit: Unit) = {
     var trace: List[(String, BigInt)] = Nil
@@ -162,13 +173,14 @@ case class Golem(
       if (pos >= 0) {
         line = line drop pos
         val lp = line indexOf " "
-        val rp = line indexOf ")"
+        val rp = line lastIndexOf ")"
         val fun = line take lp
-        val res = line drop (lp + 1) take (rp - lp)
+        val res = line drop (lp + 1) take (rp - lp - 1)
         trace = (fun, readInt(res)) :: trace
       }
       line = in.readLine()
     }
-    trace.reverse
+    // trace.reverse
+    trace
   }
 }

@@ -245,7 +245,7 @@ object Main {
                 note("sat")
 
                 info("status:       correct")
-                info("backend:      " + tool.how)
+                info("backend:      " + tool.backend)
 
                 if (_model.defs.nonEmpty)
                   debug("model:")
@@ -267,7 +267,7 @@ object Main {
                 note("unsat")
 
                 info("status:       incorrect")
-                info("backend:      " + tool.how)
+                info("backend:      " + tool.backend)
                 debug("trace:")
                 for ((fun, arg) <- trace)
                   debug("  " + fun + "() = " + arg)
