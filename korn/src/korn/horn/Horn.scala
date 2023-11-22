@@ -73,7 +73,7 @@ object Contract {
 
       val st1 = st0 ++ toplevel.havoc ++ internal.havoc
       val pre = pres(name)
-      val prop = pre.eval(st1, toplevel.names, external.names)
+      val prop = pre.eval(st1, toplevel.names, parameters.names)
       (Some(pre), st1 and prop)
     }
 
@@ -82,7 +82,7 @@ object Contract {
       import proc.unit._
 
       val post = posts(name)
-      val prop = post.eval(st0, st1, toplevel.names, external.names, res)
+      val prop = post.eval(st0, st1, toplevel.names, parameters.names, res)
       clause(st1, prop, "post " + name)
       Some(post)
     }

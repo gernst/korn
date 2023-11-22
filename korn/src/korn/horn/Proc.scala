@@ -25,7 +25,7 @@ class Proc(
 
   /** collect identifiers in scope and their types */
   object toplevel extends Scope(globals)
-  object external extends Scope(params)
+  object parameters extends Scope(params)
   object internal extends Scope(params ++ locals)
   object combined extends Scope(globals ++ params ++ locals)
 
@@ -40,14 +40,29 @@ class Proc(
     val post_ = contract.leave(st1, st2, None, this) // implicit return without value
 
     for (pre <- pre_) {
-      witness += pre.name -> (this, ploc, pre, external.names, "precondition")
+      val formals = (globals ++ params) map (_.name)
+
+      korn.ensure(
+        pre.fun.args.length == formals.length,
+        "arity mismatch of postcondition predicate: " + pre.fun.toStringTyped + " and " + formals)
+
+      witness += pre.name -> (this, ploc, pre, formals, "precondition")
     }
 
     for (post <- post_) {
-      if(ret != Type._void)
-        witness += post.name -> (this, ploc, post, external.names ++ List("\\result"), "postcondition")
-      else
-        witness += post.name -> (this, ploc, post, external.names, "postcondition")
+      val result = List("\\result")
+
+      val formals =
+        if (ret != Type._void)
+          ((globals ++ params ++ globals) map (_.name)) ++ result
+        else
+          (globals ++ params ++ globals) map (_.name)
+
+      korn.ensure(
+        post.fun.args.length == formals.length,
+        "arity mismatch of postcondition predicate" + post.fun.toStringTyped + " and " + formals)
+
+      witness += post.name -> (this, ploc, post, formals, "postcondition")
     }
   }
 

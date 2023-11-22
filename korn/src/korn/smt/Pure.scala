@@ -56,12 +56,12 @@ object Parsing {
       case ("=", Array(left, right)) => Pure.eqn(left, right)
 
       case ("^", Array(arg1, arg2))   => arg1 ^ arg2
-      case ("*", Array(arg1, arg2))   => arg1 * arg2
       case ("div", Array(arg1, arg2)) => arg1 / arg2
       case ("mod", Array(arg1, arg2)) => arg1 % arg2
 
       case ("-", Array(arg1)) => -arg1
 
+      case ("*", _) => args.reduceLeft(Pure.times)
       case ("+", _) => args.reduceLeft(Pure.plus)
       case ("-", _) => args.reduceLeft(Pure.minus)
 
@@ -123,6 +123,7 @@ object Sort {
 
 case class Fun(name: String, args: List[Sort], ret: Sort) {
   override def toString = name
+  def toStringTyped = name + ": " + args.mkString(", ") + " -> " + ret
 }
 
 object Fun {

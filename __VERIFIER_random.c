@@ -43,13 +43,17 @@ void output(unsigned int sign, unsigned long long sample, const char *fn) {
 void __assert_fail(const char * assertion, const char * file, unsigned int line, const char * function) {
     alarm(0);
     printf("unsat\n");
-    unsigned int i = __VERIFIER_index-1;
     /* print trace in reverse, like Eldarica */
-    do {
-        Sample *entry = &__VERIFIER_counterexample[i];
+
+    unsigned int i;
+
+    for(i = __VERIFIER_index; i > 0; i--) {
+        Sample *entry = &__VERIFIER_counterexample[i-1];
         output(entry->sign, entry->sample, entry->fn);
-    } while(i-- > 0);
+    }
+
     printf("srand(%u)\n", seed);
+
     exit(0);
 }
 

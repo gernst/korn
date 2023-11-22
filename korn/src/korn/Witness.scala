@@ -91,8 +91,8 @@ object Witness {
         c(body subst su, env, neg)
 
       case _: Bind if !quant =>
-        // if (neg) "false" else "true"
-        korn.error("unsupported quantifier in invariant: " + pure)
+        if (neg) "false" else "true"
+        // korn.info("unsupported quantifier in invariant: " + pure)
       case Ex(params, body) =>
         "(exists " + c(params) + ". " + body + ")"
       case All(params, body) =>
