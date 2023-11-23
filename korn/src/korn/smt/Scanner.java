@@ -39,11 +39,11 @@ public class Scanner extends beaver.Scanner {
   private static final String ZZ_CMAP_PACKED = 
     "\11\0\1\3\1\2\1\17\1\20\1\1\22\0\1\3\1\23\1\0"+
     "\1\0\3\5\1\0\1\21\1\22\2\5\1\0\1\6\1\5\1\5"+
-    "\1\4\1\7\10\7\1\15\1\16\5\5\1\41\1\40\4\5\2\5"+
-    "\1\36\6\5\1\43\1\5\1\37\10\5\3\0\1\5\1\5\1\0"+
-    "\1\35\1\5\1\5\1\25\1\26\1\33\2\5\1\31\2\5\1\27"+
-    "\1\12\1\10\1\24\2\5\1\34\1\32\1\30\1\11\2\5\1\13"+
-    "\1\42\1\5\1\0\1\14\1\0\1\5\6\0\1\17\u1fa2\0\1\17"+
+    "\1\4\1\7\10\7\1\15\1\16\5\5\1\42\1\41\4\5\2\5"+
+    "\1\37\6\5\1\44\1\5\1\40\10\5\3\0\1\5\1\5\1\0"+
+    "\1\30\1\5\1\32\1\25\1\26\1\35\2\5\1\34\2\5\1\27"+
+    "\1\12\1\10\1\24\2\5\1\36\1\31\1\33\1\11\2\5\1\13"+
+    "\1\43\1\5\1\0\1\14\1\0\1\5\6\0\1\17\u1fa2\0\1\17"+
     "\1\17\uffff\0\uffff\0\uffff\0\uffff\0\uffff\0\uffff\0\uffff\0\uffff\0\uffff\0\uffff\0\uffff\0\uffff\0\uffff\0\uffff\0\uffff\0\uffff\0\udfe6\0";
 
   /** 
@@ -58,13 +58,13 @@ public class Scanner extends beaver.Scanner {
 
   private static final String ZZ_ACTION_PACKED_0 =
     "\1\0\1\1\1\2\1\3\1\4\1\3\1\4\3\1"+
-    "\1\5\1\6\1\7\12\4\1\0\1\10\1\11\1\0"+
-    "\2\2\14\4\1\12\1\4\1\13\10\4\1\14\1\15"+
-    "\2\4\1\16\3\4\1\17\1\4\1\20\1\21\1\22"+
-    "\2\4\1\23\2\4\1\24";
+    "\1\5\1\6\1\7\14\4\1\0\1\10\1\11\1\0"+
+    "\2\2\3\4\1\12\12\4\1\13\2\4\1\14\11\4"+
+    "\1\15\1\16\2\4\1\17\2\4\1\20\1\4\1\21"+
+    "\1\4\1\22\1\23\1\24\2\4\1\25\2\4\1\26";
 
   private static int [] zzUnpackAction() {
-    int [] result = new int[71];
+    int [] result = new int[78];
     int offset = 0;
     offset = zzUnpackAction(ZZ_ACTION_PACKED_0, offset, result);
     return result;
@@ -89,18 +89,19 @@ public class Scanner extends beaver.Scanner {
   private static final int [] ZZ_ROWMAP = zzUnpackRowMap();
 
   private static final String ZZ_ROWMAP_PACKED_0 =
-    "\0\0\0\44\0\110\0\44\0\154\0\220\0\264\0\330"+
-    "\0\374\0\u0120\0\44\0\44\0\154\0\u0144\0\u0168\0\u018c"+
-    "\0\u01b0\0\u01d4\0\u01f8\0\u021c\0\u0240\0\u0264\0\u0288\0\330"+
-    "\0\44\0\u02ac\0\u0120\0\u02d0\0\44\0\u02f4\0\u0318\0\u033c"+
-    "\0\u0360\0\u0384\0\u03a8\0\u03cc\0\u03f0\0\u0414\0\u0438\0\u045c"+
-    "\0\u0480\0\154\0\u04a4\0\154\0\u04c8\0\u04ec\0\u0510\0\u0534"+
-    "\0\u0558\0\u057c\0\u05a0\0\u05c4\0\154\0\154\0\u05e8\0\u060c"+
-    "\0\154\0\u0630\0\u0654\0\u0678\0\154\0\u069c\0\u06c0\0\154"+
-    "\0\154\0\u06e4\0\u0708\0\154\0\u072c\0\u0750\0\154";
+    "\0\0\0\45\0\112\0\45\0\157\0\224\0\271\0\336"+
+    "\0\u0103\0\u0128\0\45\0\45\0\157\0\u014d\0\u0172\0\u0197"+
+    "\0\u01bc\0\u01e1\0\u0206\0\u022b\0\u0250\0\u0275\0\u029a\0\u02bf"+
+    "\0\u02e4\0\336\0\45\0\u0309\0\u0128\0\u032e\0\45\0\u0353"+
+    "\0\u0378\0\u039d\0\157\0\u03c2\0\u03e7\0\u040c\0\u0431\0\u0456"+
+    "\0\u047b\0\u04a0\0\u04c5\0\u04ea\0\u050f\0\157\0\u0534\0\u0559"+
+    "\0\157\0\u057e\0\u05a3\0\u05c8\0\u05ed\0\u0612\0\u0637\0\u065c"+
+    "\0\u0681\0\u06a6\0\157\0\157\0\u06cb\0\u06f0\0\157\0\u0715"+
+    "\0\u073a\0\157\0\u075f\0\157\0\u0784\0\u07a9\0\157\0\157"+
+    "\0\u07ce\0\u07f3\0\157\0\u0818\0\u083d\0\157";
 
   private static int [] zzUnpackRowMap() {
-    int [] result = new int[71];
+    int [] result = new int[78];
     int offset = 0;
     offset = zzUnpackRowMap(ZZ_ROWMAP_PACKED_0, offset, result);
     return result;
@@ -125,47 +126,51 @@ public class Scanner extends beaver.Scanner {
   private static final String ZZ_TRANS_PACKED_0 =
     "\1\2\3\3\1\4\2\5\1\6\2\5\1\7\1\5"+
     "\1\10\1\11\1\12\1\2\1\3\1\13\1\14\1\15"+
-    "\1\5\1\16\1\17\1\20\3\5\1\21\2\5\1\22"+
-    "\1\23\1\24\1\25\1\5\1\26\45\0\3\3\14\0"+
-    "\1\3\27\0\10\5\7\0\21\5\4\0\1\6\2\0"+
-    "\1\6\40\0\10\5\7\0\1\5\1\27\17\5\14\30"+
-    "\1\31\27\30\5\0\2\32\1\0\4\32\7\0\21\32"+
-    "\1\33\1\34\1\35\14\33\2\0\23\33\4\0\10\5"+
-    "\7\0\3\5\1\36\15\5\4\0\7\5\1\37\7\0"+
-    "\21\5\4\0\10\5\7\0\3\5\1\40\15\5\4\0"+
-    "\10\5\7\0\1\5\1\41\17\5\4\0\4\5\1\42"+
-    "\3\5\7\0\21\5\4\0\10\5\7\0\3\5\1\43"+
-    "\15\5\4\0\10\5\7\0\1\5\1\44\17\5\4\0"+
-    "\10\5\7\0\11\5\1\45\7\5\4\0\10\5\7\0"+
-    "\1\5\1\46\17\5\4\0\10\5\7\0\2\5\1\47"+
-    "\16\5\4\0\10\32\7\0\21\32\2\0\1\35\45\0"+
-    "\10\5\7\0\10\5\1\50\10\5\4\0\10\5\7\0"+
-    "\6\5\1\51\12\5\4\0\10\5\7\0\5\5\1\52"+
-    "\13\5\4\0\10\5\7\0\11\5\1\53\7\5\4\0"+
-    "\10\5\7\0\5\5\1\54\13\5\4\0\10\5\7\0"+
-    "\12\5\1\55\6\5\4\0\10\5\7\0\1\5\1\56"+
-    "\17\5\4\0\10\5\7\0\11\5\1\57\7\5\4\0"+
-    "\10\5\7\0\6\5\1\60\12\5\4\0\10\5\7\0"+
-    "\3\5\1\61\15\5\4\0\10\5\7\0\6\5\1\62"+
-    "\12\5\4\0\10\5\7\0\7\5\1\63\11\5\4\0"+
-    "\10\5\7\0\12\5\1\64\6\5\4\0\10\5\7\0"+
-    "\4\5\1\65\14\5\4\0\10\5\7\0\4\5\1\66"+
-    "\14\5\4\0\10\5\7\0\12\5\1\67\6\5\4\0"+
-    "\4\5\1\70\3\5\7\0\21\5\4\0\10\5\7\0"+
-    "\4\5\1\71\14\5\4\0\4\5\1\72\3\5\7\0"+
-    "\21\5\4\0\10\5\7\0\5\5\1\73\13\5\4\0"+
-    "\10\5\7\0\4\5\1\74\14\5\4\0\10\5\7\0"+
-    "\17\5\1\75\1\5\4\0\10\5\7\0\5\5\1\76"+
-    "\13\5\4\0\10\5\7\0\3\5\1\77\15\5\4\0"+
-    "\10\5\7\0\7\5\1\100\11\5\4\0\10\5\7\0"+
-    "\4\5\1\101\14\5\4\0\10\5\7\0\3\5\1\102"+
-    "\15\5\4\0\2\5\1\103\5\5\7\0\21\5\4\0"+
-    "\10\5\7\0\11\5\1\104\7\5\4\0\10\5\7\0"+
-    "\10\5\1\105\10\5\4\0\5\5\1\106\2\5\7\0"+
-    "\21\5\4\0\4\5\1\107\3\5\7\0\21\5";
+    "\1\5\1\16\1\17\1\20\1\21\1\5\1\22\2\5"+
+    "\1\23\1\5\1\24\1\25\1\26\1\27\1\5\1\30"+
+    "\46\0\3\3\14\0\1\3\30\0\10\5\7\0\22\5"+
+    "\4\0\1\6\2\0\1\6\41\0\10\5\7\0\1\5"+
+    "\1\31\20\5\14\32\1\33\30\32\5\0\2\34\1\0"+
+    "\4\34\7\0\22\34\1\35\1\36\1\37\14\35\2\0"+
+    "\24\35\4\0\10\5\7\0\3\5\1\40\16\5\4\0"+
+    "\7\5\1\41\7\0\22\5\4\0\10\5\7\0\3\5"+
+    "\1\42\16\5\4\0\10\5\7\0\6\5\1\43\13\5"+
+    "\4\0\10\5\7\0\1\5\1\44\20\5\4\0\10\5"+
+    "\7\0\1\5\1\45\20\5\4\0\4\5\1\46\3\5"+
+    "\7\0\22\5\4\0\10\5\7\0\3\5\1\47\16\5"+
+    "\4\0\10\5\7\0\1\5\1\50\20\5\4\0\10\5"+
+    "\7\0\13\5\1\51\6\5\4\0\10\5\7\0\1\5"+
+    "\1\52\20\5\4\0\10\5\7\0\2\5\1\53\17\5"+
+    "\4\0\10\34\7\0\22\34\2\0\1\37\46\0\10\5"+
+    "\7\0\12\5\1\54\7\5\4\0\10\5\7\0\11\5"+
+    "\1\55\10\5\4\0\10\5\7\0\10\5\1\56\11\5"+
+    "\4\0\4\5\1\57\3\5\7\0\22\5\4\0\10\5"+
+    "\7\0\13\5\1\60\6\5\4\0\10\5\7\0\10\5"+
+    "\1\61\11\5\4\0\10\5\7\0\5\5\1\62\14\5"+
+    "\4\0\10\5\7\0\1\5\1\63\20\5\4\0\10\5"+
+    "\7\0\13\5\1\64\6\5\4\0\10\5\7\0\11\5"+
+    "\1\65\10\5\4\0\10\5\7\0\3\5\1\66\16\5"+
+    "\4\0\10\5\7\0\11\5\1\67\10\5\4\0\10\5"+
+    "\7\0\6\5\1\70\13\5\4\0\10\5\7\0\6\5"+
+    "\1\71\13\5\4\0\10\5\7\0\5\5\1\72\14\5"+
+    "\4\0\10\5\7\0\4\5\1\73\15\5\4\0\10\5"+
+    "\7\0\4\5\1\74\15\5\4\0\10\5\7\0\5\5"+
+    "\1\75\14\5\4\0\4\5\1\76\3\5\7\0\22\5"+
+    "\4\0\10\5\7\0\4\5\1\77\15\5\4\0\4\5"+
+    "\1\100\3\5\7\0\22\5\4\0\10\5\7\0\10\5"+
+    "\1\101\11\5\4\0\10\5\7\0\10\5\1\102\11\5"+
+    "\4\0\10\5\7\0\4\5\1\103\15\5\4\0\10\5"+
+    "\7\0\20\5\1\104\1\5\4\0\10\5\7\0\10\5"+
+    "\1\105\11\5\4\0\10\5\7\0\3\5\1\106\16\5"+
+    "\4\0\10\5\7\0\6\5\1\107\13\5\4\0\10\5"+
+    "\7\0\4\5\1\110\15\5\4\0\10\5\7\0\3\5"+
+    "\1\111\16\5\4\0\2\5\1\112\5\5\7\0\22\5"+
+    "\4\0\10\5\7\0\13\5\1\113\6\5\4\0\10\5"+
+    "\7\0\12\5\1\114\7\5\4\0\5\5\1\115\2\5"+
+    "\7\0\22\5\4\0\4\5\1\116\3\5\7\0\22\5";
 
   private static int [] zzUnpackTrans() {
-    int [] result = new int[1908];
+    int [] result = new int[2146];
     int offset = 0;
     offset = zzUnpackTrans(ZZ_TRANS_PACKED_0, offset, result);
     return result;
@@ -203,11 +208,11 @@ public class Scanner extends beaver.Scanner {
   private static final int [] ZZ_ATTRIBUTE = zzUnpackAttribute();
 
   private static final String ZZ_ATTRIBUTE_PACKED_0 =
-    "\1\0\1\11\1\1\1\11\6\1\2\11\13\1\1\0"+
-    "\1\11\1\1\1\0\1\1\1\11\52\1";
+    "\1\0\1\11\1\1\1\11\6\1\2\11\15\1\1\0"+
+    "\1\11\1\1\1\0\1\1\1\11\57\1";
 
   private static int [] zzUnpackAttribute() {
-    int [] result = new int[71];
+    int [] result = new int[78];
     int offset = 0;
     offset = zzUnpackAttribute(ZZ_ATTRIBUTE_PACKED_0, offset, result);
     return result;
@@ -675,102 +680,112 @@ public class Scanner extends beaver.Scanner {
             { throw new RuntimeException("unexpected character '" + yytext() + "' at " + yyline + ":" + yycolumn);
             } 
             // fall through
-          case 21: break;
+          case 23: break;
           case 2: 
             { 
             } 
             // fall through
-          case 22: break;
+          case 24: break;
           case 3: 
             { return newToken(Terminals.NUM, yytext());
             } 
             // fall through
-          case 23: break;
+          case 25: break;
           case 4: 
             { return newToken(Terminals.ID, yytext());
             } 
             // fall through
-          case 24: break;
+          case 26: break;
           case 5: 
             { return newToken(Terminals.LP);
             } 
             // fall through
-          case 25: break;
+          case 27: break;
           case 6: 
             { return newToken(Terminals.RP);
             } 
             // fall through
-          case 26: break;
+          case 28: break;
           case 7: 
             { return newToken(Terminals.BANG);
             } 
             // fall through
-          case 27: break;
+          case 29: break;
           case 8: 
             { return newToken(Terminals.ID, yytext(+1,-1));
             } 
             // fall through
-          case 28: break;
+          case 30: break;
           case 9: 
             { return newToken(Terminals.KW, yytext(+1,0));
             } 
             // fall through
-          case 29: break;
-          case 10: 
-            { return newToken(Terminals.LET);
-            } 
-            // fall through
-          case 30: break;
-          case 11: 
-            { return newToken(Terminals.INT);
-            } 
-            // fall through
           case 31: break;
-          case 12: 
-            { return newToken(Terminals.REAL);
+          case 10: 
+            { return newToken(Terminals.AS);
             } 
             // fall through
           case 32: break;
-          case 13: 
-            { return newToken(Terminals.BOOL);
+          case 11: 
+            { return newToken(Terminals.LET);
             } 
             // fall through
           case 33: break;
-          case 14: 
-            { return newToken(Terminals.MODEL);
+          case 12: 
+            { return newToken(Terminals.INT);
             } 
             // fall through
           case 34: break;
-          case 15: 
-            { return newToken(Terminals.ARRAY);
+          case 13: 
+            { return newToken(Terminals.REAL);
             } 
             // fall through
           case 35: break;
-          case 16: 
-            { return newToken(Terminals.DEFINE);
+          case 14: 
+            { return newToken(Terminals.BOOL);
             } 
             // fall through
           case 36: break;
-          case 17: 
-            { return newToken(Terminals.EXISTS);
+          case 15: 
+            { return newToken(Terminals.MODEL);
             } 
             // fall through
           case 37: break;
-          case 18: 
-            { return newToken(Terminals.FORALL);
+          case 16: 
+            { return newToken(Terminals.CONST);
             } 
             // fall through
           case 38: break;
-          case 19: 
-            { return newToken(Terminals.POINTER);
+          case 17: 
+            { return newToken(Terminals.ARRAY);
             } 
             // fall through
           case 39: break;
-          case 20: 
-            { return newToken(Terminals.DEFINE_FUN);
+          case 18: 
+            { return newToken(Terminals.DEFINE);
             } 
             // fall through
           case 40: break;
+          case 19: 
+            { return newToken(Terminals.EXISTS);
+            } 
+            // fall through
+          case 41: break;
+          case 20: 
+            { return newToken(Terminals.FORALL);
+            } 
+            // fall through
+          case 42: break;
+          case 21: 
+            { return newToken(Terminals.POINTER);
+            } 
+            // fall through
+          case 43: break;
+          case 22: 
+            { return newToken(Terminals.DEFINE_FUN);
+            } 
+            // fall through
+          case 44: break;
           default:
             zzScanError(ZZ_NO_MATCH);
         }

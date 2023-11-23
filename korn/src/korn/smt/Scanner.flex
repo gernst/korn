@@ -83,6 +83,8 @@ kw      = ":" {symbol}
 
 "model"     { return newToken(Terminals.MODEL);   }
 
+"as"        { return newToken(Terminals.AS);      }
+"const"     { return newToken(Terminals.CONST);   }
 "let"       { return newToken(Terminals.LET);     }
 "exists"    { return newToken(Terminals.EXISTS);  }
 "forall"    { return newToken(Terminals.FORALL);  }

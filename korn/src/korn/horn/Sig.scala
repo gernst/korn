@@ -190,7 +190,7 @@ class Sig(unit: Unit) {
 
       case ArrayType(elem, dim) =>
         val Val(x, _) = zero(elem)
-        Val(Pure.constarray(x), typ)
+        Val(Pure.constarray(x, Sort.array(Sort.int, Sort.int)), typ)
 
       case TypedefName(that) if unit.typedefs contains that =>
         zero(unit.typedefs(that))

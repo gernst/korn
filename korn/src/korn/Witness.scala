@@ -18,8 +18,12 @@ object Witness {
   var quant: Boolean = false
 
   def c(param: Param): String = {
-    val Param(x, Sort.int) = param
-    "int " + x
+    param match {
+      case Param(x, Sort.int) =>
+        "int " + x
+      case Param(x, Sort.array(Sort.int, Sort.int)) =>
+        "int " + x + "[]"
+    }
   }
 
   def c(params: List[Param]): String = {
@@ -92,7 +96,7 @@ object Witness {
 
       case _: Bind if !quant =>
         if (neg) "false" else "true"
-        // korn.info("unsupported quantifier in invariant: " + pure)
+      // korn.info("unsupported quantifier in invariant: " + pure)
       case Ex(params, body) =>
         "(exists " + c(params) + ". " + body + ")"
       case All(params, body) =>

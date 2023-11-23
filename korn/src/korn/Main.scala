@@ -27,7 +27,7 @@ object Main {
   var quiet = false
   var model = false
   var float = false
-  var pointers = true
+  var pointers = false
   var expect = None: Option[String]
   var witness = false
   var confirm = false
@@ -139,18 +139,16 @@ object Main {
         configure(rest)
 
       case "-golem" :: rest =>
-        pointers = false
         add(Golem(timeout, model, write, expect))
         configure(rest)
 
       case first :: rest if first.startsWith("-golem:") =>
-        pointers = false
         val engine = first drop "-golem:".length
         add(Golem(timeout, model, write, expect, engine))
         configure(rest)
 
-      case "-no-pointers" :: rest =>
-        pointers = false
+      case "-pointers" :: rest =>
+        pointers = true
         configure(rest)
 
       case "-float" :: rest =>

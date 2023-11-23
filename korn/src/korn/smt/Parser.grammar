@@ -13,7 +13,7 @@
 %terminals INT, REAL, BOOL, ARRAY, POINTER;
 
 %terminals MODEL, DEFINE_FUN, DEFINE;
-%terminals LET, EXISTS, FORALL;
+%terminals AS, CONST, LET, EXISTS, FORALL;
 
 %typeof ID      = "String";
 %typeof NUM     = "String";
@@ -84,6 +84,8 @@ expr
   | LP BANG expr.e attrs RP
   | LP ID.n exprs.es RP
           {: return s(Parsing.apply(n, es)); :}
+  | LP LP AS CONST sort.s RP expr.e RP
+          {: return s(Parsing.constarray(s, e)); :}
   | LP LET LP pairs.ps RP expr.b RP
           {: return s(Parsing.let(ps, b)); :}
   | LP EXISTS LP params.ps RP expr.b RP

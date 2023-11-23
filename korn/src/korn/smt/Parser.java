@@ -21,13 +21,15 @@ public class Parser extends beaver.Parser {
 		static public final short DEFINE_FUN = 8;
 		static public final short DEFINE = 9;
 		static public final short KW = 10;
-		static public final short LET = 11;
-		static public final short EXISTS = 12;
-		static public final short FORALL = 13;
-		static public final short MODEL = 14;
-		static public final short POINTER = 15;
-		static public final short ARRAY = 16;
-		static public final short BANG = 17;
+		static public final short AS = 11;
+		static public final short CONST = 12;
+		static public final short LET = 13;
+		static public final short EXISTS = 14;
+		static public final short FORALL = 15;
+		static public final short MODEL = 16;
+		static public final short POINTER = 17;
+		static public final short ARRAY = 18;
+		static public final short BANG = 19;
 
 		static public final String[] NAMES = {
 			"EOF",
@@ -41,6 +43,8 @@ public class Parser extends beaver.Parser {
 			"DEFINE_FUN",
 			"DEFINE",
 			"KW",
+			"AS",
+			"CONST",
 			"LET",
 			"EXISTS",
 			"FORALL",
@@ -52,23 +56,25 @@ public class Parser extends beaver.Parser {
 	}
 
 	static final ParsingTables PARSING_TABLES = new ParsingTables(
-		"U9oDb7beLKSKnhzxNvunCMunqHYVPcbCrEU#BzMgQJNkSQzrhHeHX88W21Rghc1LXABOkbI" +
-		"XBTP2HL1SK13$jNNVbwfrN#k#w#atyyvxZDVtXo$yvdnpvfovvyxS703xKI6la47I4OAFD5" +
-		"J5I1IAe4nEe1A#G2$qHcDqn61K84yE88UH5KX1cZobQezKvfIZ1Whm6HeXZ6weZrovWpgeZ" +
-		"Mn4vBQgOdHGrLAEew6yGnIVe39QCBipyfXT9c#P7NjYcQaghcrDSVrrmb#EeVA4UUqnddbL" +
-		"y9NkFqxjHupo03taEbhBDMBqV#Y1wkY3$cQ6Bp4HrL0JcQY5BDH5FJc61iX7aTn22PgWAPg" +
-		"XkLn5AxHX5MtH3f#Y4xgWgzn7T$IahnIVeo$wOG06OX26OmY6OGJ6O3H6OQmynWHCmcJkxV" +
-		"7imRFraOjwF9KqtWOuy$ZyCEyXbU#NmNF8ufb7ML4EbOdqg49MrUORDM2DcVH5UB95TiyGR" +
-		"wfnGkNpRcAgWBuIFg4XtyBZlPdiT6QRAYBwHD$cnRMfAQwp4twJvp4ln1kCiAP2tRzOxSUC" +
-		"dZx9nUSjr50Luf$76p1lPl3udZ6RQQDZkZwh2ccCRpsUlUSGCpsbbhDg8aDMPLiDJ9a3#pC" +
-		"dNoKc#HxWdO8t27vZG2#D6QcsBrb65fFlo0gIJjgI7qnC7FvIoMIIGLQgRnNff7gg4zk4$A" +
-		"Zw9zB2MLkZSXsPHdvM$mOoJ$L6yWtvDL33RsG1sKIcaz$LlvaiKlq7AILRt5nT#vRq8LjrF" +
-		"eWC9zkScEtaUxA3p20xrR#Kx8Bvle3TP2RPesjxoJXdZrbad$ji4RchQvuJLobGNtcIcZFK" +
-		"pYPpW#kwDZ$9NhFKBdPyMO6O9O5vZjfb0Vz2jSiH#2wScAZQbG7$AhMhoTfakRg#tj4RoCO" +
-		"aCRtL$f9ahLJjfe1$iwF$3AnDmGS$UI4lvVK7tYjoL8uaPeVjU9ASbbDM7xBZNRddv1oqum" +
-		"sTNPGpSjDP$TkE3tLsIVwH2t9UP#VKdfL7JiPVxrNqhnsVoNDhByiRcF$RA7j1b3qWoiwKO" +
-		"$khp#uAssjpIPx5jvsXcBhGzZ$FzaxpPKUeJK$Cj$YsovPGcpvROF7PRq4yTb#FFJEDL2PX" +
-		"zgiKzh4KfsCPp3pCBcNwdi$ExX6VNHssinTfBuiH9YaaDK7J$m4nx01z");
+		"U9nrbMbiL5KKn$$l3MrfBOjrfYtJPLeBb6qG6HHaax8e852GJLjH196j43wGa9YOy47s431" +
+		"G8uiQZS4qHWGXHZO$I5Z2Zg22YY0kWABicmh7$xrpPlBwEhp9xvvp$#Sk9$U#EG$04RJ5mw" +
+		"WHmLWqHnP6m4KcXgC71kCv#GVP91y1fA46JV2Yt4EMx4CZZgb1kebpJWmPx7V2e#YCKlaJU" +
+		"SX524K8eutwXVA7Ul4sXiPehJFYIYl4v2xAL8kPlP9#DWQftnSFCCyXwCKyOwXWdd5zBAem" +
+		"1IFaCaPIYw$O1LtngloE$dXPbKdrScZGoZToN7v3VxEANE9ApH11nAxv4gRA3RcEWVmrnOF" +
+		"8mKC8eWKAv1YAKOAMSW7bQ8SEYA8zEk8HF8R7qGrFe3kUH4$qHX$v5VqmWFEVmjCOXcSm59" +
+		"NoDvx5A6gZCGOlu7bKOnmcOWB6unMvXicOXkcyZm2p0s#X1K#q08KysMAUJrFcvp0AvkBIo" +
+		"#MPPh8NPWvcJ2xlqyJ3nFJJaCvxAh5QW3VOYZSGLBzzKasq3j#A#8ouqjRkr26fcRqIlijp" +
+		"YljbtDNaMSuyNPv7iUf6owDcTYdM5SqfbbgbfIfjV3duMyV#t2GktxqizG8s5h0$XpSQP1k" +
+		"qMedQ8D#T46ssxOSi8QkxkdA4EGPqPaBBjvftND3kOxmywmCpvi8#pKc0D24v98yKaUvaW8" +
+		"wfLDkFr98bP19vcqH8bAmnOnA8y3y7la$06#GTdVykcQT#xyHOFkNaVVK$89qziTLaBUb6r" +
+		"f79fCwxbuwh9dt9nzeVI8QHzTh$bCma6yaiyfdgcyXyzJUJsUGBtzfRo4AoZSmXsrNVGHQh" +
+		"$oMf8bzvvkqaoyWkyXhPhVfoieUi87l9wsIVnlQJbPurZ3dapOTdUr7jFS#uT5$E5VupIip" +
+		"ZCuyiyCSrjeXa#BIvQfTwjB1lpF8KQxsfjZRLNXfxo#ERzscLBnvJkpRLF3xlaG$litOVjU" +
+		"jy#aTgwyWdAUODLhiXHMoesiq#$NEFlzKNcu46ZzoME$9l0$KN#LgE9dj7RFijEI7VMV#mR" +
+		"I$AN$Lc7PAVv9JygBqVr7xl6N7GjkUqTrfEodbFz81jhsZlZ5prnFRNs#ciRM$ABMj$blzW" +
+		"$kLHLfGegqYKzIvCtrHlKqEAw1UIKelBMWdYi7OwjguMsCeAuh3MckfjS5ctGHnMReVLsM3" +
+		"gCeZ3Mc6#6fdsov7BIftFFICabAoF1jDFOoqpbTJbLyCXBhyOi5#DrbeHuwIHHgGnoKZIyN" +
+		"#QVHsJ");
 
 	static final Action RETURN2 = new Action() {
 		public Symbol reduce(Symbol[] _symbols, int offset) {
@@ -308,7 +314,16 @@ public class Parser extends beaver.Parser {
 					 return s(Parsing.apply(n, es));
 				}
 			},
-			new Action() {	// [49] expr = LP LET LP pairs.ps RP expr.b RP
+			new Action() {	// [49] expr = LP LP AS CONST sort.s RP expr.e RP
+				public Symbol reduce(Symbol[] _symbols, int offset) {
+					final Symbol _symbol_s = _symbols[offset + 5];
+					final Sort s = (Sort) _symbol_s.value;
+					final Symbol _symbol_e = _symbols[offset + 7];
+					final Pure e = (Pure) _symbol_e.value;
+					 return s(Parsing.constarray(s, e));
+				}
+			},
+			new Action() {	// [50] expr = LP LET LP pairs.ps RP expr.b RP
 				public Symbol reduce(Symbol[] _symbols, int offset) {
 					final Symbol _symbol_ps = _symbols[offset + 4];
 					final ArrayList _list_ps = (ArrayList) _symbol_ps.value;
@@ -318,7 +333,7 @@ public class Parser extends beaver.Parser {
 					 return s(Parsing.let(ps, b));
 				}
 			},
-			new Action() {	// [50] expr = LP EXISTS LP params.ps RP expr.b RP
+			new Action() {	// [51] expr = LP EXISTS LP params.ps RP expr.b RP
 				public Symbol reduce(Symbol[] _symbols, int offset) {
 					final Symbol _symbol_ps = _symbols[offset + 4];
 					final ArrayList _list_ps = (ArrayList) _symbol_ps.value;
@@ -328,7 +343,7 @@ public class Parser extends beaver.Parser {
 					 return s(Parsing.bind("exists", ps, b));
 				}
 			},
-			new Action() {	// [51] expr = LP FORALL LP params.ps RP expr.b RP
+			new Action() {	// [52] expr = LP FORALL LP params.ps RP expr.b RP
 				public Symbol reduce(Symbol[] _symbols, int offset) {
 					final Symbol _symbol_ps = _symbols[offset + 4];
 					final ArrayList _list_ps = (ArrayList) _symbol_ps.value;

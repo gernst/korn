@@ -17,6 +17,10 @@ object Parsing {
     Sort.array(dom, ran)
   }
 
+  def constarray(typ: Sort, value: Pure) = {
+    Pure.constarray(value, typ) // hack
+  }
+
   def pointerSort(elem: Sort) = {
     if (korn.Main.pointers)
       Sort.pointer(elem)
@@ -257,11 +261,11 @@ object Pure extends korn.Counter with Alpha[Pure, Var] {
     }
   }
 
-  case class constarray(value: Pure) extends Pure {
+  case class constarray(value: Pure, sort: Sort) extends Pure {
     def free = value.free
-    def rename(re: Map[Var, Var]) = constarray(value rename re)
-    def subst(su: Map[Var, Pure]) = constarray(value subst su)
-    override def toString = sexpr("const", value)
+    def rename(re: Map[Var, Var]) = constarray(value rename re, sort)
+    def subst(su: Map[Var, Pure]) = constarray(value subst su, sort)
+    override def toString = sexpr(sexpr("as", "const", sort), value)
   }
 
   case class ite(test: Pure, left: Pure, right: Pure) extends Pure {
