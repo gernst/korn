@@ -171,6 +171,35 @@ class Sig(unit: Unit) {
     }
   }
 
+  def zero(typ: Type): Val = {
+    typ match {
+      case Type._Bool =>
+        Val(Pure.zero, typ)
+
+      case Signed(_, bytes) =>
+        Val(Pure.zero, typ)
+
+      case Unsigned(_, bytes) =>
+        Val(Pure.zero, typ)
+
+      case PtrType(elem) if korn.Main.pointers =>
+        ???
+
+      case PtrType(elem) =>
+        Val(Pure.zero, typ)
+
+      case ArrayType(elem, dim) =>
+        val Val(x, _) = zero(elem)
+        Val(Pure.constarray(x), typ)
+
+      case TypedefName(that) if unit.typedefs contains that =>
+        zero(unit.typedefs(that))
+
+      case _ =>
+        korn.error("unsupported type: " + typ)
+    }
+  }
+
   def nondet(name: String, typ: Type): (Var, Sort, Val) = {
     typ match {
       case Type._Bool =>

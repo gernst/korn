@@ -149,14 +149,18 @@ class Unit(val file: String, stmts: List[Stmt]) {
       case Group(stmts) =>
         // use case: groups of variable declarations
         run(stmts, dynamic)
+
+      // global variables are implicitly zeroed
       case VarDef(formal @ Formal(typ, name), None) =>
-        var (_, _, x) = nondet(name, typ)
+        var x = zero(typ)
         state += name -> x
+
       case VarDef(formal @ Formal(typ, name), Some(init)) =>
-        var (_, _, x) = nondet(name, typ)
+        var x = zero(typ)
         state += name -> x
         val y = value(init, state)
         state += name -> y
+
       case FunDef(ret, "reach_error", formals, body) =>
       // built-in
       case stmt @ FunDef(ret, name, formals, body) =>

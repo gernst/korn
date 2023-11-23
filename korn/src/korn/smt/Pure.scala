@@ -257,6 +257,13 @@ object Pure extends korn.Counter with Alpha[Pure, Var] {
     }
   }
 
+  case class constarray(value: Pure) extends Pure {
+    def free = value.free
+    def rename(re: Map[Var, Var]) = constarray(value rename re)
+    def subst(su: Map[Var, Pure]) = constarray(value subst su)
+    override def toString = sexpr("const", value)
+  }
+
   case class ite(test: Pure, left: Pure, right: Pure) extends Pure {
     def free = test.free ++ left.free ++ right.free
     def rename(re: Map[Var, Var]) = ite(test rename re, left rename re, right rename re)
