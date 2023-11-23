@@ -11,23 +11,6 @@ class Eval(unit: Unit) {
   import unit._
   import unit.sig._
 
-  def nondet_bounded(name: String, typ: Type, st: State): (Val, State) = {
-    val (x, _, v) = nondet("$" + name, typ)
-    val b = bounds(x, typ)
-
-    val sort = resolve(typ)
-    val call = "$__VERIFIER_nondet_" + name
-    val fun = Fun(call, List(sort), Sort.bool)
-    val pred = CEX(fun)
-    preds += pred
-    val c = pred(x)
-    clause(st, c, "counterexample trace")
-
-    // korn.avoid(st.path contains False, "nondet choice in unreachable state")
-
-    (v, st and b and c)
-  }
-
   def value_test(expr: Expr, st: State) = {
     Val.truth(value(expr, st))
   }
@@ -97,6 +80,50 @@ class Eval(unit: Unit) {
 
   class scoped(proc: Proc) {
     import proc._
+
+    def nondet_bounded(name: String, typ: Type, st0: State, st1: State): (Val, State) = {
+      val (x, _, v) = nondet("$" + name, typ)
+      val b = bounds(x, typ)
+
+      if (true) {
+        val step = st1.store(Unit.step.name)
+
+        val k_ = step match {
+          case Val(Pure.const(k), typ) =>
+            Val(Pure.const(k + 1), typ)
+          case Val(k, typ) =>
+            Val(k + Pure.one, typ)
+        }
+
+        val sort = resolve(typ)
+        val call = "$__VERIFIER_nondet_" + name
+
+        val (pred, c) = if (true) {
+          val fun = Fun(call, List(sort), Sort.bool)
+          val pred = CEX(fun)
+          val c = pred(x)
+          (pred, c)
+        } else {
+          val fun = Fun(call, List(Sort.int, sort), Sort.bool)
+          val pred = CEX(fun)
+          val c = pred(step.pure, x)
+          (pred, c)
+        }
+
+        preds += pred
+        clause(st1, c, "counterexample trace", false)
+
+        // korn.avoid(st.path contains False, "nondet choice in unreachable state")
+
+        // auxiliary ++= List(x.toString)
+
+        val asg = (Unit.step.name -> k_)
+        val st2 = st1 and b trace c
+        (v, st2 + asg)
+      } else {
+        (v, st1 and b)
+      }
+    }
 
     def assign(lhs: Expr, rhs: Expr, st0: State, st1: State): (Val, Val, State) = {
       lhs match {
@@ -281,23 +308,25 @@ class Eval(unit: Unit) {
           val (_arg2, st3) = rval(arg2, st0, st2)
           (Val.binop(op, _arg1, _arg2), st3)
 
+        case Question(test, arg1, arg2) if !Expr.hasEffects(arg1) && !Expr.hasEffects(arg2) =>
+          val (_test, st2) = rval_test(test, st0, st1)
+          val (_arg1, sty) = rval(arg1, st0, st2 and _test)
+          val (_arg2, stn) = rval(arg2, st0, st2 and !_test)
+          (Val.question(_test, _arg1, _arg2), st2)
+
         case Question(test, arg1, arg2) =>
           val (_test, st2) = rval_test(test, st0, st1)
           val (_arg1, sty) = rval(arg1, st0, st2 and _test)
           val (_arg2, stn) = rval(arg2, st0, st2 and !_test)
 
-          if (false && st2.store == sty.store && st2.store == stn.store) {
-            (Val.question(_test, _arg1, _arg2), st2)
-          } else {
-            val st3 = branch.join(st0, sty, "ite left", stn, "ite right", proc)
-            (Val.question(_test, _arg1, _arg2), st3)
-          }
+          val st3 = branch.join(st0, sty, "ite left", stn, "ite right", proc)
+          (Val.question(_test, _arg1, _arg2), st3)
 
         case stdlib.exit() =>
           (Val.unit, st1 and False)
 
         case stdlib.abort() =>
-          // clause(st1, False, "abort")
+          // fail(st1, "abort")
           (Val.unit, st1 and False)
 
         case stdlib.__assert_fail(args) =>
@@ -324,79 +353,79 @@ class Eval(unit: Unit) {
           (Val.unit, st2)
 
         case __VERIFIER.error() =>
-          clause(st1, False, "error")
+          fail(st1, "error")
           (Val.unit, st1)
 
         case __VERIFIER.reach_error() =>
-          clause(st1, False, "error")
+          fail(st1, "error")
           (Val.unit, st1)
 
         case __VERIFIER.nondet_bool() =>
-          nondet_bounded("bool", Type._Bool, st1)
+          nondet_bounded("bool", Type._Bool, st0, st1)
 
         // signed integers
         case __VERIFIER.nondet_char() =>
-          nondet_bounded("char", Signed._char, st1)
+          nondet_bounded("char", Signed._char, st0, st1)
 
         case __VERIFIER.nondet_short() =>
-          nondet_bounded("short", Signed._short, st1)
+          nondet_bounded("short", Signed._short, st0, st1)
 
         case __VERIFIER.nondet_int() =>
-          nondet_bounded("int", Signed._int, st1)
+          nondet_bounded("int", Signed._int, st0, st1)
 
         case __VERIFIER.nondet_long() =>
-          nondet_bounded("long", Signed._long, st1)
+          nondet_bounded("long", Signed._long, st0, st1)
 
         case __VERIFIER.nondet_longlong() =>
-          nondet_bounded("longlong", Signed._long_long, st1)
+          nondet_bounded("longlong", Signed._long_long, st0, st1)
 
         // unsigned integers
         case __VERIFIER.nondet_uchar() =>
-          nondet_bounded("uchar", Unsigned._char, st1)
+          nondet_bounded("uchar", Unsigned._char, st0, st1)
 
         case __VERIFIER.nondet_ushort() =>
-          nondet_bounded("ushort", Unsigned._short, st1)
+          nondet_bounded("ushort", Unsigned._short, st0, st1)
 
         case __VERIFIER.nondet_uint() =>
-          nondet_bounded("uint", Unsigned._int, st1)
+          nondet_bounded("uint", Unsigned._int, st0, st1)
 
         case __VERIFIER.nondet_ulong() =>
-          nondet_bounded("ulong", Unsigned._long, st1)
+          nondet_bounded("ulong", Unsigned._long, st0, st1)
 
         case __VERIFIER.nondet_ulonglong() =>
-          nondet_bounded("ulonglong", Unsigned._long_long, st1)
+          nondet_bounded("ulonglong", Unsigned._long_long, st0, st1)
 
         case __VERIFIER.nondet_float() =>
-          nondet_bounded("float", Type._float, st1)
+          nondet_bounded("float", Type._float, st0, st1)
 
         case __VERIFIER.nondet_double() =>
-          nondet_bounded("double", Type._double, st1)
+          nondet_bounded("double", Type._double, st0, st1)
 
         // nonstandard
         case __VERIFIER.nondet_unsigned_char() =>
-          nondet_bounded("uchar", Unsigned._char, st1)
+          nondet_bounded("uchar", Unsigned._char, st0, st1)
 
         case __VERIFIER.nondet_unsigned_short() =>
-          nondet_bounded("ushort", Unsigned._short, st1)
+          nondet_bounded("ushort", Unsigned._short, st0, st1)
 
         case __VERIFIER.nondet_unsigned() =>
-          nondet_bounded("int", Signed._int, st1)
+          nondet_bounded("int", Signed._int, st0, st1)
 
         case __VERIFIER.nondet_unsigned_int() =>
-          nondet_bounded("int", Unsigned._int, st1)
+          nondet_bounded("int", Unsigned._int, st0, st1)
 
         case __VERIFIER.nondet_unsigned_long() =>
-          nondet_bounded("ulong", Unsigned._long, st1)
+          nondet_bounded("ulong", Unsigned._long, st0, st1)
 
         // explicit size
         case __VERIFIER.nondet_u8() =>
-          nondet_bounded("uchar", Unsigned._char, st1)
+          nondet_bounded("uchar", Unsigned._char, st0, st1)
 
         case __VERIFIER.nondet_u16() =>
-          nondet_bounded("ushort", Unsigned._short, st1)
+          nondet_bounded("ushort", Unsigned._short, st0, st1)
 
         case __VERIFIER.nondet_u32() =>
-          nondet_bounded("uint", Unsigned._int, st1)
+          nondet_bounded("uint", Unsigned._int, st0, st1)
 
         // a bit hackish
         case SizeOfExpr(expr) =>
@@ -429,7 +458,7 @@ class Eval(unit: Unit) {
 
           call.pre(st0, st2, name, pre, _in, proc)
           val st3 = call.post(st0, st2, name, post, _in, _out, proc)
-
+          // val st4 = branch.cut(st0, st3, proc)
           (_ret, st3)
 
         case Cast(typ, expr) =>

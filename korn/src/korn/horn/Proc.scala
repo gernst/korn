@@ -50,13 +50,16 @@ class Proc(
     }
 
     for (post <- post_) {
-      val result = List("\\result")
+      val r = List("\\result")
+      val ogs = globals map ("\\old(" + _.name + ")")
+      val ps = params map (_.name)
+      val gs = globals map (_.name)
 
       val formals =
         if (ret != Type._void)
-          ((globals ++ params ++ globals) map (_.name)) ++ result
+          ogs ++ ps ++ gs ++ r
         else
-          (globals ++ params ++ globals) map (_.name)
+          ogs ++ ps ++ gs
 
       korn.ensure(
         post.fun.args.length == formals.length,
@@ -104,6 +107,7 @@ class Proc(
         val Val(x, _) = st2(name)
         val eq = x === pure
         val st3 = st2 and eq
+        // val st4 = branch.cut(st0, st3, this)
         st3
 
       case Atomic(None) =>

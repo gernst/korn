@@ -6,6 +6,16 @@ import korn.c._
 import korn.smt._
 import korn.Loc
 
+object Unit {
+  // signedness is ignored, will be SMT Int anyway
+  val step = Formal(Unsigned._int, "$step")
+
+  val default_globals = List(step)
+  val default_vars = Map(step.name -> step.typ)
+  val default_state = State(Nil, Nil, Map(step.name -> Val(Pure.zero, step.typ)))
+  val default_typing = Map(step.name -> Sort.int)
+}
+
 class Unit(val file: String, stmts: List[Stmt]) {
 
   /** global data types */
@@ -32,11 +42,16 @@ class Unit(val file: String, stmts: List[Stmt]) {
 
   var witness = mutable.Map[String, (Proc, Loc, Pred, List[String], String)]()
 
+  /** symbolic state with global variables */
+  var state: State = Unit.default_state
+
   /** types of additional logical variables */
   var typing = mutable.Map[String, Sort]()
 
-  /** symbolic state with global variables */
-  var state: State = State.empty
+  /** initialize globals with defaults */
+  globals ++= Unit.default_globals
+  vars ++= Unit.default_vars
+  typing ++= Unit.default_typing
 
   object sig extends Sig(this)
   object eval extends Eval(this)
@@ -46,16 +61,26 @@ class Unit(val file: String, stmts: List[Stmt]) {
     clauses forall (_ isLinear funs)
   }
 
-  def clause(st: State, phi: Pure, reason: String) {
+  def clause(st: State, phi: Pure, reason: String, useWitness: Boolean = true) {
     val f = (st.path contains False)
     val t = (st.path contains phi) || (phi == True)
 
+    val premises =
+      if (useWitness)
+        st.path ++ st.witness
+      else
+        st.path
+
     if (!t && !f)
-      clauses += Clause(st.path, phi, reason)
+      clauses += Clause(premises, phi, reason)
+  }
+
+  def fail(st: State, reason: String) {
+    clause(st, False, reason, useWitness = true)
   }
 
   def goal(st: State, phi: Pure, reason: String) {
-    clause(st and !phi, False, reason)
+    clause(st and !phi, False, reason, useWitness = true)
   }
 
   def enum(cases: List[Const]) = {

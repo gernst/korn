@@ -1,14 +1,14 @@
-int main() {
-    int x;
-    int y = x;
-    y ++;
-    goto label;
-    assert(0);
+extern int __VERIFIER_nondet_int();
 
-label:
-    if(x < 0) {
-        x = -x;
+int main() {
+    int x = __VERIFIER_nondet_int();
+    int y;
+
+    if(x == 42) {
+        y = 0;
+    } else {
+        y = 1;
     }
 
-    assert(x >= 0);
+    assert(y);
 }

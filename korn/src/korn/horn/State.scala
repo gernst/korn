@@ -3,7 +3,7 @@ package korn.horn
 import korn.smt._
 
 object State {
-  val empty = State(Nil, Map())
+  val empty = State(Nil, Nil, Map())
 }
 
 object Context {
@@ -17,13 +17,22 @@ case class Context(entry: State, hyps: List[Hyp], switches: List[Pure]) {
   def ::(sw: Pure) = copy(switches = sw :: switches)
 }
 
-case class State(path: List[Pure], store: Store) extends (String => Val) {
+case class State(path: List[Pure], witness: List[Pure], store: Store) extends (String => Val) {
   def and(that: Pure): State = {
     that match {
       case Pure.and(phi, psi) =>
         this and psi and phi
       case _ =>
         copy(path = that :: path)
+    }
+  }
+
+  def trace(that: Pure): State = {
+    that match {
+      case Pure.and(phi, psi) =>
+        this and psi and phi
+      case _ =>
+        copy(witness = that :: witness)
     }
   }
 

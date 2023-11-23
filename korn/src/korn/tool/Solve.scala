@@ -122,7 +122,7 @@ case class Eldarica(
   }
 
   override def readTrace(in: BufferedReader, unit: Unit) = {
-    var trace: List[(String, BigInt)] = Nil
+    var trace: List[(String, Int, BigInt)] = Nil
     var line = in.readLine()
     while (line != null) {
       val pos = line indexOf "__VERIFIER_nondet_"
@@ -132,11 +132,15 @@ case class Eldarica(
         val rp = line indexOf ")"
         val fun = line take lp
         val res = line drop (lp + 1) take (rp - lp - 1)
-        trace = (fun, BigInt(res)) :: trace
+        val Array(index, value) = res.split(", ")
+        trace = (fun, index.toInt, BigInt(value)) :: trace
       }
       line = in.readLine()
     }
-    trace
+
+    trace = trace.sortBy(_._2)
+    for ((fun, index, value) <- trace)
+      yield (fun, value)
   }
 }
 
@@ -166,7 +170,7 @@ case class Golem(
   }
 
   override def readTrace(in: BufferedReader, unit: Unit) = {
-    var trace: List[(String, BigInt)] = Nil
+    var trace: List[(String, Int, BigInt)] = Nil
     var line = in.readLine()
     while (line != null) {
       val pos = line indexOf "__VERIFIER_nondet_"
@@ -176,11 +180,14 @@ case class Golem(
         val rp = line lastIndexOf ")"
         val fun = line take lp
         val res = line drop (lp + 1) take (rp - lp - 1)
-        trace = (fun, readInt(res)) :: trace
+        val Array(index, value) = res.split(" ", 2)
+        trace = (fun, index.toInt, readInt(value)) :: trace
       }
       line = in.readLine()
     }
-    // trace.reverse
-    trace
+
+    trace = trace.sortBy(_._2)
+    for ((fun, index, value) <- trace)
+      yield (fun, value)
   }
 }

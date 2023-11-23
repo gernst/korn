@@ -15,8 +15,8 @@ sealed trait Step extends Pred {
 }
 
 case class CEX(fun: Fun) extends Pred {
-  def apply(arg: Pure) = {
-    Pure.app(fun, List(arg))
+  def apply(args: Pure*) = {
+    Pure.app(fun, args.toList)
   }
 }
 
@@ -76,7 +76,7 @@ class Sig(unit: Unit) {
   import unit._
   import unit.sig._
 
-  case class Scope(formals: List[Formal]) {
+  class Scope(formals: List[Formal]) {
     val names = formals map (_.name)
     val types = formals map (_.typ)
     val sorts = types map (resolve(_))
@@ -91,7 +91,7 @@ class Sig(unit: Unit) {
     }
 
     def arbitrary = {
-      State(Nil, havoc)
+      State(Nil, Nil, havoc)
     }
 
     def state(label: String): Step = {
