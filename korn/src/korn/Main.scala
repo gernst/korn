@@ -200,11 +200,12 @@ object Main {
 
   def run(file: String) {
     info("program:      " + file)
+    val stmts = Tool.parse(file)
 
     if (dry) {
-      Tool.parse(file)
+      // do nothing
     } else if (tools.isEmpty) {
-      val unit = Tool.translate(file)
+      val unit = Tool.translate(file, stmts)
 
       if (write) {
         val to = write_smt2 getOrElse smt2(file)
@@ -217,6 +218,7 @@ object Main {
       }
     } else {
       import scala.util.control.Breaks._
+      val unit = Tool.translate(file, stmts)
 
       breakable {
         for (tool <- tools) {
@@ -224,8 +226,6 @@ object Main {
           // val Tool(timeout, model, write, cmd @ _*) = tool
 
           info("running:      " + tool.how)
-
-          val unit = Tool.translate(file)
 
           val to = write_smt2 getOrElse smt2(file)
           if (tool.write)

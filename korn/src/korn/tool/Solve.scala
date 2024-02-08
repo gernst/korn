@@ -64,6 +64,8 @@ abstract class Solve extends Tool {
   }
 
   def check(unit: Unit, smt2: String) = {
+    unit.run()
+
     val (in, err, proc) = if (write) {
       val out = new PrintStream(new File(smt2))
       write(out, unit)

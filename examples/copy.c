@@ -3,18 +3,17 @@ void main() {
     int a[n];
     int b[n];
     int i=0;
-    int k;
-    assume(0 <= k && k < n);
     
     assume(0 <= n);
 
     while(i<n)
-      // invariant $main_inv1
     {
         b[i] = a[i];
         i++;
     }
-    // assert $main_sum1
+
+    int k;
     assert(i == n);
+    assume(0 <= k && k < n);
     assert(a[k] == b[k]);
 }

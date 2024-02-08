@@ -4,11 +4,11 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.PrintStream
 import korn.Main
+import korn.horn.Unit
 import korn.smt.Model
 import scala.concurrent.duration.Duration
 import korn.smt.Scanner
 import korn.smt.Parser
-import korn.horn.Unit
 
 sealed trait Result
 case class Unknown(status: String) extends Result
@@ -72,15 +72,12 @@ object Tool {
     status == 0
   }
 
-  def parse(file: String) {
-    val stmts = korn.c.parse(file)
+  def parse(file: String) = {
+    korn.c.parse(file)
   }
 
-  def translate(file: String) = {
-    val stmts = korn.c.parse(file)
-    object unit extends Unit(file, stmts)
-    unit.run()
-    unit
+  def translate(file: String, stmts: List[korn.c.Stmt]) = {
+    new korn.horn.Unit(file, stmts)
   }
   
   def model(in: BufferedReader): Model = {

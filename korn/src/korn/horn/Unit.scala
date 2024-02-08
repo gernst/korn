@@ -163,9 +163,11 @@ class Unit(val file: String, stmts: List[Stmt]) {
 
       case FunDef(ret, "reach_error", formals, body) =>
       // built-in
+
       case stmt @ FunDef(ret, name, formals, body) =>
         val loc = korn.unpack(stmt.loc, "no location for while loop")
         define(loc, name, formals, ret, body)
+
       case _ =>
       // nothing to do
     }
