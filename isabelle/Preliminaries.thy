@@ -77,4 +77,12 @@ while_breakI[intro]:
 while_stepI[intro]:
   "\<lbrakk>t s; B s (Ok s'); while t B s' s''\<rbrakk> \<Longrightarrow> while t B s s''"
 
+inductive ite :: "'S cond  \<Rightarrow> 'S prog \<Rightarrow> 'S prog \<Rightarrow> 'S prog" where
+ite_leftI[intro]:
+  "\<lbrakk>  t s; c1 s r\<rbrakk> \<Longrightarrow> ite t c1 c2 s r" |
+ite_rightI[intro]:
+  "\<lbrakk>\<not> t s; c2 s r\<rbrakk> \<Longrightarrow> ite t c1 c2 s r"
+
+inductive_cases iteE[elim]: "ite t c1 c2 s r"
+
 end

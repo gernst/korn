@@ -31,9 +31,20 @@ sealed trait Call {
 }
 
 sealed trait Branch {
-  def join(st0: State, st1: State, reason1: String, st2: State, reason2: String, proc: Proc): State
   def label(label: String, st0: State, st1: State, proc: Proc): State
   def goto(label: String, st0: State, st1: State, proc: Proc)
+
+  def join(st0: State, st1: State, reason1: String, st2: State, reason2: String, proc: Proc): State
+  def join(
+      st0: State,
+      sort: Sort,
+      st1: State,
+      res1: Pure,
+      reason1: String,
+      st2: State,
+      res2: Pure,
+      reason2: String,
+      proc: Proc): (Pure, State)
 }
 
 sealed trait Loop {
@@ -169,6 +180,27 @@ object Branch {
       now(pred, st0, st1, reason1)
       now(pred, st0, st2, reason2)
       from(pred, st0, combined.arbitrary)
+    }
+
+    def join(
+        st0: State,
+        sort: Sort,
+        st1: State,
+        res1: Pure,
+        reason1: String,
+        st2: State,
+        res2: Pure,
+        reason2: String,
+        proc: Proc): (Pure, State) = {
+      import proc._
+      import proc.unit._
+
+      val pred = combined.step($if newLabel name, List(sort))
+      now(pred, st0, st1, reason1, List(res1))
+      now(pred, st0, st2, reason2, List(res2))
+      val res3 = sig.fresh("test", sort)
+      val st3 = from(pred, st0, combined.arbitrary, List(res3))
+      (res3, st3)
     }
 
     def label(label: String, st0: State, st1: State, proc: Proc): State = {

@@ -6,11 +6,23 @@ begin
    referring to syntactic formulas/variables,
    i.e., remain a little more abstract here. *)
 
+fun break where
+"break s r = (r = Brk s)"
+
 fun skip :: "'S prog" where
 "skip s r = (r = Ok s)"
 
 fun spec :: "'S cond \<Rightarrow> 'S rel \<Rightarrow> 'S prog" where
 "spec P Q s r = (if P s then \<exists> s'. r = Ok s' \<and> Q s s' else r = Err)"
+
+fun assm where
+"assm P s r = (P s \<and> r = Ok s)"
+
+fun assrt where
+"assrt P s r = (if P s then r = Ok s else r = Err)"
+
+fun choice where
+"choice c1 c2 s r = (c1 s r \<or> c2 s r)"
 
 inductive seq :: "'S prog \<Rightarrow> 'S prog \<Rightarrow> 'S prog" where
 seq_Err[intro]: "c1 s Err \<Longrightarrow> seq c1 c2 s Err" |

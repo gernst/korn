@@ -19,8 +19,8 @@ KORN_JAR = korn.jar
 KORN_SH  = ./korn.sh
 KORN_FLAGS ?=
 
-ARCHIVES = ../svcomp-archives-2023/2023
-KORN_DIST = run korn.jar z3 eld eld.jar README.md $(wildcard LICENSE*) __VERIFIER.c __VERIFIER_random.c
+ARCHIVES = ../svcomp-archives-2024/2024
+KORN_DIST = run korn.jar golem z3 eld eld.jar README.md $(wildcard LICENSE*) __VERIFIER.c __VERIFIER_random.c
 
 all: $(KORN_JAR) $(KORN_SH)
 
@@ -29,12 +29,19 @@ examples: $(KORN_SMT)
 parser: $(KORN_JAVA)
 
 archives-2023: $(ARCHIVES)/korn.zip
+archives-2024: dist/korn.zip
 
 $(ARCHIVES)/korn.zip: $(KORN_DIST)
 	@echo $@
 	@mkdir -p $(ARCHIVES)/korn
 	@cp $(KORN_DIST) $(ARCHIVES)/korn
 	@(cd $(ARCHIVES); zip korn.zip -r korn)
+
+dist/korn.zip: $(KORN_DIST)
+	@echo $@
+	@mkdir -p ./dist/korn
+	@cp $(KORN_DIST) ./dist/korn
+	@(cd dist; zip korn.zip -r korn)
 
 clean:
 	$(MILL) clean

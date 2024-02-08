@@ -11,7 +11,7 @@ sealed trait Pred {
 
 sealed trait Step extends Pred {
   def names: List[String]
-  def apply(st0: State, st1: State): Pure
+  def apply(st0: State, st1: State, extra: List[Pure] = Nil): Pure
 }
 
 case class CEX(fun: Fun) extends Pred {
@@ -60,14 +60,14 @@ case class Post(fun: Fun, ret: Option[Sort]) extends Pred {
 
 object Pred {
   case class state(fun: Fun, names: List[String]) extends Step {
-    def apply(st0: State, st1: State) = {
-      Pure.app(fun, Val.to(st1(names)))
+    def apply(st0: State, st1: State, extra: List[Pure]) = {
+      Pure.app(fun, Val.to(st1(names)) ++ extra)
     }
   }
 
   case class step(fun: Fun, names: List[String]) extends Step {
-    def apply(st0: State, st1: State) = {
-      Pure.app(fun, Val.to(st0(names) ++ st1(names)))
+    def apply(st0: State, st1: State, extra: List[Pure]) = {
+      Pure.app(fun, Val.to(st0(names) ++ st1(names)) ++ extra)
     }
   }
 }
@@ -94,15 +94,15 @@ class Sig(unit: Unit) {
       State(Nil, havoc)
     }
 
-    def state(label: String): Step = {
-      val fun = Fun(label, sorts, Sort.bool)
+    def state(label: String, extra: List[Sort] = Nil): Step = {
+      val fun = Fun(label, sorts ++ extra, Sort.bool)
       val pred = Pred.state(fun, names)
       preds += pred
       pred
     }
 
-    def step(label: String): Step = {
-      val fun = Fun(label, sorts ++ sorts, Sort.bool)
+    def step(label: String, extra: List[Sort] = Nil): Step = {
+      val fun = Fun(label, sorts ++ sorts ++ extra, Sort.bool)
       val pred = Pred.step(fun, names)
       preds += pred
       pred

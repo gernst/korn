@@ -19,7 +19,7 @@ import korn.tool._
 import scala.concurrent.duration._
 
 object Main {
-  val version = "0.4"
+  val version = "0.5"
 
   var dry = false
   var config = "default"

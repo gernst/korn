@@ -66,13 +66,13 @@ class Proc(
     }
   }
 
-  def now(pred: Step, st0: State, st1: State, reason: String) {
-    val prop = pred(st0, st1)
+  def now(pred: Step, st0: State, st1: State, reason: String, extra: List[Pure] = Nil) {
+    val prop = pred(st0, st1, extra)
     clause(st1, prop, reason)
   }
 
-  def from(pred: Step, st0: State, st1: State): State = {
-    val prop = pred(st0, st1)
+  def from(pred: Step, st0: State, st1: State, extra: List[Pure] = Nil): State = {
+    val prop = pred(st0, st1, extra)
     st1 and prop
   }
 
