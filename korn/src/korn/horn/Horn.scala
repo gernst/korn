@@ -12,10 +12,10 @@ object Config {
         Config(Branch.relational, Loop.invariants(rel = false))
       case "relational" =>
         Config(Branch.relational, Loop.invariants(rel = true))
-      case "summaries" =>
-        Config(Branch.relational, Loop.summaries(rel = false, only = false, strong = false))
-      case "summaries-only" =>
-        Config(Branch.relational, Loop.summaries(rel = false, only = true, strong = false))
+      // case "summaries" =>
+      //   Config(Branch.relational, Loop.summaries(rel = false, only = false, strong = false))
+      // case "summaries-only" =>
+      //   Config(Branch.relational, Loop.summaries(rel = false, only = true, strong = false))
     }
   }
 }
@@ -26,8 +26,8 @@ sealed trait Contract {
 }
 
 sealed trait Call {
-  def pre(st0: State, st1: State, callee: String, pre: Pre, args: List[Val], proc: Proc)
-  def post(st0: State, st1: State, callee: String, post: Post, args: List[Val], res: Option[Val], proc: Proc): State
+  def pre(st1: State, callee: String, pre: Pre, args: List[Val], proc: Proc)
+  def post(st1: State, callee: String, post: Post, args: List[Val], res: Option[Val], proc: Proc): State
 }
 
 sealed trait Branch {
@@ -48,10 +48,10 @@ sealed trait Branch {
 }
 
 sealed trait Loop {
-  def enter(st0: State, st1: State, loc: Loc, proc: Proc): (Step, Step, State)
+  def enter(st0: State, states1: List[State], loc: Loc, proc: Proc): (Step, Step, State, State)
   def term(hyp: Hyp, loc: Loc, proc: Proc)
   def iter(si1: State, hyp: Hyp, loc: Loc, proc: Proc)
-  def leave(hyp: Hyp, proc: Proc): State
+  def leave(hyp: Hyp, proc: Proc): List[State]
 
   def break(si1: State, hyp: Hyp, proc: Proc)
   def return_(si1: State, hyps: List[Hyp], proc: Proc): State
@@ -137,7 +137,7 @@ object Call {
   // }
 
   object nonlinear extends Call {
-    def pre(st0: State, st1: State, callee: String, pre: Pre, args: List[Val], proc: Proc) = {
+    def pre(st1: State, callee: String, pre: Pre, args: List[Val], proc: Proc) = {
       import proc._
       import proc.unit._
 
@@ -146,7 +146,6 @@ object Call {
     }
 
     def post(
-        st0: State,
         st1: State,
         callee: String,
         post: Post,
@@ -233,41 +232,49 @@ object Loop {
 
   /** non-relational invariants and loop final states */
   case class invariants(rel: Boolean) extends Loop {
-    def enter(st0: State, st1: State, loc: Loc, proc: Proc): (Step, Step, State) = {
+    def enter(st0: State, states1: List[State], loc: Loc, proc: Proc): (Step, Step, State, State) = {
       import proc._
       val inv =
         if (!rel) combined.state($inv newLabel name)
         else combined.step($inv newLabel name)
+
       val sum =
         if (!rel) combined.state($sum newLabel name)
         else combined.step($sum newLabel name)
-      now(inv, st1, st1, "loop entry " + inv + " (line " + loc.line + ")")
-      val si0 = from(inv, st1, combined.arbitrary)
-      (inv, sum, si0)
+
+      for (st1 <- states1)
+        now(inv, st1, st1, "loop entry " + inv + " (line " + loc.line + ")")
+
+      val si0 = combined.arbitrary
+      val si1 = combined.arbitrary
+      (inv, sum, si0, from(inv, si0, si1))
     }
 
     def term(hyp: Hyp, loc: Loc, proc: Proc) {
       import proc._
-      val Hyp(inv, sum, st1, si0, sin, siy, dont) = hyp
-      now(sum, st1, sin, "loop term " + sum + " (line " + loc.line + ")")
+      val Hyp(inv, sum, _, si0, sin, siy, dont) = hyp
+      now(sum, si0, sin, "loop term " + sum + " (line " + loc.line + ")")
     }
 
-    def iter(si1: State, hyp: Hyp, loc: Loc, proc: Proc) {
+    def iter(si2: State, hyp: Hyp, loc: Loc, proc: Proc) {
       import proc._
-      val Hyp(inv, sum, st1, si0, sin, siy, dont) = hyp
-      now(inv, st1, si1, "forwards " + inv + " (line " + loc.line + ")")
+      val Hyp(inv, sum, _, si0, sin, siy, dont) = hyp
+      now(inv, si0, si2, "forwards " + inv + " (line " + loc.line + ")")
     }
 
-    def leave(hyp: Hyp, proc: Proc): State = {
+    def leave(hyp: Hyp, proc: Proc): List[State] = {
       import proc._
-      val Hyp(inv, sum, st1, si0, sin, siy, dont) = hyp
-      from(sum, st1, combined.arbitrary)
+      val Hyp(inv, sum, states1, si0, sin, siy, dont) = hyp
+
+      for (st1 <- states1)
+        yield from(inv, st1, sin)
     }
 
     def break(si1: State, hyp: Hyp, proc: Proc) {
       import proc._
-      val Hyp(inv, sum, st1, si0, sin, siy, dont) = hyp
-      now(sum, st1, si1, "break " + sum)
+      val Hyp(inv, sum, states1, si0, sin, siy, dont) = hyp
+      for (st1 <- states1)
+        now(sum, st1, si1, "break " + sum)
     }
 
     def return_(si1: State, hyps: List[Hyp], proc: Proc): State = {
@@ -280,8 +287,10 @@ object Loop {
   }
 
   /** non-relational invariants and relational loop summaries */
+
+  /*
   case class summaries(rel: Boolean, only: Boolean, strong: Boolean = false) extends Loop {
-    def enter(st0: State, st1: State, loc: Loc, proc: Proc): (Step, Step, State) = {
+    def enter(st0: State, states1: List[State], loc: Loc, proc: Proc): (Step, Step, State) = {
       import proc._
       val inv =
         if (!rel) combined.state($inv newLabel name)
@@ -367,4 +376,5 @@ object Loop {
       }
     }
   }
+   */
 }

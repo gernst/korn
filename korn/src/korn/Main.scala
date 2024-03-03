@@ -35,6 +35,7 @@ object Main {
   var witness_quant = false
   var write_smt2 = None: Option[String]
   var write = false
+  var monniaux = false
   var timeout: Duration = 900.seconds // SV-COMP default
   var tools = mutable.Buffer[Tool]()
 
@@ -102,6 +103,10 @@ object Main {
 
       case ("-w" | "-write") :: rest =>
         write = true
+        configure(rest)
+
+      case "-monniaux" :: rest =>
+        monniaux = true
         configure(rest)
 
       case ("-z" | "-zero") :: rest =>
@@ -206,6 +211,7 @@ object Main {
       // do nothing
     } else if (tools.isEmpty) {
       val unit = Tool.translate(file, stmts)
+      unit.run()
 
       if (write) {
         val to = write_smt2 getOrElse smt2(file)

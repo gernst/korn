@@ -10,7 +10,7 @@ object Context {
   def init(st: State) = Context(st, Nil, Nil)
 }
 
-case class Hyp(inv: Step, sum: Step, st1: State, si0: State, sin: State, siy: State, dont: Set[String])
+case class Hyp(inv: Step, sum: Step, states1: List[State], si0: State, sin: State, siy: State, dont: Set[String])
 
 case class Context(entry: State, hyps: List[Hyp], switches: List[Pure]) {
   def ::(hyp: Hyp) = copy(hyps = hyp :: hyps)

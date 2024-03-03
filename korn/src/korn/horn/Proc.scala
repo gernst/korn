@@ -36,33 +36,36 @@ class Proc(
     val st0 = state
     val (pre_, st1) = contract.enter(st0, this)
     val ctx = Context.init(st1)
-    val st2 = local(body, st1, st1, ctx)
-    val post_ = contract.leave(st1, st2, None, this) // implicit return without value
 
-    for (pre <- pre_) {
-      val formals = (globals ++ params) map (_.name)
+    val states1 = List(st1)
+    for (st2 <- local(body, st1, states1, ctx)) {
+      val post_ = contract.leave(st1, st2, None, this) // implicit return without value
 
-      korn.ensure(
-        pre.fun.args.length == formals.length,
-        "arity mismatch of postcondition predicate: " + pre.fun.toStringTyped + " and " + formals)
+      for (pre <- pre_) {
+        val formals = (globals ++ params) map (_.name)
 
-      witness += pre.name -> (this, ploc, pre, formals, "precondition")
-    }
+        korn.ensure(
+          pre.fun.args.length == formals.length,
+          "arity mismatch of postcondition predicate: " + pre.fun.toStringTyped + " and " + formals)
 
-    for (post <- post_) {
-      val result = List("\\result")
+        witness += pre.name -> (this, ploc, pre, formals, "precondition")
+      }
 
-      val formals =
-        if (ret != Type._void)
-          ((globals ++ params ++ globals) map (_.name)) ++ result
-        else
-          (globals ++ params ++ globals) map (_.name)
+      for (post <- post_) {
+        val result = List("\\result")
 
-      korn.ensure(
-        post.fun.args.length == formals.length,
-        "arity mismatch of postcondition predicate" + post.fun.toStringTyped + " and " + formals)
+        val formals =
+          if (ret != Type._void)
+            ((globals ++ params ++ globals) map (_.name)) ++ result
+          else
+            (globals ++ params ++ globals) map (_.name)
 
-      witness += post.name -> (this, ploc, post, formals, "postcondition")
+        korn.ensure(
+          post.fun.args.length == formals.length,
+          "arity mismatch of postcondition predicate" + post.fun.toStringTyped + " and " + formals)
+
+        witness += post.name -> (this, ploc, post, formals, "postcondition")
+      }
     }
   }
 
@@ -76,94 +79,134 @@ class Proc(
     st1 and prop
   }
 
-  def unreach(st: State) = {
-    st and False
-  }
+  val unreachable: List[State] = Nil
 
-  def local(stmts: List[Stmt], st0: State, st1: State, ctx: Context): State = {
+  def local(stmts: List[Stmt], st0: State, states1: List[State], ctx: Context): List[State] = {
     stmts match {
       case Nil =>
-        st1
+        states1
+
       case first :: rest =>
-        val st2 = local(first, st0, st1, ctx)
-        val st3 = local(rest, st0, st2, ctx)
-        st3
+        val states2 = local(first, st0, states1, ctx);
+        val states3 = local(rest, st0, states2, ctx)
+        states3
     }
   }
 
-  def local(stmt: Stmt, st0: State, st1: State, ctx: Context): State = {
+  def local(stmt: Stmt, st0: State, states1: List[State], ctx: Context): List[State] = {
     stmt match {
       case Group(stmts) =>
-        local(stmts, st0, st1, ctx)
+        local(stmts, st0, states1, ctx)
 
       case Assume(Id(name), None, typ) =>
-        st1
+        states1
 
       case Assume(Id(name), Some(expr), typ) =>
-        val (Val(pure, _), st2) = rval(expr, st0, st1)
-        val Val(x, _) = st2(name)
-        val eq = x === pure
-        val st3 = st2 and eq
-        st3
+        for (
+          st1 <- states1;
+          (Val(pure, _), st2) <- rval(expr, st1);
+          Val(x, _) = st2(name)
+        )
+          yield st2 and (x === pure)
 
       case Atomic(None) =>
-        st1
+        states1
 
       case Atomic(Some(expr)) =>
-        val (_, st2) = rval(expr, st0, st1)
-        st2
+        for (
+          st1 <- states1;
+          (_, st2) <- rval(expr, st1)
+        )
+          yield st2
 
       case Label(label, stmt) =>
-        val st2 = branch.label(label, st0, st1, this)
-        local(stmt, st0, st2, ctx)
+        val states2 =
+          for (st1 <- states1)
+            yield branch.label(label, st0, st1, this)
+        local(stmt, st0, states2, ctx)
 
       case Goto(label) =>
-        val st2 = loop.goto(label, st1, ctx.hyps, this)
-        branch.goto(label, st0, st2, this)
-        unreach(st2)
+        for (st1 <- states1) {
+          val st2 = loop.goto(label, st1, ctx.hyps, this)
+          branch.goto(label, st0, st2, this)
+        }
+        unreachable
 
       case Return(None) =>
-        val st2 = loop.return_(st1, ctx.hyps, this)
-        contract.leave(ctx.entry, st2, None, this)
-        unreach(st2)
+        for (st1 <- states1) {
+          val st2 = loop.return_(st1, ctx.hyps, this)
+          contract.leave(ctx.entry, st2, None, this)
+        }
+        unreachable
 
       case Return(Some(res)) =>
-        val st2 = loop.return_(st1, ctx.hyps, this)
-        val (_res, st3) = rval(res, st0, st2)
-        contract.leave(ctx.entry, st3, Some(_res), this)
-        unreach(st3)
+        for (st1 <- states1) {
+          val st2 = loop.return_(st1, ctx.hyps, this)
+          for ((_res, st3) <- rval(res, st2))
+            contract.leave(ctx.entry, st3, Some(_res), this)
+        }
+        unreachable
 
       case Break =>
         val hyp :: _ = ctx.hyps
-        loop.break(st1, hyp, this)
-        unreach(st1)
+        for (st1 <- states1) {
+          loop.break(st1, hyp, this)
+        }
+        unreachable
+
+      // case If(test, left, right) =>
+      //   val (_test, st2) = rval_test(test, st0, st1)
+      //   val sa1 = local(left, st0, st2 and _test, ctx)
+      //   val sb1 = local(right, st0, st2 and !_test, ctx)
+      //   branch.join(st0, sa1, "if then", sb1, "if else", this)
 
       case If(test, left, right) =>
-        val (_test, st2) = rval_test(test, st0, st1)
-        val sa1 = local(left, st0, st2 and _test, ctx)
-        val sb1 = local(right, st0, st2 and !_test, ctx)
-        branch.join(st0, sa1, "if then", sb1, "if else", this)
+        val _test_states2 =
+          for (
+            st1 <- states1;
+            (_test, st2) <- rval_test(test, st1)
+          )
+            yield (_test, st2)
+
+        val _pos_states2 =
+          for ((_test, st2) <- _test_states2)
+            yield st2 and _test
+
+        val _neg_states2 =
+          for ((_test, st2) <- _test_states2)
+            yield st2 and !_test
+
+        val _left = local(left, st0, _pos_states2, ctx)
+        val _right = local(right, st0, _neg_states2, ctx)
+
+        _left ++ _right
 
       case While(test, body) =>
         val dont = Stmt.labels(body)
         val loc = korn.unpack(stmt.loc, "no location for while loop")
 
-        val (inv, sum, si0) = loop.enter(st0, st1, loc, this)
+        val (inv, sum, si0, si1) = loop.enter(st0, states1, loc, this)
 
-        val (_test, si1) = rval_test(test, si0, si0)
-        val sin = si1 and !_test
-        val siy = si1 and _test
-
-        val hyp = Hyp(inv, sum, st1, si0, sin, siy, dont)
         witness += inv.name -> (this, loc, inv, inv.names, "invariant")
         witness += sum.name -> (this, loc, sum, sum.names, "summary")
 
-        loop.term(hyp, loc, this)
+        val res = for ((_test, si2) <- rval_test(test, si1)) yield {
+          val sin = si2 and !_test
+          val siy = si2 and _test
 
-        val si2 = local(body, si0, siy, hyp :: ctx)
-        loop.iter(si2, hyp, loc, this)
+          val hyp = Hyp(inv, sum, states1, si0, sin, siy, dont)
 
-        loop.leave(hyp, this)
+          loop.term(hyp, loc, this)
+
+          for (si2 <- local(body, si0, List(siy), hyp :: ctx)) yield {
+            loop.iter(si2, hyp, loc, this)
+          }
+
+          loop.leave(hyp, this)
+        }
+
+        // res.flatten
+        Nil
 
       case _ =>
         korn.error("cannot execute as local statement: " + stmt)

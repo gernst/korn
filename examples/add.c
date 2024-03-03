@@ -1,9 +1,18 @@
+extern int __VERIFIER_nondet_int();
+
 int main() {
-    int x, y;
+    int x = __VERIFIER_nondet_int();
+    int y = __VERIFIER_nondet_int();
 
     assume(x >= 0);
     int x0 = x;
     int y0 = y;
+
+    if(x == 0) {
+
+    } else {
+        
+    }
     
     while(x > 0) {
         x --; y++;
