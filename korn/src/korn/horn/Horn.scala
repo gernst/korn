@@ -49,9 +49,9 @@ sealed trait Branch {
 
 sealed trait Loop {
   def enter(st0: State, states1: List[State], loc: Loc, proc: Proc): (Step, Step, State, State)
-  def term(hyp: Hyp, loc: Loc, proc: Proc)
-  def iter(si1: State, hyp: Hyp, loc: Loc, proc: Proc)
-  def leave(hyp: Hyp, proc: Proc): List[State]
+  def iter(inv: Step, si0: State, si2: State, loc: Loc, proc: Proc)
+  def term(inv: Step, sum: Step, si0: State, sin: State, loc: Loc, proc: Proc)
+  def leave(sum: Step, st1: State, si1: State, proc: Proc): State
 
   def break(si1: State, hyp: Hyp, proc: Proc)
   def return_(si1: State, hyps: List[Hyp], proc: Proc): State
@@ -145,13 +145,7 @@ object Call {
       clause(st1, _pre, "pre " + name)
     }
 
-    def post(
-        st1: State,
-        callee: String,
-        post: Post,
-        args: List[Val],
-        res: Option[Val],
-        proc: Proc): State = {
+    def post(st1: State, callee: String, post: Post, args: List[Val], res: Option[Val], proc: Proc): State = {
       import proc._
       import proc.unit._
 
@@ -250,24 +244,19 @@ object Loop {
       (inv, sum, si0, from(inv, si0, si1))
     }
 
-    def term(hyp: Hyp, loc: Loc, proc: Proc) {
+    def iter(inv: Step, si0: State, si2: State, loc: Loc, proc: Proc) {
       import proc._
-      val Hyp(inv, sum, _, si0, sin, siy, dont) = hyp
-      now(sum, si0, sin, "loop term " + sum + " (line " + loc.line + ")")
-    }
-
-    def iter(si2: State, hyp: Hyp, loc: Loc, proc: Proc) {
-      import proc._
-      val Hyp(inv, sum, _, si0, sin, siy, dont) = hyp
       now(inv, si0, si2, "forwards " + inv + " (line " + loc.line + ")")
     }
 
-    def leave(hyp: Hyp, proc: Proc): List[State] = {
+    def term(inv: Step, sum: Step, si0: State, sin: State, loc: Loc, proc: Proc) {
       import proc._
-      val Hyp(inv, sum, states1, si0, sin, siy, dont) = hyp
+      now(sum, si0, sin, "loop term " + sum + " (line " + loc.line + ")")
+    }
 
-      for (st1 <- states1)
-        yield from(inv, st1, sin)
+    def leave(sum: Step, st1: State, si1: State, proc: Proc): State = {
+      import proc._
+      from(sum, st1, si1)
     }
 
     def break(si1: State, hyp: Hyp, proc: Proc) {

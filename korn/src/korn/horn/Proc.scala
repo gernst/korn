@@ -185,28 +185,53 @@ class Proc(
         val dont = Stmt.labels(body)
         val loc = korn.unpack(stmt.loc, "no location for while loop")
 
+        // Note, we want to verify the loop just once
+        // using a joint invariant (not path-sensitive invariants).
+        // However, the summarization must capture potential dependencies
+        // between initial states and final states of the loop.
+        // To accomodate, we introduce two relational predicates so that
+        //   inv is an inductive invariant
+        //   sum summarizes the loop from terminated inv states and break states (it is currently not required to be backwards-inductive)
+
+        // initialization:
+        //   path(st1) ==> inv(st1, st1) for all st1 in states1
+
+        // some intermediate states:
+        //    si0 used as the \old(_) state (coinciding with the disjuntion of states1) but taken arbitrary for the body
+        //    si1 is some arbitrary state at the loop head with the invariant, which yields st2 after evaluation of the loop test
+        //    sin is st2 with the negated loop test ("no")
+        //    siy is st2 with the positive loop test ("yes") 
+
+        // one regular iteration:
+        //   inv(si0, siy) /\ body(si2, si3) ==> inv(si0, si3)
+
+        // loop exit conditions:
+        //   inv(si0, sin) ==> sum(si0, sin)
+        //   inv(si0, six) ==> sum(si0, six) // when encountering a break inside the loop body
+
+        // state after the loop:
+        //   path(st1) /\ sum(st1, si0) where si0 is completely arbitrary as specified before
+
         val (inv, sum, si0, si1) = loop.enter(st0, states1, loc, this)
 
         witness += inv.name -> (this, loc, inv, inv.names, "invariant")
         witness += sum.name -> (this, loc, sum, sum.names, "summary")
 
-        val res = for ((_test, si2) <- rval_test(test, si1)) yield {
+        for ((_test, si2) <- rval_test(test, si1)) yield {
           val sin = si2 and !_test
           val siy = si2 and _test
 
           val hyp = Hyp(inv, sum, states1, si0, sin, siy, dont)
 
-          loop.term(hyp, loc, this)
+          loop.term(inv, sum, si0, sin, loc, this)
 
           for (si2 <- local(body, si0, List(siy), hyp :: ctx)) yield {
-            loop.iter(si2, hyp, loc, this)
+            loop.iter(inv, si0, si2, loc, this)
           }
-
-          loop.leave(hyp, this)
         }
 
-        // res.flatten
-        Nil
+        for(st1 <- states1)
+          yield loop.leave(sum, st1, si0, this)
 
       case _ =>
         korn.error("cannot execute as local statement: " + stmt)
