@@ -135,6 +135,19 @@ object Main {
         add(Z3(timeout, model, write, expect))
         configure(rest)
 
+      case "-z3:q" :: rest =>
+        val options = Seq("fp.spacer.ground_pobs=true", "fp.spacer.q3.use_qgen=true")
+        add(Z3(timeout, model, write, expect, options))
+        configure(rest)
+
+      // z3 -p
+      // z3 fp.spacer.ground_pobs=true
+      // spacer.q3 (bool) (default: true)
+      // spacer.q3.instantiate (bool) (default: true)
+      // spacer.q3.qgen.normalize (bool) (default: true)
+      // spacer.q3.use_qgen (bool) (default: false)
+      // spacer.ground_pobs (bool) set to true
+
       case "-eld" :: rest =>
         add(Eldarica(timeout, model, write, expect))
         configure(rest)
@@ -224,12 +237,11 @@ object Main {
       }
     } else {
       import scala.util.control.Breaks._
-      val unit = Tool.translate(file, stmts)
 
       breakable {
         for (tool <- tools) {
-          // Note: local variables shadow class attribute
-          // val Tool(timeout, model, write, cmd @ _*) = tool
+          // DO NOT SHARE! units are mutable!
+          val unit = Tool.translate(file, stmts)
 
           info("running:      " + tool.how)
 
@@ -285,6 +297,8 @@ object Main {
 
                 break
             }
+
+            info("")
           } catch {
             case err: Error =>
               if (Main.debug)

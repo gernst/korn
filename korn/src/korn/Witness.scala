@@ -111,10 +111,19 @@ object Witness {
     val Def(name, args, ret, body) = df
 
     if (unit.witness contains name) {
-      val (proc, loc, pred, to, msg) = unit witness name
+      val (proc, loc, pred, names, msg) = unit witness name
+
+      val old = if (names.length < args.length) {
+        // likely relational predicate, add old
+        names map ("\\old(" + _ + ")")
+      } else {
+        Nil
+      }
 
       val from = args map (_.x.toString)
+      val to = old ++ names
       // val to = pred.names
+
       korn.ensure(from.length == to.length, "parameter length mismatch for " + proc.name + ": " + from + " and " + to)
       val env = Map(from zip to: _*)
 

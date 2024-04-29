@@ -346,6 +346,13 @@ object Var extends (String => Var) {
   }
 }
 
+case class Old(pure: Pure) extends Pure {
+  override def free: Set[Var] = ???
+  override def rename(re: Map[Var,Var]): Pure = ???
+  override def subst(su: Map[Var,Pure]): Pure = ???
+
+}
+
 sealed trait Quant {
   def apply(params: List[Param], body: Pure) = {
     Bind(this, params, body)

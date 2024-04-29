@@ -19,6 +19,7 @@ package object horn {
   object stdlib {
     object abort extends FunCall.nullary("abort")
     object exit extends FunCall.nullary("exit")
+    object exit_with_result extends FunCall.unary("exit")
     object assume extends FunCall.unary("assume")
     object assert extends FunCall.unary("assert")
     object malloc extends FunCall.unary("malloc")
@@ -30,6 +31,10 @@ package object horn {
     object assert extends FunCall.unary("__VERIFIER_assert")
     object error extends FunCall.nullary("__VERIFIER_error")
     object reach_error extends FunCall.nullary("reach_error")
+
+    val nondets = List(
+      nondet_int
+    )
 
     object nondet_bool extends FunCall.nullary("__VERIFIER_nondet_bool")
 
@@ -54,6 +59,8 @@ package object horn {
     object nondet_unsigned extends FunCall.nullary("__VERIFIER_nondet_unsigned")
     object nondet_unsigned_int extends FunCall.nullary("__VERIFIER_nondet_unsigned_int")
     object nondet_unsigned_long extends FunCall.nullary("__VERIFIER_nondet_unsigned_long")
+
+
 
     object nondet_float extends FunCall.nullary("__VERIFIER_nondet_float")
     object nondet_double extends FunCall.nullary("__VERIFIER_nondet_double")

@@ -74,9 +74,26 @@ class Unit(val file: String, val stmts: List[Stmt]) {
   }
 
   def run() {
+    prelude()
     run(stmts, static)
     run(stmts, signature)
     run(stmts, dynamic)
+  }
+
+  def prelude() {
+    import sig._
+
+    for ((name, typ) <- List("int" -> Signed._int)) {
+      val (x, _, v) = nondet("$" + name, typ)
+      val sort = resolve(typ)
+      val call = "$__VERIFIER_nondet_" + name
+      val fun = Fun(call, List(sort), Sort.bool)
+      val pred = CEX(fun)
+      preds += pred
+      val c = pred(x)
+
+      clauses += Clause(Nil, c, "nondet functions are unconstrained")
+    }
   }
 
   def run(stmts: List[Stmt], action: Stmt => Any) {

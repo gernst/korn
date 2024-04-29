@@ -21,9 +21,6 @@ class Eval(unit: Unit) {
     val pred = CEX(fun)
     preds += pred
     val c = pred(x)
-    clause(st, c, "counterexample trace")
-
-    // korn.avoid(st.path contains False, "nondet choice in unreachable state")
 
     List((v, st and b and c))
   }
@@ -374,6 +371,10 @@ class Eval(unit: Unit) {
 
         case stdlib.exit() =>
           List((Val.unit, st1 and False))
+
+        case stdlib.exit_with_result(result) =>
+          for ((_result, st2) <- rval_test(result, st1))
+            yield (Val.unit, st2 and False)
 
         case stdlib.abort() =>
           // clause(st1, False, "abort")
