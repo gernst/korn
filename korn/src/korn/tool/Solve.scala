@@ -167,7 +167,7 @@ case class Golem(
     }
   }
 
-  override def readTrace(in: BufferedReader, unit: Unit) = {
+  def readTrace_(in: BufferedReader, unit: Unit) = {
     var trace: List[(String, BigInt)] = Nil
     var line = in.readLine()
     while (line != null) {
@@ -183,6 +183,93 @@ case class Golem(
       line = in.readLine()
     }
     // trace.reverse
+    trace
+  }
+
+  override def readTrace(in: BufferedReader, unit: Unit) = {
+    var graph: Map[Int, (String, List[Int])] = Map()
+
+    var last: Int = 0
+
+    var line = in.readLine()
+    assert(line == "0:\ttrue")
+    graph += (0 -> ("true", Nil))
+
+    line = in.readLine()
+    while (line != null) {
+      if (line.trim.nonEmpty) {
+        val colon = line indexOf ":"
+        val arrow = line indexOf "->"
+
+        val part1 = line take colon
+        val part2 = line substring (colon + 1, arrow)
+        val part3 = line drop arrow + 2
+
+        val here = part1.toInt
+        val call = part2.trim // parsed later
+        val prems = part3.trim.split(" ") map (_.toInt)
+
+        graph += (here -> (call, prems.toList))
+        last = here
+      }
+
+      line = in.readLine()
+    }
+
+    analyze(last, graph)
+  }
+
+  def analyze(last: Int, graph: Map[Int, (String, List[Int])]) = {
+    var todo = List(last)
+    var trace: List[(String, BigInt)] = Nil
+
+    while (todo.nonEmpty) {
+      val next :: rest = todo
+      todo = rest
+
+      val (call, prems) = graph(next)
+      // println(next, call, prems)
+
+      val kept = if (call contains "%") {
+        val a = call indexOf "%"
+        val b = call indexOf " "
+        val name = call substring (a + 1, b)
+        val pre = "$" + name + "_pre"
+
+        prems filter {
+          case prem =>
+            val (call_, _) = graph(prem)
+
+            val a = call_ indexOf "$"
+            val b = call_ indexOf " "
+            val name_ = call_ substring (a + 1, b)
+            val pre_ = "$" + name_
+
+            val ok = pre_ != pre
+            // if (ok)
+            //   println("keep: " + next + " " + name + " -> " + prem + " " + pre_ + " != " + pre)
+            // else
+            //   println("drop: " + next + " " + name + " -> " + prem + " " + pre_)
+            ok
+        }
+      } else {
+        prems
+      }
+
+      // println("keeping: " + kept)
+      todo = kept.reverse ++ todo
+
+      if (call contains "__VERIFIER_nondet") {
+        val pos = call indexOf "__VERIFIER_nondet_"
+        val rest = call drop pos
+        val lp = rest indexOf " "
+        val rp = rest lastIndexOf ")"
+        val fun = rest take lp
+        val res = rest drop (lp + 1) take (rp - lp - 1)
+        trace = (fun, readInt(res)) :: trace
+      }
+    }
+
     trace
   }
 }
