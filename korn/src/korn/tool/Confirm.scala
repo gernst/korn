@@ -34,7 +34,8 @@ object Confirm {
     out println "#include <stdlib.h>"
     out.println()
 
-    if (!(unit.funs contains "assume")) {
+    val require_assume = (unit.funs contains "assume") && !(unit.fundefs contains "assume")
+    if (require_assume) {
       out println "void assume(int cond) {"
       out println "    if(!cond) {"
       out println "        printf(\"unknown\\n\");"
@@ -43,7 +44,8 @@ object Confirm {
       out println "}"
     }
 
-    if (!(unit.funs contains "assert")) {
+    val require_assert = (unit.funs contains "assert") && !(unit.fundefs contains "assert")
+    if (require_assert) {
       out println "void assert(int cond) {"
       out println "    if(!cond) {"
       out println "        printf(\"unsat\\n\");"

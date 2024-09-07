@@ -1,10 +1,13 @@
-int a(int x);
-int b(int x);
+extern unsigned short __VERIFIER_nondet_ushort(void);
+extern void assert(int);
 
-int main() {
-    int x;
-  if(a(x) && b(x)) {
-    assert(0);
+int main(void) {
+  unsigned int x = 0;
+  unsigned short N = __VERIFIER_nondet_ushort();
+
+  while (x < N) {
+    x += 2;
   }
-  return 0;
+
+  assert(x % 2);
 }

@@ -7,11 +7,14 @@ package object horn {
   type Typing = Map[String, Sort]
   type Store = Map[String, Val]
 
+  def is_nondet(name: String) = {
+    name startsWith "__VERIFIER_nondet"
+  }
+
   val known = Set(
     "main",
     "abort",
     "exit",
-    "__VERIFIER_nondet_int",
     "__VERIFIER_assume",
     "__VERIFIER_error"
   )
@@ -31,10 +34,6 @@ package object horn {
     object assert extends FunCall.unary("__VERIFIER_assert")
     object error extends FunCall.nullary("__VERIFIER_error")
     object reach_error extends FunCall.nullary("reach_error")
-
-    val nondets = List(
-      nondet_int
-    )
 
     object nondet_bool extends FunCall.nullary("__VERIFIER_nondet_bool")
 

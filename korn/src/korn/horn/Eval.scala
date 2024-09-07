@@ -487,7 +487,7 @@ class Eval(unit: Unit) {
           rval(expr, st1)
 
         case expr @ FunCall(name, args) =>
-          korn.avoid(name startsWith "__VERIFIER_nondet", "unsupported function: " + name)
+          korn.avoid(is_nondet(name), "unsupported function: " + name)
 
           val pre = pres(name)
           val post = posts(name)

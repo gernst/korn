@@ -270,9 +270,9 @@ class Sig(unit: Unit) {
     val _args = resolve(args)
     val _ret = resolve(ret)
 
-    // println("function: " + name + " " + _args + " " + _ret)
-
-    if (!known(name)) {
+    if(is_nondet(name)) {
+      // done in Unit.define_nondet
+    } else if (!known(name)) {
       if (_ret != null) {
         pres += (name -> Pre(Fun(pre, _globals ++ _args, Sort.bool)))
         posts += (name -> Post(Fun(post, _globals ++ _args ++ _globals ++ List(_ret), Sort.bool), Some(_ret)))

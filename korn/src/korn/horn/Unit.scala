@@ -5,6 +5,7 @@ import scala.collection.mutable
 import korn.c._
 import korn.smt._
 import korn.Loc
+import korn.horn.is_nondet
 
 class Unit(val file: String, val stmts: List[Stmt]) {
 
@@ -18,6 +19,7 @@ class Unit(val file: String, val stmts: List[Stmt]) {
   var globals: List[Formal] = Nil
   val vars = mutable.Map[String, Type]()
   val funs = mutable.Map[String, (Type, List[Type])]()
+  val fundefs = mutable.Map[String, Stmt]()
   var pointers = false
 
   /** numeric constants defined by enums */
@@ -74,26 +76,9 @@ class Unit(val file: String, val stmts: List[Stmt]) {
   }
 
   def run() {
-    prelude()
     run(stmts, static)
     run(stmts, signature)
     run(stmts, dynamic)
-  }
-
-  def prelude() {
-    import sig._
-
-    for ((name, typ) <- List("int" -> Signed._int)) {
-      val (x, _, v) = nondet("$" + name, typ)
-      val sort = resolve(typ)
-      val call = "$__VERIFIER_nondet_" + name
-      val fun = Fun(call, List(sort), Sort.bool)
-      val pred = CEX(fun)
-      preds += pred
-      val c = pred(x)
-
-      clauses += Clause(Nil, c, "nondet functions are unconstrained")
-    }
   }
 
   def run(stmts: List[Stmt], action: Stmt => Any) {
@@ -185,13 +170,31 @@ class Unit(val file: String, val stmts: List[Stmt]) {
         val loc = korn.unpack(stmt.loc, "no location for while loop")
         define(loc, name, formals, ret, body)
 
+      case FunDecl(ret, name, types) if is_nondet(name) =>
+        define_nondet(name, ret)
+
       case _ =>
       // nothing to do
     }
   }
 
+  def define_nondet(name: String, typ: Type) {
+    import sig._
+
+    val (x, _, v) = nondet("arg", typ)
+    val sort = resolve(typ)
+    val call = "$" + name
+    val fun = Fun(call, List(sort), Sort.bool)
+    val pred = CEX(fun)
+    preds += pred
+    val c = pred(x)
+
+    clauses += Clause(Nil, c, "nondet functions are unconstrained")
+  }
+
   def define(loc: Loc, name: String, params: List[Formal], ret: Type, body: Stmt) {
     import sig._
+    fundefs += (name -> body)
 
     val (locals, stmt) = Stmt.norm(body)
 
