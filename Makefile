@@ -20,9 +20,9 @@ KORN_SH  = ./korn.sh
 KORN_FLAGS ?=
 
 ARCHIVES = ../svcomp-archives-2024/2024
-KORN_DIST = run korn.jar golem z3 eld eld.jar README.md $(wildcard LICENSE*) __VERIFIER.c __VERIFIER_random.c
+KORN_DIST = run korn.jar golem z3 eld eld.jar README.md $(wildcard LICENSE*) __VERIFIER.c __VERIFIER_zero.c __VERIFIER_random.c sat.c unsat.c smoketest.sh
 
-all: $(KORN_JAR) $(KORN_SH)
+all: $(KORN_JAR)
 
 examples: $(KORN_SMT)
 

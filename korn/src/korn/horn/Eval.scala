@@ -95,6 +95,20 @@ class Eval(unit: Unit) {
   class scoped(proc: Proc) {
     import proc._
 
+    def malloc(typ: Type, cast: Type, dim: Expr, st0: State): List[(Val, State)] = {
+      // XXX: don't evaluate size for now, change this in Val.scala!
+      //      also disregard cast
+      typ match {
+        case PtrType(elem) =>
+          val typ = ArrayType(elem, dim)
+          val (_, _, v) = nondet("$malloc", typ)
+          List((v, st0))
+
+        case _ =>
+          korn.error("cannot assign new memory to: " + typ)
+      }
+    }
+
     def assign(lhs: Expr, rhs: Expr, st1: State): List[(Val, Val, State)] = {
       lhs match {
         case Id(name) if st1 contains name =>
@@ -112,6 +126,7 @@ class Eval(unit: Unit) {
           for (
             (_rhs, st2) <- rval(rhs, st1);
             (_idx, st3) <- rval(idx, st2);
+            _ = println("store " + _old + "[" + _idx + "] = " + _rhs);
             _new = Val.store(_old, _idx, _rhs)
           )
             yield (Val.select(_old, _idx), _rhs, st3 + (name -> _new))

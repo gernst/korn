@@ -126,7 +126,7 @@ object Val {
       case (Val(base, typ @ ArrayType(elem, dim)), Val(index, _), Val(value, _)) =>
         Val(base store (index, value), typ)
       case _ =>
-        korn.error("invalid array update: " + base + " at " + index)
+        korn.error("invalid array update: " + base + " at " + index + " = " + value)
     }
   }
 }

@@ -99,6 +99,39 @@ class Proc(
       case Assume(Id(name), None, typ) =>
         states1
 
+      case Assume(Id(name), Some(Cast(cast, stdlib.malloc(size))), typ) =>
+        ???
+        for (
+          st1 <- states1;
+          Val(x, typ) = st1(name);
+          (_rhs@Val(pure, _), st2) <- malloc(cast, typ, size, st1)
+        )
+          yield st2 + (name -> _rhs)
+
+      case Assume(Id(name), Some(stdlib.malloc(size)), typ) =>
+        for (
+          st1 <- states1;
+          Val(x, typ) = st1(name);
+          (_rhs@Val(pure, _), st2) <- malloc(typ, typ, size, st1)
+        )
+          yield st2 + (name -> _rhs)
+
+      case Atomic(Some(BinOp("=", Id(name), Cast(cast, stdlib.malloc(size))))) =>
+        for (
+          st1 <- states1;
+          Val(x, typ) = st1(name);
+          (_rhs@Val(pure, _), st2) <- malloc(cast, typ, size, st1)
+        )
+          yield st2 + (name -> _rhs)
+
+      case Atomic(Some(BinOp("=", Id(name), stdlib.malloc(size)))) =>
+        for (
+          st1 <- states1;
+          Val(x, typ) = st1(name);
+          (_rhs@Val(pure, _), st2) <- malloc(typ, typ, size, st1)
+        )
+          yield st2 + (name -> _rhs)
+
       case Assume(Id(name), Some(expr), typ) =>
         for (
           st1 <- states1;

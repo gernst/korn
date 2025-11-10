@@ -6,6 +6,7 @@ package object horn {
 
   type Typing = Map[String, Sort]
   type Store = Map[String, Val]
+  type Heap = Map[Pure, Val]
 
   def is_nondet(name: String) = {
     name startsWith "__VERIFIER_nondet"

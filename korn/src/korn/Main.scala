@@ -17,6 +17,8 @@ import java.io.FileWriter
 import korn.horn.Eval
 import korn.tool._
 import scala.concurrent.duration._
+import korn.witness.GraphML
+import korn.witness.Yaml
 
 object Main {
   val version = "0.7"
@@ -33,7 +35,7 @@ object Main {
   var expect = None: Option[String]
   var witness = false
   var confirm = false
-  var witness_graphml = None: Option[String]
+  var witness_file = None: Option[String]
   var witness_quant = false
   var write_smt2 = None: Option[String]
   var write = false
@@ -178,7 +180,7 @@ object Main {
         configure(rest)
 
       case "-witness" :: file :: rest =>
-        witness_graphml = Some(file)
+        witness_file = Some(file)
         configure(rest)
 
       case "-smt2" :: file :: rest =>
@@ -228,6 +230,10 @@ object Main {
   def graphml(path: String) = {
     ensure((path endsWith ".c") || (path endsWith ".i"), "unrecognized file ending: " + path)
     (path dropRight 2) + ".graphml"
+  }
+
+  def yaml(path: String) = {
+    "witness.yaml"
   }
 
   def run(file: String) {
@@ -285,9 +291,9 @@ object Main {
                   debug("")
 
                 if (witness) {
-                  val dest = witness_graphml getOrElse graphml(file)
+                  val dest = witness_file getOrElse yaml(file)
                   val out = new PrintStream(new File(dest))
-                  Witness.proof(file, _model, unit, out)
+                  Yaml.proof(file, _model, unit, out)
                   info("witness:      " + dest)
                 }
 
@@ -303,9 +309,9 @@ object Main {
                   debug("  " + fun + "() = " + arg)
 
                 if (witness) {
-                  val dest = witness_graphml getOrElse graphml(file)
+                  val dest = witness_file getOrElse graphml(file)
                   val out = new PrintStream(new File(dest))
-                  Witness.cex(file, trace, out)
+                  GraphML.cex(file, trace, out)
                   info("witness:      " + dest)
                 }
 
