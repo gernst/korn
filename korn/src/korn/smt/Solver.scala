@@ -22,3 +22,7 @@ case class Model(defs: List[Def]) {
   def this(defs: Array[Def]) = this(defs.toList)
   override def toString = sexpr("model", defs: _*)
 }
+
+object Model {
+  val empty = Model(Nil)
+}

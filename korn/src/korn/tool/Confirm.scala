@@ -10,8 +10,8 @@ case class Confirm(tool: Tool) extends Tool {
   def backend = tool.backend
   def write = tool.write
 
-  def check(unit: Unit, smt2: String) = {
-    tool.check(unit, smt2) match {
+  def check(unit: Unit, smt2: String, expect: Option[String]) = {
+    tool.check(unit, smt2, expect) match {
       case Incorrect(trace) =>
         Confirm.confirm(unit, trace)
 

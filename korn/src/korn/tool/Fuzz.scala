@@ -10,7 +10,7 @@ object Fuzz extends Tool {
   def backend = how
   def write = false
 
-  def check(unit: Unit, smt2: String): Result = {
+  def check(unit: Unit, smt2: String, expected: Option[String]): Result = {
     /* random sampling for given number of seconds */
     val start = System.currentTimeMillis()
 
@@ -21,7 +21,7 @@ object Fuzz extends Tool {
       val (in, out, err, proc) = pipe(bin)
       val status = proc.waitFor()
 
-      val result = Backend.read(out, unit.file)
+      val result = Backend.read(out, unit.file, expected)
 
       result match {
         case _: Incorrect =>
@@ -39,15 +39,15 @@ case class Fuzz(timeout: Duration) extends Tool {
 
   def how = "fuzz (" + timeout.toSeconds + "s)"
   def backend = how
-  
+
   def write = false
 
-  def check(unit: Unit, smt2: String): Result = {
-    val (_, result) = fuzz(unit.file)
+  def check(unit: Unit, smt2: String, expected: Option[String]): Result = {
+    val (_, result) = fuzz(unit.file, expected)
     result
   }
 
-  def fuzz(file: String): (Int, Result) = {
+  def fuzz(file: String, expected: Option[String]): (Int, Result) = {
     /* random sampling for given number of seconds */
     val start = System.currentTimeMillis()
 
@@ -67,7 +67,7 @@ case class Fuzz(timeout: Duration) extends Tool {
       val (in, out, err, proc) = pipe(bin)
       val status = proc.waitFor()
 
-      val result = Backend.read(out, file)
+      val result = Backend.read(out, file, expected)
 
       result match {
         case _: Incorrect =>

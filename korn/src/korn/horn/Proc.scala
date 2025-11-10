@@ -79,8 +79,6 @@ class Proc(
     st1 and prop
   }
 
-  val unreachable: List[State] = Nil
-
   def local(stmts: List[Stmt], st0: State, states1: List[State], ctx: Context): List[State] = {
     stmts match {
       case Nil =>
@@ -130,14 +128,14 @@ class Proc(
           val st2 = loop.goto(label, st1, ctx.hyps, this)
           branch.goto(label, st0, st2, this)
         }
-        unreachable
+        Nil
 
       case Return(None) =>
         for (st1 <- states1) {
           val st2 = loop.return_(st1, ctx.hyps, this)
           contract.leave(ctx.entry, st2, None, this)
         }
-        unreachable
+        Nil
 
       case Return(Some(res)) =>
         for (st1 <- states1) {
@@ -145,14 +143,14 @@ class Proc(
           for ((_res, st3) <- rval(res, st2))
             contract.leave(ctx.entry, st3, Some(_res), this)
         }
-        unreachable
+        Nil
 
       case Break =>
         val hyp :: _ = ctx.hyps
         for (st1 <- states1) {
           loop.break(st1, hyp, this)
         }
-        unreachable
+        Nil
 
       // case If(test, left, right) =>
       //   val (_test, st2) = rval_test(test, st0, st1)

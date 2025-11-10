@@ -33,8 +33,9 @@ abstract class Solve extends Tool {
     Backend.write(unit, model, expect, out)
   }
 
-  def read(in: BufferedReader, unit: Unit) = {
+  def read(in: BufferedReader, unit: Unit, expect: Option[String]) = {
     val status = in.readLine()
+    Backend.isExpected(status, expect)
 
     status match {
       case "sat" =>
@@ -50,20 +51,20 @@ abstract class Solve extends Tool {
     }
   }
 
-  def readWithTimeout(in: BufferedReader, unit: Unit): Result = {
+  def readWithTimeout(in: BufferedReader, unit: Unit, expect: Option[String]): Result = {
     import scala.concurrent.ExecutionContext.Implicits.global
     import scala.concurrent._
     import scala.concurrent.duration._
 
     try {
-      Await.result(Future(read(in, unit)), timeout)
+      Await.result(Future(read(in, unit, expect)), timeout)
     } catch {
       case _: TimeoutException | _: InterruptedException =>
         Unknown("timeout")
     }
   }
 
-  def check(unit: Unit, smt2: String) = {
+  def check(unit: Unit, smt2: String, expect: Option[String]) = {
     unit.run()
 
     val (in, err, proc) = if (write) {
@@ -78,7 +79,7 @@ abstract class Solve extends Tool {
     }
 
     try {
-      readWithTimeout(in, unit)
+      readWithTimeout(in, unit, expect)
     } finally {
       import korn.Main.info
       import korn.Main.debug

@@ -361,6 +361,18 @@ class Eval(unit: Unit) {
           )
             yield (Val.binop(op, _arg1, _arg2), st3)
 
+        case stdlib.exit() =>
+          Nil
+
+        case stdlib.exit_with_result(result) =>
+          Nil
+
+        case stdlib.abort() =>
+          Nil
+
+        case stdlib.__assert_fail(args) =>
+          Nil
+
         case stdlib.assume(phi) =>
           for ((_phi, st2) <- rval_test(phi, st1))
             yield (Val.unit, st2 and _phi)
@@ -368,21 +380,6 @@ class Eval(unit: Unit) {
         case __VERIFIER.assume(cond) =>
           for ((_cond, st2) <- rval_test(cond, st1))
             yield (Val.unit, st2 and _cond)
-
-        case stdlib.exit() =>
-          List((Val.unit, st1 and False))
-
-        case stdlib.exit_with_result(result) =>
-          for ((_result, st2) <- rval_test(result, st1))
-            yield (Val.unit, st2 and False)
-
-        case stdlib.abort() =>
-          // clause(st1, False, "abort")
-          List((Val.unit, st1 and False))
-
-        case stdlib.__assert_fail(args) =>
-          // ignore arguments
-          List((Val.unit, st1 and False))
 
         case stdlib.assert(phi) =>
           for ((_phi, st2) <- rval_test(phi, st1)) yield {

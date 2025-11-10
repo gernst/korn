@@ -28,6 +28,8 @@ object Main {
   var model = false
   var float = false
   var pointers = false
+  var safety = true // check assertions etc
+  var termination = false // approximate termination
   var expect = None: Option[String]
   var witness = false
   var confirm = false
@@ -42,6 +44,8 @@ object Main {
   var files = mutable.Buffer[String]()
   var out = System.out
   var err = System.err
+
+  var failed = false
 
   def note(line: String) {
     if (quiet) {
@@ -189,6 +193,16 @@ object Main {
         expect = Some(status)
         configure(rest)
 
+      case "-safety" :: rest =>
+        safety = true
+
+      case "-termination" :: rest =>
+        termination = true
+
+      case "-termination-only" :: rest =>
+        safety = false
+        termination = true
+
       case "-32" :: rest =>
         c.bits = 32
         configure(rest)
@@ -249,7 +263,7 @@ object Main {
           if (tool.write)
             info("clauses:      " + to)
 
-          val result = tool.check(unit, to)
+          val result = tool.check(unit, to, expect)
 
           try {
             result match {
@@ -303,7 +317,6 @@ object Main {
             case err: Error =>
               if (Main.debug)
                 throw err
-            // witness cannot be translated
           }
         }
       }

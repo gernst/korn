@@ -9,13 +9,24 @@ import korn.Util
 import korn.now
 
 object Backend {
-  def read(in: BufferedReader, file: String) = {
+  def isExpected(status: String, expect: Option[String]) {
+    expect match {
+      case Some(status_) if status != status_ =>
+        korn.error("status: " + status + ", expected: " + status_)
+
+      case _ =>
+      // ok
+    }
+  }
+
+  def read(in: BufferedReader, file: String, expect: Option[String]) = {
     val status = in.readLine()
+    isExpected(status, expect)
 
     status match {
-      // case "sat" =>
-      //   val model = Backend.model(in)
-      //   Correct(model)
+      case "sat" =>
+        val model = Model.empty
+        Correct(model)
 
       case "unsat" =>
         val trace = Backend.counterexample(in)
