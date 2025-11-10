@@ -223,7 +223,7 @@ class Sig(unit: Unit) {
         (x, s, Val(x, typ))
 
       case PtrType(elem) if korn.Main.pointers =>
-        val s = Sort.pointer(resolve(typ))
+        val s = Sort.pointer(resolve(elem))
         val x = fresh(name, s)
         (x, s, Val(x, typ))
 
