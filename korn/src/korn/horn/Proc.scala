@@ -25,8 +25,8 @@ class Proc(
 
   /** collect identifiers in scope and their types */
   object toplevel extends Scope(globals)
-  object parameters extends Scope(params)
-  object internal extends Scope(params ++ locals)
+  object parameters extends Scope(params) // used to evaluate pre
+  object internal extends Scope(params ++ locals) // used to initialize entry
   object combined extends Scope(globals ++ params ++ locals)
 
   object eval extends unit.eval.scoped(this)
@@ -200,7 +200,7 @@ class Proc(
         //    si0 used as the \old(_) state (coinciding with the disjuntion of states1) but taken arbitrary for the body
         //    si1 is some arbitrary state at the loop head with the invariant, which yields st2 after evaluation of the loop test
         //    sin is st2 with the negated loop test ("no")
-        //    siy is st2 with the positive loop test ("yes") 
+        //    siy is st2 with the positive loop test ("yes")
 
         // one regular iteration:
         //   inv(si0, siy) /\ body(si2, si3) ==> inv(si0, si3)
@@ -214,8 +214,18 @@ class Proc(
 
         val (inv, sum, si0, si1) = loop.enter(st0, states1, loc, this)
 
-        witness += inv.name -> (this, loc, inv, inv.names, "invariant")
-        witness += sum.name -> (this, loc, sum, sum.names, "summary")
+        remember(this, loc, inv, "invariant")
+        remember(this, loc, sum, "summary")
+
+        // val tr = combined.step(Loop.$trans.newLabel(name))
+        // remember(this, loc, tr, "transition invariant")
+
+        // val as1 = combined.arbitrary
+        // val as2 = combined.arbitrary
+        // val as3 = combined.arbitrary
+
+        // clause(List(tr(as1, as2), tr(as2, as3)), tr(as1, as3), "transitive")
+        // clause(List(tr(as1, as1)), False, "irreflexive")
 
         for ((_test, si2) <- rval_test(test, si1)) yield {
           val sin = si2 and !_test
@@ -227,10 +237,12 @@ class Proc(
 
           for (si2 <- local(body, si0, List(siy), hyp :: ctx)) yield {
             loop.iter(inv, si0, si2, loc, this)
+            now(inv, si0, si2, "forwards " + inv + " (line " + loc.line + ")")
+            // now(tr, siy, si2, "forwards " + tr + " (line " + loc.line + ")")
           }
         }
 
-        for(st1 <- states1)
+        for (st1 <- states1)
           yield loop.leave(sum, st1, si0, this)
 
       case _ =>

@@ -19,7 +19,7 @@ import korn.tool._
 import scala.concurrent.duration._
 
 object Main {
-  val version = "0.5"
+  val version = "0.6"
 
   var dry = false
   var config = "default"
@@ -35,7 +35,7 @@ object Main {
   var witness_quant = false
   var write_smt2 = None: Option[String]
   var write = false
-  var monniaux = false
+  // var monniaux = false
   var timeout: Duration = 900.seconds // SV-COMP default
   var tools = mutable.Buffer[Tool]()
 
@@ -105,9 +105,9 @@ object Main {
         write = true
         configure(rest)
 
-      case "-monniaux" :: rest =>
-        monniaux = true
-        configure(rest)
+      // case "-monniaux" :: rest =>
+      //   monniaux = true
+      //   configure(rest)
 
       case ("-z" | "-zero") :: rest =>
         add(Fuzz)

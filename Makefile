@@ -30,6 +30,8 @@ parser: $(KORN_JAVA)
 
 archives-2023: $(ARCHIVES)/korn.zip
 archives-2024: dist/korn.zip
+archives-2025: dist/korn.zip
+archives-2026: dist/korn.zip
 
 $(ARCHIVES)/korn.zip: $(KORN_DIST)
 	@echo $@

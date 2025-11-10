@@ -48,12 +48,20 @@ class Unit(val file: String, val stmts: List[Stmt]) {
     clauses forall (_ isLinear funs)
   }
 
-  def clause(st: State, phi: Pure, reason: String) {
-    val f = (st.path contains False)
-    val t = (st.path contains phi) || (phi == True)
+  def remember(proc: Proc, loc: Loc, pred: Step, reason: String) {
+    witness += pred.name -> (proc, loc, pred, pred.names, reason)
+  }
+
+  def clause(path: List[Pure], phi: Pure, reason: String) {
+    val f = (path contains False)
+    val t = (path contains phi) || (phi == True)
 
     if (!t && !f)
-      clauses += Clause(st.path, phi, reason)
+      clauses += Clause(path, phi, reason)
+  }
+
+  def clause(st: State, phi: Pure, reason: String) {
+    clause(st.path, phi, reason)
   }
 
   def goal(st: State, phi: Pure, reason: String) {

@@ -151,6 +151,8 @@ object Witness {
         case "summary" =>
         // ignore
 
+        case "transition invariant" =>
+
         case "precondition" =>
 
         case "postcondition" =>

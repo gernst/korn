@@ -7,12 +7,6 @@ int main() {
     assume(x >= 0);
     int x0 = x;
     int y0 = y;
-
-    if(x == 0) {
-
-    } else {
-        
-    }
     
     while(x > 0) {
         x --; y++;

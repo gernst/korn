@@ -34,6 +34,7 @@ sealed trait Branch {
   def label(label: String, st0: State, st1: State, proc: Proc): State
   def goto(label: String, st0: State, st1: State, proc: Proc)
 
+/*
   def join(st0: State, st1: State, reason1: String, st2: State, reason2: String, proc: Proc): State
   def join(
       st0: State,
@@ -44,7 +45,7 @@ sealed trait Branch {
       st2: State,
       res2: Pure,
       reason2: String,
-      proc: Proc): (Pure, State)
+      proc: Proc): (Pure, State) */
 }
 
 sealed trait Loop {
@@ -82,7 +83,7 @@ object Contract {
       import proc._
       import proc.unit._
 
-      val st1 = st0 ++ toplevel.havoc ++ internal.havoc
+      val st1 = st0 ++ combined.havoc
       val pre = pres(name)
       val prop = pre.eval(st1, toplevel.names, parameters.names)
       (Some(pre), st1 and prop)
@@ -222,6 +223,10 @@ object Loop {
 
   object $sum extends korn.Counter {
     def newLabel(prefix: String) = "$" + prefix + "_sum" + next
+  }
+
+  object $trans extends korn.Counter {
+    def newLabel(prefix: String) = "$" + prefix + "_trans" + next
   }
 
   /** non-relational invariants and loop final states */
