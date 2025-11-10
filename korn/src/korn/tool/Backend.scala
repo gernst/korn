@@ -19,24 +19,6 @@ object Backend {
     }
   }
 
-  def read(in: BufferedReader, file: String, expect: Option[String]) = {
-    val status = in.readLine()
-    isExpected(status, expect)
-
-    status match {
-      case "sat" =>
-        val model = Model.empty
-        Correct(model)
-
-      case "unsat" =>
-        val trace = Backend.counterexample(in)
-        Incorrect(trace)
-
-      case _ =>
-        Unknown(status)
-    }
-  }
-
   // def readWithTimeout(timeout: Int, in: BufferedReader, file: String) = {
   //   val unknown: Result = Unknown("timeout")
   //   Util.withTimeout(timeout * 1000, unknown) { read(in, file) }

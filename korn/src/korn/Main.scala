@@ -114,13 +114,13 @@ object Main {
       //   configure(rest)
 
       case ("-z" | "-zero") :: rest =>
-        add(Fuzz)
+        add(Fuzz(0.seconds, "zero"))
         configure(rest)
 
       // kept for compatibility with explicit timeout argument
       case ("-r" | "-random") :: n :: rest =>
         timeout = n.toInt.seconds
-        add(Fuzz(timeout))
+        add(Fuzz(timeout, "random"))
         configure(rest)
 
       case ("-d" | "-debug") :: rest =>

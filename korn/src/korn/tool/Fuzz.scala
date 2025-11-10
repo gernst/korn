@@ -2,80 +2,70 @@ package korn.tool
 
 import scala.concurrent.duration.Duration
 import korn.horn.Unit
+import java.io.BufferedReader
 
-object Fuzz extends Tool {
+case class Fuzz(timeout: Duration, mode: String) extends Tool {
   import Tool._
 
-  def how = "fuzz (zeroes)"
-  def backend = how
-  def write = false
+  def read(in: BufferedReader, file: String, expect: Option[String]) = {
+    val status = in.readLine()
 
-  def check(unit: Unit, smt2: String, expected: Option[String]): Result = {
-    /* random sampling for given number of seconds */
-    val start = System.currentTimeMillis()
+    status match {
+      case "unsat" =>
+        Backend.isExpected(status, expect)
+        val trace = Backend.counterexample(in)
+        Incorrect(trace)
 
-    val bin = "./fuzz"
-    val ok = compile(bin, unit.file, "__VERIFIER.c", "__VERIFIER_zero.c")
-
-    if (ok) {
-      val (in, out, err, proc) = pipe(bin)
-      val status = proc.waitFor()
-
-      val result = Backend.read(out, unit.file, expected)
-
-      result match {
-        case _: Incorrect =>
-          return result
-        case _ =>
-      }
+      case _ =>
+        Unknown(status)
     }
-
-    return Result.unknown
   }
-}
-
-case class Fuzz(timeout: Duration) extends Tool {
-  import Tool._
 
   def how = "fuzz (" + timeout.toSeconds + "s)"
   def backend = how
 
   def write = false
 
-  def check(unit: Unit, smt2: String, expected: Option[String]): Result = {
-    val (_, result) = fuzz(unit.file, expected)
+  def check(unit: Unit, smt2: String, expect: Option[String]): Result = {
+    val (_, result) = fuzz(unit.file, expect)
     result
   }
 
-  def fuzz(file: String, expected: Option[String]): (Int, Result) = {
+  def fuzz(file: String, expect: Option[String]): (Int, Result) = {
     /* random sampling for given number of seconds */
     val start = System.currentTimeMillis()
 
     val bin = "./fuzz"
-    val ok = compile(bin, file, "__VERIFIER.c", "__VERIFIER_random.c")
+    val fuzz_c = mode match {
+      case "zero"   => "__VERIFIER_zero.c"
+      case "random" => "__VERIFIER_random.c"
+    }
+
+    var ok = compile(bin, file, "__VERIFIER.c", fuzz_c)
 
     var rounds: Int = 0
 
     while (ok) {
-      val now = System.currentTimeMillis()
-      val remaining = now - start
-
-      if (remaining > timeout.toMillis)
-        return (rounds, Result.unknown)
-
       rounds += 1
       val (in, out, err, proc) = pipe(bin)
       val status = proc.waitFor()
 
-      val result = Backend.read(out, file, expected)
+      val result = read(out, file, expect)
 
       result match {
         case _: Incorrect =>
           return (rounds, result)
         case _ =>
       }
+
+      // at least one round!
+      val now = System.currentTimeMillis()
+      val remaining = now - start
+
+      ok = remaining <= timeout.toMillis
     }
 
+    Backend.isExpected("unknown", expect)
     return (rounds, Result.unknown)
   }
 }
