@@ -228,12 +228,11 @@ object Main {
   }
 
   def graphml(path: String) = {
-    ensure((path endsWith ".c") || (path endsWith ".i"), "unrecognized file ending: " + path)
-    (path dropRight 2) + ".graphml"
+    "witness.graphml"
   }
 
   def yaml(path: String) = {
-    "witness.yaml"
+    "witness.yml"
   }
 
   def run(file: String) {
