@@ -121,8 +121,9 @@ class Proc(
       case Assume(Id(name), Some(expr), typ) =>
         for
           st1 <- states1
-          (Val(pure, _), st2) <- rval(expr, st1)
-          Val(x, _) = st2(name)
+          (_val, st2) <- rval(expr, st1)
+          Val(x, _typ) = st2(name)
+          Val(pure, _) = Val.convert(_val, _typ)
         yield st2.and(x === pure)
 
       case Atomic(None) =>

@@ -41,8 +41,15 @@ class Eval(unit: TranslationUnit):
       case Lit(value: Int) =>
         Val(Pure.const(value), Signed._int)
 
-      case Lit(value: Long) =>
+      // decimal constants have the first of int, long, long long that fits
+      case Lit(value: Long) if value.isValidInt =>
+        Val(Pure.const(value), Signed._int)
+
+      case Lit(value: Long) if Signed._long.bytes == 8 =>
         Val(Pure.const(value), Signed._long)
+
+      case Lit(value: Long) =>
+        Val(Pure.const(value), Signed._long_long)
 
       case Lit(value) =>
         korn.error("unknown constant: " + value + " of type " + value.getClass())
@@ -83,7 +90,7 @@ class Eval(unit: TranslationUnit):
         Val.question(_test, _left, _right)
 
       case Cast(typ, expr) =>
-        value(expr, st)
+        Val.convert(value(expr, st), unfold(typ))
 
       case _ =>
         korn.error("cannot evaluate: " + expr)
@@ -103,13 +110,20 @@ class Eval(unit: TranslationUnit):
         case _ =>
           korn.error("cannot assign new memory to: " + typ)
 
+    def elem(arr: Val): Type =
+      arr.typ match
+        case ArrayType(elem, _) => unfold(elem)
+        case typ                => typ
+
     def assign(lhs: Expr, rhs: Expr, st1: State): List[(Val, Val, State)] =
       lhs match
         case Id(name) if st1.contains(name) =>
           val _old = st1(name)
 
-          for (_rhs, st2) <- rval(rhs, st1)
-          yield (_old, _rhs, st2 + (name -> _rhs))
+          for (_val, st2) <- rval(rhs, st1)
+          yield
+            val _rhs = Val.convert(_val, _old.typ)
+            (_old, _rhs, st2 + (name -> _rhs))
 
         case Id(name) =>
           korn.error("no such variable: " + name + " in " + st1)
@@ -118,7 +132,8 @@ class Eval(unit: TranslationUnit):
           val _old = st1(name)
 
           for
-            (_rhs, st2) <- rval(rhs, st1)
+            (_val, st2) <- rval(rhs, st1)
+            _rhs = Val.convert(_val, elem(_old))
             (_idx, st3) <- rval(idx, st2)
             _ = println("store " + _old + "[" + _idx + "] = " + _rhs)
             _new = Val.store(_old, _idx, _rhs)
@@ -473,7 +488,8 @@ class Eval(unit: TranslationUnit):
           List((v, st1))
 
         case Cast(typ, expr) =>
-          rval(expr, st1)
+          for (_val, st2) <- rval(expr, st1)
+          yield (Val.convert(_val, unfold(typ)), st2)
 
         case expr @ FunCall(name, args) =>
           korn.avoid(is_nondet(name), "unsupported function: " + name)

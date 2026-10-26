@@ -116,6 +116,15 @@ class Sig(unit: TranslationUnit):
       case _ =>
         korn.error("cannot resolve: " + typ)
 
+  def unfold(typ: Type): Type =
+    typ match
+      case TypedefName(name) if unit.typedefs.contains(name) =>
+        unfold(unit.typedefs(name))
+      case TypedefName("size_t") =>
+        Unsigned._long
+      case _ =>
+        typ
+
   def bounds(pure: Pure, typ: Type): Pure =
     typ match
       case Type._Bool =>
