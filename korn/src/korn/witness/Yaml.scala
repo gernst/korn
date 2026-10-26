@@ -4,37 +4,35 @@ import korn.now
 import korn.Loc
 import korn.Main
 import korn.Util
-import korn.smt._
-import korn.c._
-import korn.horn._
+import korn.smt.*
+import korn.c.*
+import korn.horn.*
 import java.io.PrintStream
 import java.text.SimpleDateFormat
 import java.util.UUID
 
-object Yaml {
+object Yaml:
   import Witness.c
 
-  def proof(file: String, df: Def, unit: Unit, out: PrintStream) {
+  def proof(file: String, df: Def, unit: TranslationUnit): List[String] =
     val Def(name, args, ret, body) = df
 
-    if (unit.witness contains name) {
-      val (proc, loc, pred, names, msg) = unit witness name
+    if unit.witness.contains(name) then
+      val (proc, loc, pred, names, msg) = unit.witness(name)
 
-      val old = if (names.length < args.length) {
+      val old = if names.length < args.length then
         // likely relational predicate, add old
-        names map ("\\old(" + _ + ")")
-      } else {
-        Nil
-      }
+        names.map("\\old(" + _ + ")")
+      else Nil
 
-      val from = args map (_.x.toString)
+      val from = args.map(_.x.toString)
       val to = old ++ names
       // val to = pred.names
 
       korn.ensure(from.length == to.length, "parameter length mismatch for " + proc.name + ": " + from + " and " + to)
-      val env = Map(from zip to: _*)
+      val env = Map(from.zip(to)*)
 
-      if (Main.debug) {
+      if Main.debug then
         Witness.quant = true
         Witness.escape = false
         val inv = c(body, env, neg = false)
@@ -42,48 +40,54 @@ object Yaml {
         println(msg + " for " + proc.name + " at " + loc.line + ":" + loc.column)
         println("  " + inv)
         println()
-      }
 
-      msg match {
+      msg match
         case "invariant" =>
           Witness.quant = Main.witness_quant
           Witness.escape = false
           val inv = c(body, env, neg = false)
 
-          out println loop(file, proc.name, loc, inv)
+          val text = loop(file, proc.name, loc, inv)
+          List(text)
 
         case "summary" =>
-        // ignore
+          // ignore
+          Nil
 
         case "transition invariant" =>
+          Nil
 
         case "precondition" =>
+          Nil
 
         case "postcondition" =>
-      }
-    }
-  }
+          Nil
+    else Nil
 
-  def proof(file: String, model: Model, unit: Unit, out: PrintStream) {
-    try {
+  def proof(file: String, model: Model, unit: TranslationUnit, out: PrintStream): Unit =
+    try
       val uuid = UUID.randomUUID();
       val time = now()
 
-      val arch = bits match {
+      val arch = bits match
         case 32 => "ILP32"
         case 64 => "LP64"
-      }
 
-      out println header(file, time, uuid, Util.hash(unit.file), arch)
+      out.println(header(file, time, uuid, Util.hash(unit.file), arch))
 
-      out println "  content:"
-      for (df <- model.defs)
-        proof(unit.file, df, unit, out)
+      val content =
+        for
+          df <- model.defs
+          entry <- proof(unit.file, df, unit)
+        yield entry
 
-      if (Main.debug)
-        println("finished writing correctness witness for " + file)
-    } finally {}
-  }
+      if content.nonEmpty then
+        out.println("  content:")
+        for entry <- content do out.println(entry)
+      else out.println("  content: []")
+
+      if Main.debug then println("finished writing correctness witness for " + file)
+    finally {}
 
   def format_version = "2.0"
 
@@ -103,7 +107,7 @@ object Yaml {
   metadata:
     format_version: "${format_version}"
     uuid: "${uuid}"
-    creation_time: "2023-11-21T10:29:38+01:00"
+    creation_time: "${time}"
     producer:
       name: "Korn"
       version: "${Main.version}"
@@ -116,4 +120,3 @@ object Yaml {
       specification: "G ! call(reach_error())"
       data_model: "${arch}"
       language: "C""""
-}

@@ -4,20 +4,17 @@ import java.io.InputStream
 
 case class Loc(line: Int, column: Int)
 
-case class Error(msg: String) extends RuntimeException {
+case class Error(msg: String) extends RuntimeException:
   override def toString = msg
-}
 
-class Counter {
+class Counter:
   var _index = 0
 
-  def next = {
+  def next =
     _index += 1
     _index
-  }
-}
 
-object Util {
+object Util:
   // import scala.concurrent.ExecutionContext.Implicits.global
   // import scala.concurrent._
   // import scala.concurrent.duration._
@@ -31,21 +28,19 @@ object Util {
   //   Try(Await.result(Future(a), ms.milliseconds)).getOrElse(default)
   // }
 
-  def hash(file: String) = {
+  def hash(file: String) =
     import java.nio.file.Files
     import java.nio.file.Paths
     val md = java.security.MessageDigest.getInstance("SHA-256")
     val hash = md.digest(Files.readAllBytes(Paths.get(file))).map("%02x".format(_)).mkString
     hash
-  }
 
   // def main(args: Array[String]) {
   //   println(withTimeout(200) { Thread.sleep(100); "result" })
   //   println(withTimeout(50) { Thread.sleep(100); "result" })
   // }
-}
 
-object Digraph {
+object Digraph:
   /* Frank DeRemer and Thomas Pennello:
    * Efficient computation of LALR (1) look-ahead sets.
    * ACM Transactions on Programming Languages and Systems (TOPLAS), 4(4), pp.615-649, 1982.
@@ -57,44 +52,38 @@ object Digraph {
    */
   import scala.collection.mutable
 
-  def digraph[X, A](states: Iterable[X], init: X => Iterable[A], succ: X => Iterable[X]): (X => mutable.Set[A]) = {
+  def digraph[X, A](states: Iterable[X], init: X => Iterable[A], succ: X => Iterable[X]): (X => mutable.Set[A]) =
     val stack = mutable.Stack[X]()
     val depth = mutable.Map[X, Int]()
     val result = mutable.Map[X, mutable.Set[A]]()
 
-    for (x <- states) {
-      start(x)
-    }
+    for x <- states do start(x)
 
-    def start(x: X) {
-      if (!(depth contains x))
-        traverse(x)
-    }
+    def start(x: X): Unit =
+      if !(depth.contains(x)) then traverse(x)
 
-    def traverse(x: X) {
-      stack push x
+    def traverse(x: X): Unit =
+      stack.push(x)
       val d = stack.length
 
       depth(x) = d
       result(x) = mutable.Set()
       result(x) ++= init(x)
 
-      for (y <- succ(x)) {
+      for y <- succ(x) do
         start(y)
 
         depth(x) = Math.min(depth(x), depth(y))
-        result(x) = result(x) union result(y)
-      }
+        result(x) = result(x).union(result(y))
 
-      if (depth(x) == d) {
-        do {
-          val y = stack.top
-          depth(y) = Int.MaxValue
-          result(y) = result(x)
-        } while (stack.pop() != x)
-      }
-    }
+      if depth(x) == d then
+        while {
+          {
+            val y = stack.top
+            depth(y) = Int.MaxValue
+            result(y) = result(x)
+          };
+          stack.pop() != x
+        } do ()
 
     result
-  }
-}

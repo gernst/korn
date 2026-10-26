@@ -1,9 +1,9 @@
 package korn.witness
 
 import korn.Main
-import korn.c._
-import korn.smt._
-import korn.horn._
+import korn.c.*
+import korn.smt.*
+import korn.horn.*
 import java.io.PrintStream
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -14,33 +14,31 @@ import korn.Loc
 
 case object InvalidWitness extends Exception
 
-object GraphML {
+object GraphML:
   val N0 = "N0"
   val NV = "NV"
 
   import Witness.c
 
-  def proof(df: Def, unit: Unit, out: PrintStream) {
+  def proof(df: Def, unit: TranslationUnit, out: PrintStream): Unit =
     val Def(name, args, ret, body) = df
 
-    if (unit.witness contains name) {
-      val (proc, loc, pred, names, msg) = unit witness name
+    if unit.witness.contains(name) then
+      val (proc, loc, pred, names, msg) = unit.witness(name)
 
-      val old = if (names.length < args.length) {
+      val old = if names.length < args.length then
         // likely relational predicate, add old
-        names map ("\\old(" + _ + ")")
-      } else {
-        Nil
-      }
+        names.map("\\old(" + _ + ")")
+      else Nil
 
-      val from = args map (_.x.toString)
+      val from = args.map(_.x.toString)
       val to = old ++ names
       // val to = pred.names
 
       korn.ensure(from.length == to.length, "parameter length mismatch for " + proc.name + ": " + from + " and " + to)
-      val env = Map(from zip to: _*)
+      val env = Map(from.zip(to)*)
 
-      if (Main.debug) {
+      if Main.debug then
         Witness.quant = true
         Witness.escape = false
         val inv = c(body, env, neg = false)
@@ -48,9 +46,8 @@ object GraphML {
         println(msg + " for " + proc.name + " at " + loc.line + ":" + loc.column)
         println("  " + inv)
         println()
-      }
 
-      msg match {
+      msg match
         case "invariant" =>
           Witness.quant = Main.witness_quant
           Witness.escape = true
@@ -58,9 +55,9 @@ object GraphML {
 
           val nd = "N-" + loc.line + "-" + loc.column
 
-          out println graph.enter(N0, nd, loc)
-          out println graph.loop(nd, inv)
-          out println graph.leave(nd, N0)
+          out.println(graph.enter(N0, nd, loc))
+          out.println(graph.loop(nd, inv))
+          out.println(graph.leave(nd, N0))
         case "summary" =>
         // ignore
 
@@ -69,60 +66,48 @@ object GraphML {
         case "precondition" =>
 
         case "postcondition" =>
-      }
-    }
-  }
 
-  def proof(file: String, model: Model, unit: Unit, out: PrintStream) {
-    out println header(file)
+  def proof(file: String, model: Model, unit: TranslationUnit, out: PrintStream): Unit =
+    out.println(header(file))
 
     val time = now()
 
-    try {
-      out println graph.header(file, time, Util.hash(file), bits, "correctness_witness")
-      out println graph.entry(N0)
+    try
+      out.println(graph.header(file, time, Util.hash(file), bits, "correctness_witness"))
+      out.println(graph.entry(N0))
 
-      for (df <- model.defs)
-        proof(df, unit, out)
+      for df <- model.defs do proof(df, unit, out)
 
-      if (Main.debug)
-        println("finished writing correctness witness for " + file)
-    } finally {
-      out println graph.footer
-      out println footer
-    }
-  }
+      if Main.debug then println("finished writing correctness witness for " + file)
+    finally
+      out.println(graph.footer)
+      out.println(footer)
 
-  def cex(fun: String, arg: BigInt, i: Int, out: PrintStream) {
+  def cex(fun: String, arg: BigInt, i: Int, out: PrintStream): Unit =
     val Ni = "N" + i // current state
     val Nj = "N" + (i + 1) // successor state
-    out println graph.node(Nj)
-    out println graph.call(fun, arg, Ni, Nj)
-  }
+    out.println(graph.node(Nj))
+    out.println(graph.call(fun, arg, Ni, Nj))
 
-  def cex(file: String, trace: List[(String, BigInt)], out: PrintStream) {
-    out println header(file)
+  def cex(file: String, trace: List[(String, BigInt)], out: PrintStream): Unit =
+    out.println(header(file))
 
     val time = now()
 
-    try {
-      out println graph.header(file, time, Util.hash(file), bits, "violation_witness")
-      out println graph.entry(N0)
+    try
+      out.println(graph.header(file, time, Util.hash(file), bits, "violation_witness"))
+      out.println(graph.entry(N0))
 
-      for (((call, arg), index) <- trace.zipWithIndex)
-        cex(call, arg, index, out)
+      for ((call, arg), index) <- trace.zipWithIndex do cex(call, arg, index, out)
 
       val n = trace.length
-      out println graph.violation(NV)
-      out println graph.call("reach_error", "N" + n, NV)
+      out.println(graph.violation(NV))
+      out.println(graph.call("reach_error", "N" + n, NV))
 
-      if (Main.debug)
-        println("finished writing violation witness for " + file)
-    } finally {
-      out println graph.footer
-      out println footer
-    }
-  }
+      if Main.debug then println("finished writing violation witness for " + file)
+    finally
+      out.println(graph.footer)
+      out.println(footer)
 
   // copied from https://github.com/sosy-lab/sv-witnesses/blob/master/multivar_true-unreach-call1.graphml
   def header(file: String) =
@@ -180,7 +165,7 @@ object GraphML {
     """</graphml>
 """
 
-  object graph {
+  object graph:
     def header(file: String, time: String, hash: String, bits: Int, typ: String) =
       s""" <graph edgedefault="directed">
   <data key="witness-type">${typ}</data>
@@ -248,5 +233,3 @@ object GraphML {
 
     def footer = """ </graph>
 """
-  }
-}

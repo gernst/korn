@@ -4,18 +4,16 @@ import java.io.FileReader
 import java.io.File
 import java.io.Reader
 
-package object c {
+package object c:
   var bits = 32
 
-  def parse(path: String): List[Stmt] = {
+  def parse(path: String): List[Stmt] =
     parse(new FileReader(path), path)
-  }
 
-  def parse(file: File): List[Stmt] = {
+  def parse(file: File): List[Stmt] =
     parse(new FileReader(file), file.getPath)
-  }
 
-  def parse(reader: Reader, path: String): List[Stmt] = {
+  def parse(reader: Reader, path: String): List[Stmt] =
     val scanner = new Scanner(reader)
     val parser = new Parser()
 
@@ -23,7 +21,5 @@ package object c {
     scanner.types = types
     parser.types = types
 
-    val Block(stmts) = parser parse scanner
+    val Block(stmts) = parser.parse(scanner)
     stmts
-  }
-}

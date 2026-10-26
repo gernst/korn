@@ -1,16 +1,15 @@
 package korn
 
-package object horn {
-  import korn.c._
-  import korn.smt._
+package object horn:
+  import korn.c.*
+  import korn.smt.*
 
   type Typing = Map[String, Sort]
   type Store = Map[String, Val]
   type Heap = Map[Pure, Val]
 
-  def is_nondet(name: String) = {
-    name startsWith "__VERIFIER_nondet"
-  }
+  def is_nondet(name: String) =
+    name.startsWith("__VERIFIER_nondet")
 
   val known = Set(
     "main",
@@ -20,7 +19,7 @@ package object horn {
     "__VERIFIER_error"
   )
 
-  object stdlib {
+  object stdlib:
     object abort extends FunCall.nullary("abort")
     object exit extends FunCall.nullary("exit")
     object exit_with_result extends FunCall.unary("exit")
@@ -28,13 +27,14 @@ package object horn {
     object assert extends FunCall.unary("assert")
     object malloc extends FunCall.unary("malloc")
     object __assert_fail extends FunCall.nary("__assert_fail")
-  }
 
-  object __VERIFIER {
+  object __VERIFIER:
     object assume extends FunCall.unary("__VERIFIER_assume")
     object assert extends FunCall.unary("__VERIFIER_assert")
     object error extends FunCall.nullary("__VERIFIER_error")
     object reach_error extends FunCall.nullary("reach_error")
+
+    object unknown extends FunCall.nullary("unknown")
 
     object nondet_bool extends FunCall.nullary("__VERIFIER_nondet_bool")
 
@@ -60,9 +60,5 @@ package object horn {
     object nondet_unsigned_int extends FunCall.nullary("__VERIFIER_nondet_unsigned_int")
     object nondet_unsigned_long extends FunCall.nullary("__VERIFIER_nondet_unsigned_long")
 
-
-
     object nondet_float extends FunCall.nullary("__VERIFIER_nondet_float")
     object nondet_double extends FunCall.nullary("__VERIFIER_nondet_double")
-  }
-}

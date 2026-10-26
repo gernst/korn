@@ -1,0 +1,65 @@
+<?xml version="1.0"?>
+<!DOCTYPE benchmark PUBLIC "+//IDN sosy-lab.org//DTD BenchExec benchmark 2.3//EN" "https://www.sosy-lab.org/benchexec/benchmark-2.3.dtd">
+<benchmark tool="korn" displayName="Korn" timelimit="2 min" hardtimelimit="3 min" memlimit="7 GB" cpuCores="1">
+
+  <require cpuModel="AMD Ryzen 7 PRO 5750G with Radeon Graphics" cpuCores="1" />
+
+  <resultfiles>**/witness.*</resultfiles>
+
+  <option name="-smt2" />
+  <option name="clauses.smt2" />
+  <option name="-model" />
+  <option name="-write" />
+  <option name="-confirm" />
+  <option name="-debug" />
+  <option name="-random" />
+  <option name="10" />
+  <option name="-timeout" />
+  <option name="20" />
+  <option name="-golem:spacer" />
+  <option name="-timeout" />
+  <option name="20" />
+  <option name="-z3" />
+  <option name="-timeout" />
+  <option name="900" />
+  <option name="-eld:portfolio" />
+
+  <rundefinition name="ryzen-2min">
+    <tasks name="C.unreach-call.Arrays">
+      <includesfile>../sv-benchmarks/c/Arrays.set</includesfile>
+      <propertyfile>../sv-benchmarks/c/properties/unreach-call.prp</propertyfile>
+    </tasks>
+    <tasks name="C.unreach-call.ControlFlow">
+      <includesfile>../sv-benchmarks/c/ControlFlow.set</includesfile>
+      <includesfile>../sv-benchmarks/c/Sanity.set</includesfile>
+      <propertyfile>../sv-benchmarks/c/properties/unreach-call.prp</propertyfile>
+    </tasks>
+    <tasks name="C.unreach-call.ECA">
+      <includesfile>../sv-benchmarks/c/ECA.set</includesfile>
+      <propertyfile>../sv-benchmarks/c/properties/unreach-call.prp</propertyfile>
+    </tasks>
+    <tasks name="C.unreach-call.Loops">
+      <includesfile>../sv-benchmarks/c/Loops.set</includesfile>
+      <includesfile>../sv-benchmarks/c/VerifyThis-Loops.set</includesfile>
+      <propertyfile>../sv-benchmarks/c/properties/unreach-call.prp</propertyfile>
+    </tasks>
+    <tasks name="C.unreach-call.Recursive">
+      <includesfile>../sv-benchmarks/c/Recursive.set</includesfile>
+      <includesfile>../sv-benchmarks/c/VerifyThis-Recursive.set</includesfile>
+      <propertyfile>../sv-benchmarks/c/properties/unreach-call.prp</propertyfile>
+    </tasks>
+    <tasks name="C.unreach-call.Sequentialized">
+      <includesfile>../sv-benchmarks/c/Sequentialized.set</includesfile>
+      <propertyfile>../sv-benchmarks/c/properties/unreach-call.prp</propertyfile>
+    </tasks>
+    <tasks name="C.unreach-call.XCSP">
+      <includesfile>../sv-benchmarks/c/XCSP.set</includesfile>
+      <propertyfile>../sv-benchmarks/c/properties/unreach-call.prp</propertyfile>
+    </tasks>
+  </rundefinition>
+
+  <columns>
+    <column title="backend">backend:</column>
+  </columns>
+
+</benchmark>

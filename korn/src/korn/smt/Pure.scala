@@ -1,62 +1,47 @@
 package korn.smt
 
-object Parsing {
-  def boolSort = {
+object Parsing:
+  def boolSort =
     Sort.bool
-  }
 
-  def intSort = {
+  def intSort =
     Sort.int
-  }
 
-  def realSort = {
+  def realSort =
     Sort.real
-  }
 
-  def arraySort(dom: Sort, ran: Sort) = {
+  def arraySort(dom: Sort, ran: Sort) =
     Sort.array(dom, ran)
-  }
 
-  def constarray(typ: Sort, value: Pure) = {
+  def constarray(typ: Sort, value: Pure) =
     Pure.constarray(value, typ) // hack
-  }
 
-  def pointerSort(elem: Sort) = {
-    if (korn.Main.pointers)
-      Sort.pointer(elem)
-    else
-      Sort.int
-  }
+  def pointerSort(elem: Sort) =
+    if korn.Main.pointers then Sort.pointer(elem)
+    else Sort.int
 
-  def pair[A, B](a: A, b: B) = {
+  def pair[A, B](a: A, b: B) =
     (a, b)
-  }
 
-  def num(n: String) = {
+  def num(n: String) =
     Pure.const(BigInt(n))
-  }
 
-  def let(eqs: Array[(Var, Pure)], body: Pure) = {
+  def let(eqs: Array[(Var, Pure)], body: Pure) =
     Pure.let(eqs.toList, body)
-  }
 
-  def bind(quant: String, bound: Array[Param], body: Pure) = {
-    quant match {
+  def bind(quant: String, bound: Array[Param], body: Pure) =
+    quant match
       case "exists" => Ex(bound.toList, body)
       case "forall" => All(bound.toList, body)
-    }
-  }
 
-  def apply(n: String) = {
-    n match {
+  def apply(n: String) =
+    n match
       case "true"  => True
       case "false" => True
       case _       => Var(n)
-    }
-  }
 
-  def apply(n: String, args: Array[Pure]) = {
-    (n, args) match {
+  def apply(n: String, args: Array[Pure]) =
+    (n, args) match
       case ("=", Array(left, right)) => Pure.eqn(left, right)
 
       case ("^", Array(arg1, arg2))   => arg1 ^ arg2
@@ -86,51 +71,40 @@ object Parsing {
       case ("ite", Array(arg1, arg2, arg3)) => Pure.ite(arg1, arg2, arg3)
 
       case _ => korn.error("unknown function: " + n)
-    }
-  }
-}
 
 sealed trait Sort {}
 
-case class Clause(path: List[Pure], head: Pure, reason: String) {
+case class Clause(path: List[Pure], head: Pure, reason: String):
   def free = head.free ++ path.flatMap(_.free)
   override def toString = path.mkString(", ") + " ==> " + head + " # " + reason
 
   def uninterpretedPremises(uninterpreted: Fun => Boolean) =
-    path collect {
+    path.collect:
       case prem @ Pure.app(fun, _) if uninterpreted(fun) =>
         prem
-    }
 
-  def isLinear(uninterpreted: Fun => Boolean) = {
+  def isLinear(uninterpreted: Fun => Boolean) =
     uninterpretedPremises(uninterpreted).size <= 1
-  }
-}
 
-object Sort {
+object Sort:
   val bool = base("Bool")
   val int = base("Int")
   val real = base("Real")
 
-  case class base(name: String) extends Sort {
+  case class base(name: String) extends Sort:
     override def toString = name
-  }
 
-  case class pointer(elem: Sort) extends Sort {
+  case class pointer(elem: Sort) extends Sort:
     override def toString = sexpr("Pointer", elem)
-  }
 
-  case class array(dom: Sort, ran: Sort) extends Sort {
+  case class array(dom: Sort, ran: Sort) extends Sort:
     override def toString = sexpr("Array", dom, ran)
-  }
-}
 
-case class Fun(name: String, args: List[Sort], ret: Sort) {
+case class Fun(name: String, args: List[Sort], ret: Sort):
   override def toString = name
   def toStringTyped = name + ": " + args.mkString(", ") + " -> " + ret
-}
 
-object Fun {
+object Fun:
   val t = Fun("true", List(), Sort.bool)
   val f = Fun("false", List(), Sort.bool)
 
@@ -152,9 +126,8 @@ object Fun {
   val and = Fun("and", List(Sort.bool, Sort.bool), Sort.bool)
   val or = Fun("or", List(Sort.bool, Sort.bool), Sort.bool)
   val imp = Fun("=>", List(Sort.bool, Sort.bool), Sort.bool)
-}
 
-sealed trait Pure extends Pure.term {
+sealed trait Pure extends Pure.term:
   def ^(that: Pure) = Pure.exp(this, that)
   def *(that: Pure) = Pure.times(this, that)
   def /(that: Pure) = Pure.divBy(this, that)
@@ -180,9 +153,8 @@ sealed trait Pure extends Pure.term {
 
   def select(index: Pure) = Pure.select(this, index)
   def store(index: Pure, value: Pure) = Pure.store(this, index, value)
-}
 
-object Pure extends korn.Counter with Alpha[Pure, Var] {
+object Pure extends korn.Counter with Alpha[Pure, Var]:
   val zero = const(0)
   val one = const(1)
 
@@ -205,19 +177,17 @@ object Pure extends korn.Counter with Alpha[Pure, Var] {
   object or extends binary(Fun.or)
   object imp extends binary(Fun.imp)
 
-  val ands: List[Pure] => Pure = {
+  val ands: List[Pure] => Pure =
     case Nil       => True
     case List(arg) => arg
-    case args      => args reduce Pure.and
-  }
+    case args      => args.reduce(Pure.and)
 
-  val ors: List[Pure] => Pure = {
+  val ors: List[Pure] => Pure =
     case Nil       => False
     case List(arg) => arg
-    case args      => args reduce Pure.or
-  }
+    case args      => args.reduce(Pure.or)
 
-  case class const(value: BigInt) extends Pure {
+  case class const(value: BigInt) extends Pure:
     def free = Set()
     def rename(re: Map[Var, Var]) = this
     def subst(su: Map[Var, Pure]) = this
@@ -225,165 +195,130 @@ object Pure extends korn.Counter with Alpha[Pure, Var] {
     def +(that: BigInt) = const(value + that)
     def -(that: BigInt) = const(value - that)
     override def toString = value.toString
-  }
 
-  case class app(fun: Fun, args: List[Pure]) extends Pure {
-    def free = Set(args flatMap (_.free): _*)
-    def rename(re: Map[Var, Var]) = app(fun, args map (_ rename re))
-    def subst(su: Map[Var, Pure]) = app(fun, args map (_ subst su))
+  case class app(fun: Fun, args: List[Pure]) extends Pure:
+    def free = Set(args.flatMap(_.free)*)
+    def rename(re: Map[Var, Var]) = app(fun, args.map(_.rename(re)))
+    def subst(su: Map[Var, Pure]) = app(fun, args.map(_.subst(su)))
 
-    override def toString = {
-      if (args.isEmpty) fun.toString
+    override def toString =
+      if args.isEmpty then fun.toString
       else sexpr(fun :: args)
-    }
-  }
 
   // Parsing only
-  case class let(eqs: List[(Var, Pure)], body: Pure) extends Pure with Pure.bind[let] {
+  case class let(eqs: List[(Var, Pure)], body: Pure) extends Pure with Pure.bind[let]:
     def free = (body.free -- bound) ++ (eqs.flatMap(_._2.free))
-    def bound = Set(eqs.map(_._1): _*)
+    def bound = Set(eqs.map(_._1)*)
 
-    def rename(a: Map[Var, Var], re: Map[Var, Var]) = {
-      val _eqs = eqs map { case (x, e) => (x rename a, e rename re) }
-      val _body = body rename re
+    def rename(a: Map[Var, Var], re: Map[Var, Var]) =
+      val _eqs = eqs.map { case (x, e) => (x.rename(a), e.rename(re)) }
+      val _body = body.rename(re)
       let(_eqs, _body)
-    }
 
-    def subst(a: Map[Var, Var], su: Map[Var, Pure]) = {
-      val _eqs = eqs map { case (x, e) => (x rename a, e subst su) }
-      val _body = body subst su
+    def subst(a: Map[Var, Var], su: Map[Var, Pure]) =
+      val _eqs = eqs.map { case (x, e) => (x.rename(a), e.subst(su)) }
+      val _body = body.subst(su)
       let(_eqs, _body)
-    }
 
-    override def toString = {
-      val ps = eqs map { case (x, a) => sexpr(x, a) }
+    override def toString =
+      val ps = eqs.map { case (x, a) => sexpr(x, a) }
       sexpr("let", sexpr(ps), body)
-    }
-  }
 
-  case class constarray(value: Pure, sort: Sort) extends Pure {
+  case class constarray(value: Pure, sort: Sort) extends Pure:
     def free = value.free
-    def rename(re: Map[Var, Var]) = constarray(value rename re, sort)
-    def subst(su: Map[Var, Pure]) = constarray(value subst su, sort)
+    def rename(re: Map[Var, Var]) = constarray(value.rename(re), sort)
+    def subst(su: Map[Var, Pure]) = constarray(value.subst(su), sort)
     override def toString = sexpr(sexpr("as", "const", sort), value)
-  }
 
-  case class ite(test: Pure, left: Pure, right: Pure) extends Pure {
+  case class ite(test: Pure, left: Pure, right: Pure) extends Pure:
     def free = test.free ++ left.free ++ right.free
-    def rename(re: Map[Var, Var]) = ite(test rename re, left rename re, right rename re)
-    def subst(su: Map[Var, Pure]) = ite(test subst su, left subst su, right subst su)
+    def rename(re: Map[Var, Var]) = ite(test.rename(re), left.rename(re), right.rename(re))
+    def subst(su: Map[Var, Pure]) = ite(test.subst(su), left.subst(su), right.subst(su))
     override def toString = sexpr("ite", test, left, right)
-  }
 
-  case class eqn(left: Pure, right: Pure) extends Pure {
+  case class eqn(left: Pure, right: Pure) extends Pure:
     def free = left.free ++ right.free
-    def rename(re: Map[Var, Var]) = eqn(left rename re, right rename re)
-    def subst(su: Map[Var, Pure]) = eqn(left subst su, right subst su)
+    def rename(re: Map[Var, Var]) = eqn(left.rename(re), right.rename(re))
+    def subst(su: Map[Var, Pure]) = eqn(left.subst(su), right.subst(su))
     override def toString = sexpr("=", left, right)
-  }
 
-  case class select(base: Pure, index: Pure) extends Pure {
+  case class select(base: Pure, index: Pure) extends Pure:
     def free = base.free ++ index.free
-    def rename(re: Map[Var, Var]) = new select(base rename re, index rename re)
-    def subst(su: Map[Var, Pure]) = new select(base subst su, index subst su)
+    def rename(re: Map[Var, Var]) = new select(base.rename(re), index.rename(re))
+    def subst(su: Map[Var, Pure]) = new select(base.subst(su), index.subst(su))
     override def toString = sexpr("select", base, index)
-  }
 
-  case class store(base: Pure, index: Pure, arg: Pure) extends Pure {
+  case class store(base: Pure, index: Pure, arg: Pure) extends Pure:
     def free = base.free ++ index.free ++ arg.free
-    def rename(re: Map[Var, Var]) = new store(base rename re, index rename re, arg rename re)
-    def subst(su: Map[Var, Pure]) = new store(base subst su, index subst su, arg subst su)
+    def rename(re: Map[Var, Var]) = new store(base.rename(re), index.rename(re), arg.rename(re))
+    def subst(su: Map[Var, Pure]) = new store(base.subst(su), index.subst(su), arg.subst(su))
     override def toString = sexpr("store", base, index, arg)
-  }
 
-  class unary(val fun: Fun) extends (Pure => Pure) {
+  class unary(val fun: Fun) extends (Pure => Pure):
     def unapply(pure: Pure) =
-      pure match {
+      pure match
         case app(`fun`, List(arg)) => Some(arg)
         case _                     => None
-      }
 
-    def apply(arg: Pure) = {
+    def apply(arg: Pure) =
       app(fun, List(arg))
-    }
-  }
 
-  class binary(val fun: Fun) extends ((Pure, Pure) => Pure) {
+  class binary(val fun: Fun) extends ((Pure, Pure) => Pure):
     def unapply(pure: Pure) =
-      pure match {
+      pure match
         case app(`fun`, List(arg1, arg2)) => Some((arg1, arg2))
         case _                            => None
-      }
 
-    def apply(arg1: Pure, arg2: Pure) = {
+    def apply(arg1: Pure, arg2: Pure) =
       app(fun, List(arg1, arg2))
-    }
 
     def flatten(expr: Pure): List[Pure] =
-      expr match {
+      expr match
         case app(`fun`, List(arg1, arg2)) =>
           flatten(arg1) ++ flatten(arg2)
         case _ =>
           List(expr)
-      }
-  }
-}
 
-case class Var(name: String, index: Option[Int]) extends Pure with Pure.x {
+case class Var(name: String, index: Option[Int]) extends Pure with Pure.x:
   def fresh(index: Int) = Var(name, Some(index))
 
-  override def toString = {
-    index match {
+  override def toString =
+    index match
       case None        => name
       case Some(index) => name + "!" + index
-    }
-  }
-}
 
-object Var extends (String => Var) {
-  def apply(name: String) = {
+object Var extends (String => Var):
+  def apply(name: String) =
     Var(name, None)
-  }
-}
 
-case class Old(pure: Pure) extends Pure {
+case class Old(pure: Pure) extends Pure:
   override def free: Set[Var] = ???
-  override def rename(re: Map[Var,Var]): Pure = ???
-  override def subst(su: Map[Var,Pure]): Pure = ???
+  override def rename(re: Map[Var, Var]): Pure = ???
+  override def subst(su: Map[Var, Pure]): Pure = ???
 
-}
-
-sealed trait Quant {
-  def apply(params: List[Param], body: Pure) = {
+sealed trait Quant:
+  def apply(params: List[Param], body: Pure) =
     Bind(this, params, body)
-  }
 
-  def unapply(pure: Pure) = {
-    pure match {
+  def unapply(pure: Pure) =
+    pure match
       case Bind(quant, params, body) if quant == this =>
         Some((params, body))
       case _ => None
-    }
-  }
-}
 
-case object All extends Quant {
+case object All extends Quant:
   override def toString = "forall"
-}
 
-case object Ex extends Quant {
+case object Ex extends Quant:
   override def toString = "exists"
-}
 
-case class Bind(quant: Quant, params: List[Param], body: Pure) extends Pure with Pure.bind[Pure] {
-  def bound = Set(params map (_.x): _*)
+case class Bind(quant: Quant, params: List[Param], body: Pure) extends Pure with Pure.bind[Pure]:
+  def bound = Set(params.map(_.x)*)
   def free = body.free -- bound
-  def rename(a: Map[Var, Var], re: Map[Var, Var]) = Bind(quant, params map (_ rename a), body rename re)
-  def subst(a: Map[Var, Var], su: Map[Var, Pure]) = Bind(quant, params map (_ rename a), body subst su)
+  def rename(a: Map[Var, Var], re: Map[Var, Var]) = Bind(quant, params.map(_.rename(a)), body.rename(re))
+  def subst(a: Map[Var, Var], su: Map[Var, Pure]) = Bind(quant, params.map(_.rename(a)), body.subst(su))
   override def toString = sexpr(quant, sexpr(params), body)
-}
 
-case class Param(x: Var, sort: Sort) {
-  def rename(re: Map[Var, Var]) = Param(x rename re, sort)
+case class Param(x: Var, sort: Sort):
+  def rename(re: Map[Var, Var]) = Param(x.rename(re), sort)
   override def toString = sexpr(x, sort)
-}

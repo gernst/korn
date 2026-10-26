@@ -2,12 +2,12 @@ package korn.horn
 
 import scala.collection.mutable
 
-import korn.c._
-import korn.smt._
+import korn.c.*
+import korn.smt.*
 import korn.Loc
 import korn.horn.is_nondet
 
-class Unit(val file: String, val stmts: List[Stmt]) {
+class TranslationUnit(val file: String, val stmts: List[Stmt]):
 
   /** global data types */
   val typedefs = mutable.Map[String, Type]()
@@ -43,35 +43,29 @@ class Unit(val file: String, val stmts: List[Stmt]) {
   object sig extends Sig(this)
   object eval extends Eval(this)
 
-  def isLinear = {
-    val funs = preds map (_.fun)
-    clauses forall (_ isLinear funs)
-  }
+  def isLinear =
+    val funs = preds.map(_.fun)
+    clauses.forall(_.isLinear(funs))
 
-  def remember(proc: Proc, loc: Loc, pred: Step, reason: String) {
+  def remember(proc: Proc, loc: Loc, pred: Step, reason: String): Unit =
     witness += pred.name -> (proc, loc, pred, pred.names, reason)
-  }
 
-  def clause(path: List[Pure], phi: Pure, reason: String) {
-    val f = (path contains False)
-    val t = (path contains phi) || (phi == True)
+  def clause(path: List[Pure], phi: Pure, reason: String): Unit =
+    val f = (path.contains(False))
+    val t = (path.contains(phi)) || (phi == True)
 
-    if (!t && !f)
-      clauses += Clause(path, phi, reason)
-  }
+    if !t && !f then clauses += Clause(path, phi, reason)
 
-  def clause(st: State, phi: Pure, reason: String) {
+  def clause(st: State, phi: Pure, reason: String): Unit =
     clause(st.path, phi, reason)
-  }
 
-  def goal(st: State, phi: Pure, reason: String) {
-    clause(st and !phi, False, reason)
-  }
+  def goal(st: State, phi: Pure, reason: String): Unit =
+    clause(st.and(!phi), False, reason)
 
-  def enum(cases: List[Const]) = {
+  def `enum`(cases: List[Const]) =
     var index = 0
 
-    cases foreach {
+    cases.foreach:
       case Const(name, None) =>
         consts += name -> Val(Pure.const(index), Signed._int)
         index += 1
@@ -80,25 +74,21 @@ class Unit(val file: String, val stmts: List[Stmt]) {
         index = next
         consts += name -> Val(Pure.const(index), Signed._int)
         index += 1
-    }
-  }
 
-  def run() {
+  def run(): Unit =
     run(stmts, static)
     run(stmts, signature)
     run(stmts, dynamic)
-  }
 
-  def run(stmts: List[Stmt], action: Stmt => Any) {
-    stmts foreach action
-  }
+  def run(stmts: List[Stmt], action: Stmt => Any): Unit =
+    stmts.foreach(action)
 
   // Collect global declarations but defer functions to a later stage
-  def static(stmt: Stmt) {
-    import sig._
-    import eval._
+  def static(stmt: Stmt): Unit =
+    import sig.*
+    import eval.*
 
-    stmt match {
+    stmt match
       case Group(stmts) =>
         // use case: groups of variable declarations
         run(stmts, static)
@@ -115,9 +105,9 @@ class Unit(val file: String, val stmts: List[Stmt]) {
       case UnionDef(name, fields) =>
         unions += name -> Some(fields)
       case EnumDef(None, cases) =>
-        enum(cases)
+        `enum`(cases)
       case EnumDef(Some(name), cases) =>
-        enum(cases)
+        `enum`(cases)
         enums += name -> Some(cases)
       case VarDef(formal @ Formal(typ, name), _) =>
         globals ++= List(formal)
@@ -126,15 +116,13 @@ class Unit(val file: String, val stmts: List[Stmt]) {
       // declare functions later when global variables are known
       case _ =>
         korn.error("unsupported global statement: " + stmt)
-    }
-  }
 
   // Collect function signatures, including global variables
-  def signature(stmt: Stmt) {
-    import sig._
-    import eval._
+  def signature(stmt: Stmt): Unit =
+    import sig.*
+    import eval.*
 
-    stmt match {
+    stmt match
       case Group(stmts) =>
         // use case: groups of function declarations (possible?)
         run(stmts, signature)
@@ -143,19 +131,17 @@ class Unit(val file: String, val stmts: List[Stmt]) {
       case FunDef(ret, "reach_error", formals, body) =>
       // built-in
       case FunDef(ret, name, formals, body) =>
-        val types = formals map (_.typ)
+        val types = formals.map(_.typ)
         declare(name, ret, types)
       case _ =>
       // nothing to do
-    }
-  }
 
   // Set up initial state for main, and define all functions
-  def dynamic(stmt: Stmt) {
-    import sig._
-    import eval._
+  def dynamic(stmt: Stmt): Unit =
+    import sig.*
+    import eval.*
 
-    stmt match {
+    stmt match
       case Group(stmts) =>
         // use case: groups of variable declarations
         run(stmts, dynamic)
@@ -183,11 +169,9 @@ class Unit(val file: String, val stmts: List[Stmt]) {
 
       case _ =>
       // nothing to do
-    }
-  }
 
-  def define_nondet(name: String, typ: Type) {
-    import sig._
+  def define_nondet(name: String, typ: Type): Unit =
+    import sig.*
 
     val (x, _, v) = nondet("arg", typ)
     val sort = resolve(typ)
@@ -198,10 +182,9 @@ class Unit(val file: String, val stmts: List[Stmt]) {
     val c = pred(x)
 
     clauses += Clause(Nil, c, "nondet functions are unconstrained")
-  }
 
-  def define(loc: Loc, name: String, params: List[Formal], ret: Type, body: Stmt) {
-    import sig._
+  def define(loc: Loc, name: String, params: List[Formal], ret: Type, body: Stmt): Unit =
+    import sig.*
     fundefs += (name -> body)
 
     val (locals, stmt) = Stmt.norm(body)
@@ -211,5 +194,3 @@ class Unit(val file: String, val stmts: List[Stmt]) {
     object proc extends Proc(this, loc, name, params, ret, locals, stmt, contract, config)
 
     proc.run()
-  }
-}

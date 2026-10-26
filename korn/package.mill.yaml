@@ -1,0 +1,12 @@
+extends: ScalaModule
+scalaVersion: 3.10.0
+mainClass: korn.Main
+
+# target Java 21 regardless of the JDK Mill runs on
+scalacOptions: [-release, "21"]
+javacOptions: [--release, "21"]
+
+unmanagedClasspath:
+- lib/beaver-cc-0.9.11.jar
+- lib/beaver-rt-0.9.11.jar
+- lib/jflex-1.7.0.jar

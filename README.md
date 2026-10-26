@@ -44,7 +44,7 @@ The following options are supported
 - `-q` output only one of `sat`, `unsat`, `error`, `unknown` and suppress all other output to stdout/stderr
 - `-t n` specify timeout in seconds (for directly supported solvers, default: 900)
 - `-32` and `-64`: size constraints for numeric types (affects `long`)
-- `-u` unbounded arithmetic, omit size constraints for `__VERIFIER_nondet_*`
+- `-u` or `-unbounded`: omit size constraints for `__VERIFIER_nondet_*`
 - `-r n` run `n` seconds of random sampling to detect trivial counterexamples
 
 The following solvers have first-class support and can be specified with options

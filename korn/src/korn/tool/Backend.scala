@@ -3,52 +3,46 @@ package korn.tool
 import java.io.BufferedReader
 import java.io.PrintStream
 
-import korn.smt._
+import korn.smt.*
 import korn.Main
 import korn.Util
 import korn.now
 
-object Backend {
-  def isExpected(status: String, expect: Option[String]) {
-    expect match {
+object Backend:
+  def isExpected(status: String, expect: Option[String]): Unit =
+    expect match
       case Some(status_) if status != status_ =>
         korn.error("status: " + status + ", expected: " + status_)
 
       case _ =>
       // ok
-    }
-  }
 
   // def readWithTimeout(timeout: Int, in: BufferedReader, file: String) = {
   //   val unknown: Result = Unknown("timeout")
   //   Util.withTimeout(timeout * 1000, unknown) { read(in, file) }
   // }
 
-  def counterexample(in: BufferedReader): List[(String, BigInt)] = {
+  def counterexample(in: BufferedReader): List[(String, BigInt)] =
     var trace: List[(String, BigInt)] = Nil
     var line = in.readLine()
-    while (line != null) {
+    while line != null do
       println(line)
-      val pos = line indexOf "__VERIFIER_nondet_"
-      if (pos >= 0) {
-        line = line drop pos
-        val lp = line indexOf "("
-        val rp = line indexOf ")"
-        val fun = line take lp
-        val res = line drop (lp + 1) take (rp - lp - 1)
+      val pos = line.indexOf("__VERIFIER_nondet_")
+      if pos >= 0 then
+        line = line.drop(pos)
+        val lp = line.indexOf("(")
+        val rp = line.indexOf(")")
+        val fun = line.take(lp)
+        val res = line.drop(lp + 1).take(rp - lp - 1)
         trace = (fun, BigInt(res)) :: trace
-      }
       line = in.readLine()
-    }
     trace
-  }
 
-  def bind[V, T](vars: Iterable[V], typing: V => T): String = {
+  def bind[V, T](vars: Iterable[V], typing: V => T): String =
     import korn.smt.sexpr
-    sexpr(vars map { x => sexpr(x, typing(x)) })
-  }
+    sexpr(vars.map { x => sexpr(x, typing(x)) })
 
-  def write(unit: korn.horn.Unit, model: Boolean, expect: Option[String], out: PrintStream) {
+  def write(unit: korn.horn.TranslationUnit, model: Boolean, expect: Option[String], out: PrintStream): Unit =
     import korn.smt.sexpr
     out.println(sexpr("set-logic", "HORN"))
 
@@ -62,60 +56,43 @@ object Backend {
     out.println("|)")
     out.println()
 
-    if (model) {
-      out.println(sexpr("set-option", ":produce-models", "true"))
-    }
+    if model then out.println(sexpr("set-option", ":produce-models", "true"))
 
-    for (status <- expect) {
-      out.println(sexpr("set-info", ":status", status))
-    }
+    for status <- expect do out.println(sexpr("set-info", ":status", status))
 
     out.println()
 
-    if (unit.pointers) {
+    if unit.pointers then
       out.println(sexpr("declare-sort", "Pointer", "1"))
       out.println()
-    }
 
-    for (pred <- unit.preds ++ unit.pres.values ++ unit.posts.values) {
+    for pred <- unit.preds ++ unit.pres.values ++ unit.posts.values do
       val korn.smt.Fun(name, args, _) = pred.fun
       val defn = sexpr("declare-fun", name, sexpr(args), "Bool")
       out.println(defn)
-    }
     out.println()
 
-    for (clause <- unit.clauses) {
+    for clause <- unit.clauses do
       val korn.smt.Clause(path, head, reason) = clause
-      val bound = clause.free map (_.toString)
+      val bound = clause.free.map(_.toString)
 
       out.println("; " + reason)
       out.println("(assert")
-      if (bound.nonEmpty)
-        out.println("  (forall " + bind(bound, unit.typing))
+      if bound.nonEmpty then out.println("  (forall " + bind(bound, unit.typing))
 
-      if (path.nonEmpty) {
-        out.println(path.mkString("    (=> (and ", "\n             ", ")"))
-      }
+      if path.nonEmpty then out.println(path.mkString("    (=> (and ", "\n             ", ")"))
 
       out.print("        " + head)
 
-      if (path.nonEmpty)
-        out.print(")")
+      if path.nonEmpty then out.print(")")
 
-      if (bound.nonEmpty)
-        out.print(")")
+      if bound.nonEmpty then out.print(")")
 
       out.println(")")
       out.println()
-    }
 
     out.println(sexpr("check-sat"))
 
-    if (model) {
-      out.println(sexpr("get-model"))
-    }
+    if model then out.println(sexpr("get-model"))
 
     out.flush()
-  }
-
-}

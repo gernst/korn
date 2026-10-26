@@ -19,7 +19,6 @@ KORN_JAR = korn.jar
 KORN_SH  = ./korn.sh
 KORN_FLAGS ?=
 
-ARCHIVES = ../svcomp-archives-2024/2024
 KORN_DIST = run korn.jar golem z3 eld eld.jar README.md $(wildcard LICENSE*) __VERIFIER.c __VERIFIER_zero.c __VERIFIER_random.c sat.c unsat.c smoketest.sh
 
 all: $(KORN_JAR)
@@ -28,20 +27,14 @@ examples: $(KORN_SMT)
 
 parser: $(KORN_JAVA)
 
-archives-2023: $(ARCHIVES)/korn.zip
 archives-2024: dist/korn.zip
 archives-2025: dist/korn.zip
 archives-2026: dist/korn.zip
 
-$(ARCHIVES)/korn.zip: $(KORN_DIST)
-	@echo $@
-	@mkdir -p $(ARCHIVES)/korn
-	@cp $(KORN_DIST) $(ARCHIVES)/korn
-	@(cd $(ARCHIVES); zip korn.zip -r korn)
-
 dist/korn.zip: $(KORN_DIST)
 	@echo $@
 	@mkdir -p ./dist/korn
+	@rm ./dist/korn/*
 	@cp $(KORN_DIST) ./dist/korn
 	@(cd dist; zip korn.zip -r korn)
 
@@ -50,7 +43,7 @@ clean:
 	@rm -f $(KORN_SH)
 
 check-dependencies:
-	$(MILL) mill.scalalib.Dependency/updates
+	$(MILL) mill.javalib.Dependency/showUpdates
 
 $(KORN_JAR): $(KORN_JAVA) $(KORN_SCALA)
 	@echo $@

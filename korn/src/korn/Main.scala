@@ -15,13 +15,13 @@ import java.io.BufferedReader
 import java.io.FileWriter
 
 import korn.horn.Eval
-import korn.tool._
-import scala.concurrent.duration._
+import korn.tool.*
+import scala.concurrent.duration.*
 import korn.witness.GraphML
 import korn.witness.Yaml
 
-object Main {
-  val version = "0.7"
+object Main:
+  val version = "0.7.3"
 
   var dry = false
   var config = "default"
@@ -49,37 +49,28 @@ object Main {
 
   var failed = false
 
-  def note(line: String) {
-    if (quiet) {
+  def note(line: String): Unit =
+    if quiet then
       out.println(line)
       out.flush()
-    }
-  }
 
-  def info(line: String) {
-    if (!quiet) {
+  def info(line: String): Unit =
+    if !quiet then
       out.println(line)
       out.flush()
-    }
-  }
 
-  def debug(line: String) {
-    if (debug) {
+  def debug(line: String): Unit =
+    if debug then
       err.println(line)
       err.flush()
-    }
-  }
 
-  def add(tool: Tool) {
-    if (confirm)
-      tools += Confirm(tool)
-    else
-      tools += tool
-  }
+  def add(tool: Tool): Unit =
+    if confirm then tools += Confirm(tool)
+    else tools += tool
 
   @tailrec
-  def configure(args: List[String]) {
-    args match {
+  def configure(args: List[String]): Unit =
+    args match
       case Nil =>
 
       case ("-ir" | "-invariants-prepost") :: rest =>
@@ -96,6 +87,10 @@ object Main {
 
       case "-use:VERIFIER_assert" :: rest =>
         Eval.useVerifierAssert = true
+        configure(rest)
+
+      case ("-u" | "-unbounded") :: rest =>
+        Eval.unbounded = true
         configure(rest)
 
       case ("-m" | "-model") :: rest =>
@@ -167,7 +162,7 @@ object Main {
         configure(rest)
 
       case first :: rest if first.startsWith("-golem:") =>
-        val engine = first drop "-golem:".length
+        val engine = first.drop("-golem:".length)
         add(Golem(timeout, model, write, expect, engine))
         configure(rest)
 
@@ -219,59 +214,50 @@ object Main {
       case file :: rest =>
         files += file
         configure(rest)
-    }
-  }
 
-  def smt2(path: String) = {
-    ensure((path endsWith ".c") || (path endsWith ".i"), "unrecognized file ending: " + path)
-    (path dropRight 2) + ".smt2"
-  }
+  def smt2(path: String) =
+    ensure((path.endsWith(".c")) || (path.endsWith(".i")), "unrecognized file ending: " + path)
+    (path.dropRight(2)) + ".smt2"
 
-  def graphml(path: String) = {
+  def graphml(path: String) =
     "witness.graphml"
-  }
 
-  def yaml(path: String) = {
+  def yaml(path: String) =
     "witness.yml"
-  }
 
-  def run(file: String) {
+  def run(file: String): Unit =
     info("program:      " + file)
     val stmts = Tool.parse(file)
 
-    if (dry) {
-      // do nothing
-    } else if (tools.isEmpty) {
+    if dry then () // do nothing
+    else if tools.isEmpty then
       val unit = Tool.translate(file, stmts)
       unit.run()
 
-      if (write) {
-        val to = write_smt2 getOrElse smt2(file)
+      if write then
+        val to = write_smt2.getOrElse(smt2(file))
         val out = new PrintStream(new File(to))
         info("clauses:      " + to)
         info("linear:       " + unit.isLinear)
         Backend.write(unit, model, expect, out)
-      } else {
-        Backend.write(unit, model, expect, out)
-      }
-    } else {
-      import scala.util.control.Breaks._
+      else Backend.write(unit, model, expect, out)
+    else
+      import scala.util.control.Breaks.*
 
-      breakable {
-        for (tool <- tools) {
+      breakable:
+        for tool <- tools do
           // DO NOT SHARE! units are mutable!
           val unit = Tool.translate(file, stmts)
 
           info("running:      " + tool.how)
 
-          val to = write_smt2 getOrElse smt2(file)
-          if (tool.write)
-            info("clauses:      " + to)
+          val to = write_smt2.getOrElse(smt2(file))
+          if tool.write then info("clauses:      " + to)
 
           val result = tool.check(unit, to, expect)
 
-          try {
-            result match {
+          try
+            result match
               case Unknown(message) =>
                 note("unknown")
                 info("status:       " + message)
@@ -282,21 +268,17 @@ object Main {
                 info("status:       correct")
                 info("backend:      " + tool.backend)
 
-                if (_model.defs.nonEmpty)
-                  debug("model:")
-                for (df <- _model.defs)
-                  debug("  " + df)
-                if (_model.defs.nonEmpty)
-                  debug("")
+                if _model.defs.nonEmpty then debug("model:")
+                for df <- _model.defs do debug("  " + df)
+                if _model.defs.nonEmpty then debug("")
 
-                if (witness) {
-                  val dest = witness_file getOrElse yaml(file)
+                if witness then
+                  val dest = witness_file.getOrElse(yaml(file))
                   val out = new PrintStream(new File(dest))
                   Yaml.proof(file, _model, unit, out)
                   info("witness:      " + dest)
-                }
 
-                break
+                break()
 
               case Incorrect(trace) =>
                 note("unsat")
@@ -304,39 +286,29 @@ object Main {
                 info("status:       incorrect")
                 info("backend:      " + tool.backend)
                 debug("trace:")
-                for ((fun, arg) <- trace)
-                  debug("  " + fun + "() = " + arg)
+                for (fun, arg) <- trace do debug("  " + fun + "() = " + arg)
 
-                if (witness) {
-                  val dest = witness_file getOrElse graphml(file)
+                if witness then
+                  val dest = witness_file.getOrElse(graphml(file))
                   val out = new PrintStream(new File(dest))
                   GraphML.cex(file, trace, out)
                   info("witness:      " + dest)
-                }
 
-                break
-            }
+                break()
 
             info("")
-          } catch {
+          catch
             case err: Error =>
-              if (Main.debug)
-                throw err
-          }
-        }
-      }
-    }
-  }
+              if Main.debug then throw err
 
-  def run(files: List[String]) {
-    for (path <- files) {
-      try {
-        run(path)
-      } catch {
+  def run(files: List[String]): Unit =
+    for path <- files do
+      try run(path)
+      catch
         case e: beaver.Parser.Exception =>
           note("error")
           info("error:        " + e.getMessage())
-          if (debug) e.printStackTrace()
+          if debug then e.printStackTrace()
         case e: NotImplementedError =>
           note("error")
           val st = e.getStackTrace()(1)
@@ -344,27 +316,21 @@ object Main {
           val code = st.getClassName + "." + st.getMethodName
           val where = code + " (" + file + ")"
           info("error:        not implemented " + where)
-          if (debug) e.printStackTrace()
+          if debug then e.printStackTrace()
         case e: Error =>
           note("error")
           info("error:        " + e.msg)
-          if (debug) e.printStackTrace()
+          if debug then e.printStackTrace()
         case e: Throwable =>
           note("error")
           info("error:        " + e.getMessage())
-          if (debug) e.printStackTrace()
-      }
-    }
-  }
+          if debug then e.printStackTrace()
 
-  def main(args: Array[String]) {
-    args.toList match {
+  def main(args: Array[String]): Unit =
+    args.toList match
       case List("-v") | List("-version") | List("--version") =>
         System.out.println(version)
         System.out.flush()
       case args =>
         configure(args)
         run(files.toList)
-    }
-  }
-}

@@ -1,34 +1,32 @@
 package korn.c
 
-case class Const(name: String, index: Option[Int]) extends beaver.Symbol {
+case class Const(name: String, index: Option[Int]) extends beaver.Symbol:
   def this(name: String) = this(name, None)
-  def this(name: String, index: AnyRef) = this(name, Some(index match {
-    case i: Integer => i.toInt
-    case i: java.lang.Long => i.toInt
-    case _ => korn.error("not a number: " + index + ": " + index.getClass().getSimpleName())
-  }))
-  
-  override def toString = index match {
-    case None => name
+  def this(name: String, index: AnyRef) = this(
+    name,
+    Some(
+      index match
+        case i: Integer        => i.toInt
+        case i: java.lang.Long => i.toInt
+        case _                 => korn.error("not a number: " + index + ": " + index.getClass().getSimpleName())
+    )
+  )
+
+  override def toString = index match
+    case None        => name
     case Some(index) => name + " = " + index
-  }
-}
 
-case class Field(typ: Type, name: String) {
-  override def toString = typ + " " + name
-}
+case class Field(typ: Type, name: String):
+  override def toString = s"$typ $name"
 
-sealed trait Type {
-  def withDims(dims: Dims) = {
+sealed trait Type:
+  def withDims(dims: Dims) =
     val Dims(ptr, bounds) = dims
-    if (ptr)
-      bounds.foldLeft(PtrType(this): Type)(ArrayType)
-    else
-      bounds.foldLeft(this)(ArrayType)
-  }
+    if ptr then bounds.foldLeft(PtrType(this): Type)(ArrayType.apply)
+    else bounds.foldLeft(this)(ArrayType.apply)
 
-  def |(that: Type): Type = {
-    (this, that) match {
+  def |(that: Type): Type =
+    (this, that) match
       // If both operands have the same type, then no further conversion is needed.
       case _ if this == that =>
         this
@@ -37,9 +35,9 @@ sealed trait Type {
       // the operand with the type of lesser integer conversion rank
       // is converted to the type of the operand with greater rank.
       case (Signed(name1, bytes1), Signed(name2, bytes2)) =>
-        if (bytes1 >= bytes2) this else that
+        if bytes1 >= bytes2 then this else that
       case (Unsigned(name1, bytes1), Unsigned(name2, bytes2)) =>
-        if (bytes1 >= bytes2) this else that
+        if bytes1 >= bytes2 then this else that
 
       // Otherwise, if the operand that has unsigned integer type has rank
       // greater or equal to the rank of the type of the other operand,
@@ -82,24 +80,22 @@ sealed trait Type {
 
       case _ =>
         korn.error("incompatible types: " + this + " and " + that)
-    }
-  }
-}
 
 sealed trait CompoundType extends Type
-sealed trait TypeName extends Type { def name: String }
+sealed trait TypeName extends Type:
+  def name: String
 case class BaseType(name: String) extends Type
 case class Signed(name: String, bytes: Int) extends Type
 case class Unsigned(name: String, bytes: Int) extends Type
 
-object Type {
+object Type:
   val _void = BaseType("void")
   val _Bool = BaseType("_Bool")
   val _float = BaseType("float")
   val _double = BaseType("double")
 
-  def sizeof(typ: Type): Long = {
-    typ match {
+  def sizeof(typ: Type): Long =
+    typ match
       case `_Bool` =>
         1
       case `_float` =>
@@ -112,26 +108,20 @@ object Type {
         bytes
       case _ =>
         korn.error("unknown size: " + typ)
-    }
-  }
 
-}
-
-object Signed {
+object Signed:
   val _char = Signed("char", 1)
   val _short = Signed("short", 2)
   val _int = Signed("int", 4)
   val _long = Signed("long", bits / 8)
   val _long_long = Signed("long long", 8)
-}
 
-object Unsigned {
+object Unsigned:
   val _char = Unsigned("char", 1)
   val _short = Unsigned("short", 2)
   val _int = Unsigned("int", 4)
   val _long = Unsigned("long", bits / 8)
   val _long_long = Unsigned("long long", 8)
-}
 
 case class TypedefName(name: String) extends TypeName
 
@@ -143,20 +133,16 @@ case class EnumName(name: String) extends TypeName
 
 case class PtrType(typ: Type) extends Type
 
-case class FunPtrType(ret: Type, args: List[Type]) extends Type {
+case class FunPtrType(ret: Type, args: List[Type]) extends Type:
   def this(ret: Type, args: Array[Type]) = this(ret, args.toList)
-}
 
 case class ArrayType(typ: Type, dim: Expr) extends Type
 
-case class AnonStruct(fields: List[Field]) extends CompoundType {
+case class AnonStruct(fields: List[Field]) extends CompoundType:
   def this(fields: Array[Field]) = this(fields.toList)
-}
 
-case class AnonUnion(fields: List[Field]) extends CompoundType {
+case class AnonUnion(fields: List[Field]) extends CompoundType:
   def this(fields: Array[Field]) = this(fields.toList)
-}
 
-case class AnonEnum(consts: List[Const]) extends CompoundType {
+case class AnonEnum(consts: List[Const]) extends CompoundType:
   def this(consts: Array[Const]) = this(consts.toList)
-}
